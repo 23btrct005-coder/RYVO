@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 
@@ -6,8 +6,10 @@ import L from 'leaflet'
 import icon from 'leaflet/dist/images/marker-icon.png'
 import iconShadow from 'leaflet/dist/images/marker-shadow.png'
 
-import { db } from './firebase'
+import { db, auth } from './firebase'
 import { collection, query, where, onSnapshot, doc, updateDoc } from 'firebase/firestore'
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, User } from 'firebase/auth'
+import { Geolocation, WatchPositionCallback } from '@capacitor/geolocation'
 
 let DefaultIcon = L.icon({
   iconUrl: icon,
@@ -22,22 +24,87 @@ interface RideRequest {
   pickup: string;
   destination: string;
   status: string;
+  paymentMethod: string;
 }
 
 function App() {
+  const [user, setUser] = useState<User | null>(null)
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+
   const [isOnline, setIsOnline] = useState(false)
   const [incomingRequest, setIncomingRequest] = useState<RideRequest | null>(null)
   const [currentRide, setCurrentRide] = useState<RideRequest | null>(null)
   
-  const defaultPosition: [number, number] = [40.7128, -74.0060]
+  const [driverPosition, setDriverPosition] = useState<[number, number]>([40.7128, -74.0060])
+  const watchIdRef = useRef<string | null>(null)
 
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser)
+    })
+    return () => unsub()
+  }, [])
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault()
+    try {
+      await signInWithEmailAndPassword(auth, email, password)
+    } catch (error) {
+      try {
+        await createUserWithEmailAndPassword(auth, email, password)
+      } catch (err: any) {
+        alert(err.message)
+      }
+    }
+  }
+
+  // Start watching GPS position when online
+  useEffect(() => {
+    const startWatch = async () => {
+      if (isOnline) {
+        try {
+          const id = await Geolocation.watchPosition({ enableHighAccuracy: true }, (position, err) => {
+            if (position) {
+              const newPos: [number, number] = [position.coords.latitude, position.coords.longitude]
+              setDriverPosition(newPos)
+              
+              // If currently in a ride, update the database with new location
+              if (currentRide) {
+                updateDoc(doc(db, "rides", currentRide.id), {
+                  driverLat: position.coords.latitude,
+                  driverLng: position.coords.longitude
+                })
+              }
+            }
+          });
+          watchIdRef.current = id;
+        } catch (e) {
+          console.error("GPS Error:", e)
+        }
+      } else {
+        if (watchIdRef.current) {
+          Geolocation.clearWatch({ id: watchIdRef.current })
+          watchIdRef.current = null
+        }
+      }
+    }
+    startWatch()
+    
+    return () => {
+      if (watchIdRef.current) {
+         Geolocation.clearWatch({ id: watchIdRef.current })
+      }
+    }
+  }, [isOnline, currentRide])
+
+  // Listen for incoming ride requests
   useEffect(() => {
     if (!isOnline) {
       setIncomingRequest(null)
       return
     }
 
-    // Listen for pending rides
     const q = query(collection(db, "rides"), where("status", "==", "pending"));
     const unsub = onSnapshot(q, (querySnapshot) => {
       let foundRequest = false;
@@ -59,7 +126,10 @@ function App() {
     if (!incomingRequest) return;
     try {
       await updateDoc(doc(db, "rides", incomingRequest.id), {
-        status: 'accepted'
+        status: 'accepted',
+        driverId: user?.uid,
+        driverLat: driverPosition[0],
+        driverLng: driverPosition[1]
       });
       setCurrentRide(incomingRequest)
       setIncomingRequest(null)
@@ -80,15 +150,31 @@ function App() {
     }
   }
 
+  if (!user) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-black text-white w-full">
+        <div className="p-8 max-w-md w-full bg-zinc-900 rounded-3xl shadow-2xl border border-zinc-800">
+          <h1 className="text-4xl font-bold text-center mb-8">RYVO Driver</h1>
+          <form onSubmit={handleLogin} className="space-y-4">
+            <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} className="w-full bg-zinc-800 text-white rounded-xl px-4 py-3" />
+            <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-zinc-800 text-white rounded-xl px-4 py-3" />
+            <button type="submit" className="w-full bg-white text-black font-bold py-4 rounded-xl">Login / Sign Up</button>
+          </form>
+          <button onClick={() => alert("Phone Auth requires Firebase Console Setup. Use email for now.")} className="w-full mt-4 bg-zinc-800 text-white font-bold py-4 rounded-xl">Login with Phone</button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="relative w-full h-screen bg-zinc-900 text-white">
       <div className="absolute inset-0 z-0">
-        <MapContainer center={defaultPosition} zoom={14} style={{ height: '100%', width: '100%' }} zoomControl={false}>
+        <MapContainer center={driverPosition} zoom={15} style={{ height: '100%', width: '100%' }} zoomControl={false}>
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
-          <Marker position={defaultPosition}>
+          <Marker position={driverPosition}>
             <Popup>You are here.</Popup>
           </Marker>
         </MapContainer>
@@ -119,10 +205,14 @@ function App() {
           <div className="bg-green-600 border border-green-500 p-6 rounded-3xl shadow-2xl max-w-md mx-auto">
              <h2 className="text-xl font-bold text-white mb-2">Ride in Progress</h2>
              <p className="text-green-100 text-sm mb-1"><strong>Pickup:</strong> {currentRide.pickup}</p>
-             <p className="text-green-100 text-sm mb-6"><strong>Dropoff:</strong> {currentRide.destination}</p>
+             <p className="text-green-100 text-sm mb-4"><strong>Dropoff:</strong> {currentRide.destination}</p>
+             
+             <div className="bg-green-700 p-3 rounded-lg mb-6 text-center">
+               <p className="font-bold text-white">Collect CASH after drop</p>
+             </div>
              
              <button onClick={handleFinish} className="w-full bg-white text-green-700 font-bold py-3 rounded-xl hover:bg-zinc-100 transition-colors">
-               Finish Ride
+               Finish Ride & Collect Cash
              </button>
           </div>
         </div>
@@ -138,7 +228,8 @@ function App() {
                  <p className="text-zinc-400 text-sm">to {incomingRequest.destination}</p>
                </div>
                <div className="text-right">
-                 <p className="text-white text-xl font-bold">Est. $12.50</p>
+                 <p className="text-white text-xl font-bold mb-1">Est. $12.50</p>
+                 <span className="bg-green-500 text-black text-xs font-bold px-2 py-1 rounded">CASH</span>
                </div>
              </div>
              

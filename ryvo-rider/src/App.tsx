@@ -6,8 +6,10 @@ import L from 'leaflet'
 import icon from 'leaflet/dist/images/marker-icon.png'
 import iconShadow from 'leaflet/dist/images/marker-shadow.png'
 
-import { db } from './firebase'
+import { db, auth } from './firebase'
 import { collection, addDoc, onSnapshot, doc } from 'firebase/firestore'
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, User } from 'firebase/auth'
+import { Geolocation } from '@capacitor/geolocation'
 
 let DefaultIcon = L.icon({
   iconUrl: icon,
@@ -18,12 +20,37 @@ let DefaultIcon = L.icon({
 L.Marker.prototype.options.icon = DefaultIcon
 
 function App() {
+  const [user, setUser] = useState<User | null>(null)
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  
   const [pickup, setPickup] = useState('')
   const [destination, setDestination] = useState('')
   const [status, setStatus] = useState<'idle' | 'searching' | 'accepted'>('idle')
   const [currentRideId, setCurrentRideId] = useState<string | null>(null)
   
+  const [driverLocation, setDriverLocation] = useState<[number, number] | null>(null)
   const defaultPosition: [number, number] = [40.7128, -74.0060]
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser)
+    })
+    return () => unsub()
+  }, [])
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault()
+    try {
+      await signInWithEmailAndPassword(auth, email, password)
+    } catch (error) {
+      try {
+        await createUserWithEmailAndPassword(auth, email, password)
+      } catch (err: any) {
+        alert(err.message)
+      }
+    }
+  }
 
   const handleRequestRide = async () => {
     if (!pickup || !destination) {
@@ -34,12 +61,13 @@ function App() {
     setStatus('searching')
 
     try {
-      // Create ride request in Firestore
       const docRef = await addDoc(collection(db, "rides"), {
+        riderId: user?.uid,
         pickup: pickup,
         destination: destination,
         status: 'pending',
-        timestamp: new Date()
+        timestamp: new Date(),
+        paymentMethod: 'CASH'
       });
       setCurrentRideId(docRef.id)
     } catch (e) {
@@ -48,19 +76,38 @@ function App() {
     }
   }
 
-  // Listen for driver acceptance
+  // Listen for driver acceptance and driver location
   useEffect(() => {
     if (!currentRideId) return;
 
-    const unsub = onSnapshot(doc(db, "rides", currentRideId), (doc) => {
-      const data = doc.data();
+    const unsub = onSnapshot(doc(db, "rides", currentRideId), (docSnap) => {
+      const data = docSnap.data();
       if (data && data.status === 'accepted') {
         setStatus('accepted')
+        if (data.driverLat && data.driverLng) {
+           setDriverLocation([data.driverLat, data.driverLng])
+        }
       }
     });
 
     return () => unsub();
   }, [currentRideId]);
+
+  if (!user) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-black text-white w-full">
+        <div className="p-8 max-w-md w-full bg-zinc-900 rounded-3xl shadow-2xl border border-zinc-800">
+          <h1 className="text-4xl font-bold text-center mb-8">RYVO Rider</h1>
+          <form onSubmit={handleLogin} className="space-y-4">
+            <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} className="w-full bg-zinc-800 text-white rounded-xl px-4 py-3" />
+            <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-zinc-800 text-white rounded-xl px-4 py-3" />
+            <button type="submit" className="w-full bg-white text-black font-bold py-4 rounded-xl">Login / Sign Up</button>
+          </form>
+          <button onClick={() => alert("Phone Auth requires Firebase Console Setup. Use email for now.")} className="w-full mt-4 bg-zinc-800 text-white font-bold py-4 rounded-xl">Login with Phone</button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="relative w-full h-screen bg-zinc-900 text-white">
@@ -73,6 +120,13 @@ function App() {
           <Marker position={defaultPosition}>
             <Popup>You are here.</Popup>
           </Marker>
+          
+          {/* Driver Marker */}
+          {driverLocation && (
+            <Marker position={driverLocation}>
+              <Popup>Driver is here</Popup>
+            </Marker>
+          )}
         </MapContainer>
       </div>
 
@@ -86,10 +140,7 @@ function App() {
                   <svg className="w-12 h-12 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
                </div>
                <h2 className="text-2xl font-bold text-white mb-2">Driver is on the way!</h2>
-               <p className="text-zinc-400">Please wait at the pickup location.</p>
-               <button onClick={() => { setStatus('idle'); setPickup(''); setDestination(''); setCurrentRideId(null) }} className="w-full bg-zinc-800 text-white font-bold py-3 rounded-xl hover:bg-zinc-700 transition-colors mt-6">
-                 Start New Ride
-               </button>
+               <p className="text-zinc-400">Payment: Cash after drop</p>
              </div>
           ) : status === 'searching' ? (
             <div className="text-center py-8">
@@ -119,7 +170,7 @@ function App() {
                   onClick={handleRequestRide}
                   className="w-full bg-white text-black font-bold py-4 rounded-xl hover:bg-zinc-200 transition-colors mt-2 text-lg"
                 >
-                  Request Ride
+                  Request Ride (Cash)
                 </button>
               </div>
             </>
