@@ -207,7 +207,7 @@ function App() {
              
              <div className="bg-green-700 p-4 rounded-xl mb-6 text-center border border-green-500">
                <p className="text-green-100 text-sm mb-1">Collect Cash Amount:</p>
-               <p className="font-bold text-white text-3xl">${currentRide.price?.toFixed(2) || '0.00'}</p>
+               <p className="font-bold text-white text-3xl">₹{currentRide.price?.toFixed(2) || '0.00'}</p>
              </div>
              
              <button onClick={handleFinish} className="w-full bg-white text-green-700 font-bold py-3 rounded-xl hover:bg-zinc-100 transition-colors">
@@ -227,7 +227,7 @@ function App() {
                  <p className="text-zinc-400 text-sm">to {incomingRequest.destination}</p>
                </div>
                <div className="text-right flex flex-col items-end">
-                 <p className="text-white text-xl font-bold mb-1">${incomingRequest.price?.toFixed(2) || '---'}</p>
+                 <p className="text-white text-xl font-bold mb-1">₹{incomingRequest.price?.toFixed(2) || '---'}</p>
                  <span className="bg-green-500 text-black text-xs font-bold px-2 py-1 rounded">CASH</span>
                </div>
              </div>

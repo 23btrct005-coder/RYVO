@@ -95,8 +95,8 @@ function App() {
         const route = data.routes[0]
         const distanceKm = route.distance / 1000
         
-        // 3. Calculate Price ($2.50 base + $1.20/km)
-        const price = Math.max(5.00, 2.50 + (distanceKm * 1.20))
+        // 3. Calculate Price (₹50 base + ₹15/km)
+        const price = Math.max(50.00, 50.00 + (distanceKm * 15.00))
         setEstimatedPrice(price)
         
         // OSRM returns [lon, lat], Leaflet wants [lat, lon]
@@ -209,7 +209,7 @@ function App() {
             </div>
           ) : status === 'confirming' ? (
             <div className="text-center py-4">
-               <h2 className="text-3xl font-bold text-white mb-2">${estimatedPrice?.toFixed(2)}</h2>
+               <h2 className="text-3xl font-bold text-white mb-2">₹{estimatedPrice?.toFixed(2)}</h2>
                <p className="text-zinc-400 mb-6">Estimated fare (Cash)</p>
                <button 
                   onClick={handleConfirmRide}
