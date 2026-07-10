@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
+import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 
 import L from 'leaflet'
@@ -9,7 +9,6 @@ import iconShadow from 'leaflet/dist/images/marker-shadow.png'
 import { db, auth } from './firebase'
 import { collection, addDoc, onSnapshot, doc } from 'firebase/firestore'
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, User } from 'firebase/auth'
-import { Geolocation } from '@capacitor/geolocation'
 
 let DefaultIcon = L.icon({
   iconUrl: icon,
@@ -26,11 +25,14 @@ function App() {
   
   const [pickup, setPickup] = useState('')
   const [destination, setDestination] = useState('')
-  const [status, setStatus] = useState<'idle' | 'searching' | 'accepted'>('idle')
+  const [status, setStatus] = useState<'idle' | 'estimating' | 'confirming' | 'searching' | 'accepted'>('idle')
   const [currentRideId, setCurrentRideId] = useState<string | null>(null)
   
   const [driverLocation, setDriverLocation] = useState<[number, number] | null>(null)
-  const defaultPosition: [number, number] = [40.7128, -74.0060]
+  const [routeGeometry, setRouteGeometry] = useState<[number, number][] | null>(null)
+  const [estimatedPrice, setEstimatedPrice] = useState<number | null>(null)
+
+  const defaultPosition: [number, number] = [40.7128, -74.0060] // Needs to be dynamic ideally
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (currentUser) => {
@@ -52,14 +54,68 @@ function App() {
     }
   }
 
-  const handleRequestRide = async () => {
+  const geocode = async (query: string): Promise<[number, number] | null> => {
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`)
+      const data = await res.json()
+      if (data && data.length > 0) {
+        return [parseFloat(data[0].lat), parseFloat(data[0].lon)]
+      }
+      return null
+    } catch (e) {
+      console.error(e)
+      return null
+    }
+  }
+
+  const handleEstimate = async () => {
     if (!pickup || !destination) {
       alert("Please enter pickup and destination")
       return
     }
 
-    setStatus('searching')
+    setStatus('estimating')
 
+    // 1. Geocode
+    const pickupCoords = await geocode(pickup)
+    const destCoords = await geocode(destination)
+
+    if (!pickupCoords || !destCoords) {
+      alert("Could not find locations. Try being more specific.")
+      setStatus('idle')
+      return
+    }
+
+    // 2. Get Route from OSRM
+    try {
+      const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${pickupCoords[1]},${pickupCoords[0]};${destCoords[1]},${destCoords[0]}?overview=full&geometries=geojson`)
+      const data = await res.json()
+      
+      if (data.code === 'Ok' && data.routes.length > 0) {
+        const route = data.routes[0]
+        const distanceKm = route.distance / 1000
+        
+        // 3. Calculate Price ($2.50 base + $1.20/km)
+        const price = Math.max(5.00, 2.50 + (distanceKm * 1.20))
+        setEstimatedPrice(price)
+        
+        // OSRM returns [lon, lat], Leaflet wants [lat, lon]
+        const swappedGeometry = route.geometry.coordinates.map((coord: [number, number]) => [coord[1], coord[0]])
+        setRouteGeometry(swappedGeometry)
+        
+        setStatus('confirming')
+      } else {
+        alert("Could not calculate route.")
+        setStatus('idle')
+      }
+    } catch (e) {
+       alert("Routing error")
+       setStatus('idle')
+    }
+  }
+
+  const handleConfirmRide = async () => {
+    setStatus('searching')
     try {
       const docRef = await addDoc(collection(db, "rides"), {
         riderId: user?.uid,
@@ -67,7 +123,8 @@ function App() {
         destination: destination,
         status: 'pending',
         timestamp: new Date(),
-        paymentMethod: 'CASH'
+        paymentMethod: 'CASH',
+        price: estimatedPrice
       });
       setCurrentRideId(docRef.id)
     } catch (e) {
@@ -112,7 +169,7 @@ function App() {
   return (
     <div className="relative w-full h-screen bg-zinc-900 text-white">
       <div className="absolute inset-0 z-0">
-        <MapContainer center={defaultPosition} zoom={13} style={{ height: '100%', width: '100%' }} zoomControl={false}>
+        <MapContainer center={defaultPosition} zoom={12} style={{ height: '100%', width: '100%' }} zoomControl={false}>
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -121,7 +178,10 @@ function App() {
             <Popup>You are here.</Popup>
           </Marker>
           
-          {/* Driver Marker */}
+          {routeGeometry && (
+             <Polyline positions={routeGeometry} color="black" weight={6} opacity={0.8} />
+          )}
+
           {driverLocation && (
             <Marker position={driverLocation}>
               <Popup>Driver is here</Popup>
@@ -147,6 +207,23 @@ function App() {
                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
                <p className="text-zinc-300 font-medium animate-pulse">Finding a nearby driver...</p>
             </div>
+          ) : status === 'confirming' ? (
+            <div className="text-center py-4">
+               <h2 className="text-3xl font-bold text-white mb-2">${estimatedPrice?.toFixed(2)}</h2>
+               <p className="text-zinc-400 mb-6">Estimated fare (Cash)</p>
+               <button 
+                  onClick={handleConfirmRide}
+                  className="w-full bg-white text-black font-bold py-4 rounded-xl hover:bg-zinc-200 transition-colors"
+                >
+                  Confirm Ride
+                </button>
+                <button 
+                  onClick={() => { setStatus('idle'); setRouteGeometry(null) }}
+                  className="w-full bg-transparent text-zinc-400 font-bold py-4 rounded-xl hover:text-white transition-colors mt-2"
+                >
+                  Cancel
+                </button>
+            </div>
           ) : (
             <>
               <p className="text-zinc-400 text-sm mb-6 font-medium">Where to?</p>
@@ -155,22 +232,23 @@ function App() {
                   type="text" 
                   value={pickup}
                   onChange={(e) => setPickup(e.target.value)}
-                  placeholder="Enter pickup location" 
+                  placeholder="Enter pickup location (e.g., Brooklyn, NY)" 
                   className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-white transition-all"
                 />
                 <input 
                   type="text" 
                   value={destination}
                   onChange={(e) => setDestination(e.target.value)}
-                  placeholder="Enter destination" 
+                  placeholder="Enter destination (e.g., Queens, NY)" 
                   className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-white transition-all"
                 />
                 
                 <button 
-                  onClick={handleRequestRide}
-                  className="w-full bg-white text-black font-bold py-4 rounded-xl hover:bg-zinc-200 transition-colors mt-2 text-lg"
+                  onClick={handleEstimate}
+                  disabled={status === 'estimating'}
+                  className="w-full bg-white text-black font-bold py-4 rounded-xl hover:bg-zinc-200 transition-colors mt-2 text-lg disabled:opacity-50"
                 >
-                  Request Ride (Cash)
+                  {status === 'estimating' ? 'Calculating...' : 'See Prices'}
                 </button>
               </div>
             </>

@@ -9,7 +9,7 @@ import iconShadow from 'leaflet/dist/images/marker-shadow.png'
 import { db, auth } from './firebase'
 import { collection, query, where, onSnapshot, doc, updateDoc } from 'firebase/firestore'
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, User } from 'firebase/auth'
-import { Geolocation, WatchPositionCallback } from '@capacitor/geolocation'
+import { Geolocation } from '@capacitor/geolocation'
 
 let DefaultIcon = L.icon({
   iconUrl: icon,
@@ -25,6 +25,7 @@ interface RideRequest {
   destination: string;
   status: string;
   paymentMethod: string;
+  price?: number;
 }
 
 function App() {
@@ -69,7 +70,6 @@ function App() {
               const newPos: [number, number] = [position.coords.latitude, position.coords.longitude]
               setDriverPosition(newPos)
               
-              // If currently in a ride, update the database with new location
               if (currentRide) {
                 updateDoc(doc(db, "rides", currentRide.id), {
                   driverLat: position.coords.latitude,
@@ -160,7 +160,6 @@ function App() {
             <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-zinc-800 text-white rounded-xl px-4 py-3" />
             <button type="submit" className="w-full bg-white text-black font-bold py-4 rounded-xl">Login / Sign Up</button>
           </form>
-          <button onClick={() => alert("Phone Auth requires Firebase Console Setup. Use email for now.")} className="w-full mt-4 bg-zinc-800 text-white font-bold py-4 rounded-xl">Login with Phone</button>
         </div>
       </div>
     )
@@ -184,7 +183,6 @@ function App() {
         <div className="flex justify-between items-center max-w-md mx-auto">
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-white">RYVO Driver</h1>
-            <p className="text-zinc-300 text-sm font-medium">Earnings: $142.50</p>
           </div>
           
           {!currentRide && (
@@ -207,8 +205,9 @@ function App() {
              <p className="text-green-100 text-sm mb-1"><strong>Pickup:</strong> {currentRide.pickup}</p>
              <p className="text-green-100 text-sm mb-4"><strong>Dropoff:</strong> {currentRide.destination}</p>
              
-             <div className="bg-green-700 p-3 rounded-lg mb-6 text-center">
-               <p className="font-bold text-white">Collect CASH after drop</p>
+             <div className="bg-green-700 p-4 rounded-xl mb-6 text-center border border-green-500">
+               <p className="text-green-100 text-sm mb-1">Collect Cash Amount:</p>
+               <p className="font-bold text-white text-3xl">${currentRide.price?.toFixed(2) || '0.00'}</p>
              </div>
              
              <button onClick={handleFinish} className="w-full bg-white text-green-700 font-bold py-3 rounded-xl hover:bg-zinc-100 transition-colors">
@@ -227,8 +226,8 @@ function App() {
                  <h2 className="text-xl font-bold text-white mb-1">{incomingRequest.pickup}</h2>
                  <p className="text-zinc-400 text-sm">to {incomingRequest.destination}</p>
                </div>
-               <div className="text-right">
-                 <p className="text-white text-xl font-bold mb-1">Est. $12.50</p>
+               <div className="text-right flex flex-col items-end">
+                 <p className="text-white text-xl font-bold mb-1">${incomingRequest.price?.toFixed(2) || '---'}</p>
                  <span className="bg-green-500 text-black text-xs font-bold px-2 py-1 rounded">CASH</span>
                </div>
              </div>
