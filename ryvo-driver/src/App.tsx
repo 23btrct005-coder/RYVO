@@ -26,6 +26,7 @@ interface RideRequest {
   status: string;
   paymentMethod: string;
   price?: number;
+  vehicleType?: string;
 }
 
 function App() {
@@ -222,7 +223,7 @@ function App() {
           <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-3xl shadow-2xl max-w-md mx-auto animate-bounce">
              <div className="flex justify-between items-start mb-4">
                <div>
-                 <p className="text-green-400 text-xs font-bold uppercase tracking-wider mb-1">New Request</p>
+                 <p className="text-green-400 text-xs font-bold uppercase tracking-wider mb-1">New Request • {incomingRequest.vehicleType || 'MINI'}</p>
                  <h2 className="text-xl font-bold text-white mb-1">{incomingRequest.pickup}</h2>
                  <p className="text-zinc-400 text-sm">to {incomingRequest.destination}</p>
                </div>

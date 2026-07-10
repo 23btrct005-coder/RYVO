@@ -18,6 +18,8 @@ let DefaultIcon = L.icon({
 })
 L.Marker.prototype.options.icon = DefaultIcon
 
+type VehicleType = 'bike' | 'auto' | 'mini'
+
 function App() {
   const [user, setUser] = useState<User | null>(null)
   const [email, setEmail] = useState('')
@@ -30,9 +32,11 @@ function App() {
   
   const [driverLocation, setDriverLocation] = useState<[number, number] | null>(null)
   const [routeGeometry, setRouteGeometry] = useState<[number, number][] | null>(null)
-  const [estimatedPrice, setEstimatedPrice] = useState<number | null>(null)
+  const [distance, setDistance] = useState<number>(0)
+  
+  const [selectedVehicle, setSelectedVehicle] = useState<VehicleType>('mini')
 
-  const defaultPosition: [number, number] = [40.7128, -74.0060] // Needs to be dynamic ideally
+  const defaultPosition: [number, number] = [40.7128, -74.0060]
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (currentUser) => {
@@ -76,7 +80,6 @@ function App() {
 
     setStatus('estimating')
 
-    // 1. Geocode
     const pickupCoords = await geocode(pickup)
     const destCoords = await geocode(destination)
 
@@ -86,7 +89,6 @@ function App() {
       return
     }
 
-    // 2. Get Route from OSRM
     try {
       const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${pickupCoords[1]},${pickupCoords[0]};${destCoords[1]},${destCoords[0]}?overview=full&geometries=geojson`)
       const data = await res.json()
@@ -95,11 +97,8 @@ function App() {
         const route = data.routes[0]
         const distanceKm = route.distance / 1000
         
-        // 3. Calculate Price (₹50 base + ₹15/km)
-        const price = Math.max(50.00, 50.00 + (distanceKm * 15.00))
-        setEstimatedPrice(price)
+        setDistance(distanceKm)
         
-        // OSRM returns [lon, lat], Leaflet wants [lat, lon]
         const swappedGeometry = route.geometry.coordinates.map((coord: [number, number]) => [coord[1], coord[0]])
         setRouteGeometry(swappedGeometry)
         
@@ -113,6 +112,15 @@ function App() {
        setStatus('idle')
     }
   }
+  
+  const getPrice = (type: VehicleType, distKm: number) => {
+    switch(type) {
+      case 'bike': return Math.max(20, 20 + (distKm * 8))
+      case 'auto': return Math.max(30, 30 + (distKm * 12))
+      case 'mini': return Math.max(50, 50 + (distKm * 15))
+      default: return 0
+    }
+  }
 
   const handleConfirmRide = async () => {
     setStatus('searching')
@@ -124,7 +132,8 @@ function App() {
         status: 'pending',
         timestamp: new Date(),
         paymentMethod: 'CASH',
-        price: estimatedPrice
+        price: getPrice(selectedVehicle, distance),
+        vehicleType: selectedVehicle
       });
       setCurrentRideId(docRef.id)
     } catch (e) {
@@ -133,10 +142,8 @@ function App() {
     }
   }
 
-  // Listen for driver acceptance and driver location
   useEffect(() => {
     if (!currentRideId) return;
-
     const unsub = onSnapshot(doc(db, "rides", currentRideId), (docSnap) => {
       const data = docSnap.data();
       if (data && data.status === 'accepted') {
@@ -146,7 +153,6 @@ function App() {
         }
       }
     });
-
     return () => unsub();
   }, [currentRideId]);
 
@@ -160,7 +166,6 @@ function App() {
             <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-zinc-800 text-white rounded-xl px-4 py-3" />
             <button type="submit" className="w-full bg-white text-black font-bold py-4 rounded-xl">Login / Sign Up</button>
           </form>
-          <button onClick={() => alert("Phone Auth requires Firebase Console Setup. Use email for now.")} className="w-full mt-4 bg-zinc-800 text-white font-bold py-4 rounded-xl">Login with Phone</button>
         </div>
       </div>
     )
@@ -200,6 +205,7 @@ function App() {
                   <svg className="w-12 h-12 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
                </div>
                <h2 className="text-2xl font-bold text-white mb-2">Driver is on the way!</h2>
+               <p className="text-zinc-400">Vehicle: <span className="uppercase text-white font-bold">{selectedVehicle}</span></p>
                <p className="text-zinc-400">Payment: Cash after drop</p>
              </div>
           ) : status === 'searching' ? (
@@ -208,14 +214,61 @@ function App() {
                <p className="text-zinc-300 font-medium animate-pulse">Finding a nearby driver...</p>
             </div>
           ) : status === 'confirming' ? (
-            <div className="text-center py-4">
-               <h2 className="text-3xl font-bold text-white mb-2">₹{estimatedPrice?.toFixed(2)}</h2>
-               <p className="text-zinc-400 mb-6">Estimated fare (Cash)</p>
+            <div className="py-2">
+               <p className="text-zinc-400 text-sm mb-3 font-medium">Select a ride</p>
+               
+               <div className="space-y-3 mb-6">
+                 {/* Bike */}
+                 <div 
+                   onClick={() => setSelectedVehicle('bike')}
+                   className={`flex items-center justify-between p-4 rounded-xl border-2 cursor-pointer transition-all ${selectedVehicle === 'bike' ? 'border-white bg-zinc-800' : 'border-transparent bg-zinc-800/50 hover:bg-zinc-800'}`}
+                 >
+                    <div className="flex items-center space-x-3">
+                       <div className="text-2xl">🛵</div>
+                       <div>
+                         <h3 className="font-bold text-white">RYVO Bike</h3>
+                         <p className="text-xs text-zinc-400">Beat the traffic</p>
+                       </div>
+                    </div>
+                    <span className="font-bold text-xl">₹{getPrice('bike', distance).toFixed(2)}</span>
+                 </div>
+
+                 {/* Auto */}
+                 <div 
+                   onClick={() => setSelectedVehicle('auto')}
+                   className={`flex items-center justify-between p-4 rounded-xl border-2 cursor-pointer transition-all ${selectedVehicle === 'auto' ? 'border-white bg-zinc-800' : 'border-transparent bg-zinc-800/50 hover:bg-zinc-800'}`}
+                 >
+                    <div className="flex items-center space-x-3">
+                       <div className="text-2xl">🛺</div>
+                       <div>
+                         <h3 className="font-bold text-white">RYVO Auto</h3>
+                         <p className="text-xs text-zinc-400">Affordable rides</p>
+                       </div>
+                    </div>
+                    <span className="font-bold text-xl">₹{getPrice('auto', distance).toFixed(2)}</span>
+                 </div>
+
+                 {/* Mini */}
+                 <div 
+                   onClick={() => setSelectedVehicle('mini')}
+                   className={`flex items-center justify-between p-4 rounded-xl border-2 cursor-pointer transition-all ${selectedVehicle === 'mini' ? 'border-white bg-zinc-800' : 'border-transparent bg-zinc-800/50 hover:bg-zinc-800'}`}
+                 >
+                    <div className="flex items-center space-x-3">
+                       <div className="text-2xl">🚗</div>
+                       <div>
+                         <h3 className="font-bold text-white">RYVO Mini</h3>
+                         <p className="text-xs text-zinc-400">Comfortable AC rides</p>
+                       </div>
+                    </div>
+                    <span className="font-bold text-xl">₹{getPrice('mini', distance).toFixed(2)}</span>
+                 </div>
+               </div>
+
                <button 
                   onClick={handleConfirmRide}
                   className="w-full bg-white text-black font-bold py-4 rounded-xl hover:bg-zinc-200 transition-colors"
                 >
-                  Confirm Ride
+                  Confirm {selectedVehicle.toUpperCase()} (Cash)
                 </button>
                 <button 
                   onClick={() => { setStatus('idle'); setRouteGeometry(null) }}
