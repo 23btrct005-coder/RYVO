@@ -199,6 +199,8 @@ function App() {
         riderId: user?.uid,
         pickup: pickup,
         destination: destination,
+        pickupCoords: pickupCoords,
+        destCoords: destCoords,
         status: 'pending',
         timestamp: new Date(),
         paymentMethod: 'CASH',
