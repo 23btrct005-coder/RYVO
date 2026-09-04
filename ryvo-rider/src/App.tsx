@@ -56,6 +56,7 @@ function App() {
   const [driverDetails, setDriverDetails] = useState<any>(null)
   const [routeGeometry, setRouteGeometry] = useState<[number, number][] | null>(null)
   const [distance, setDistance] = useState<number>(0)
+  const [otp, setOtp] = useState<string | null>(null)
   
   const [selectedVehicle, setSelectedVehicle] = useState<VehicleType>('mini')
   
@@ -252,6 +253,9 @@ function App() {
         setTimeout(() => reject(new Error("Firestore write timed out after 10 seconds. Check your internet connection or adblocker.")), 10000)
       );
 
+      const generatedOtp = Math.floor(1000 + Math.random() * 9000).toString();
+      setOtp(generatedOtp);
+
       // Race the addDoc against the timeout
       const docRef = await Promise.race([
         addDoc(collection(db, "rides"), {
@@ -264,7 +268,8 @@ function App() {
           timestamp: new Date(),
           paymentMethod: 'CASH',
           price: getPrice(selectedVehicle, distance),
-          vehicleType: selectedVehicle
+          vehicleType: selectedVehicle,
+          otp: generatedOtp
         }),
         timeoutPromise
       ]) as any;
@@ -293,6 +298,10 @@ function App() {
             vehicleColor: data.driverVehicleColor,
             vehicleNumber: data.driverVehicleNumber
           })
+        }
+        
+        if (data.otp) {
+          setOtp(data.otp)
         }
         
         if (data.driverLat && data.driverLng) {
@@ -411,6 +420,13 @@ function App() {
                     {status === 'in_transit' && 'Sit back and relax.'}
                     {status === 'completed' && 'Thank you for riding with RYVO!'}
                   </p>
+                  
+                  {(status === 'accepted' || status === 'arrived') && otp && (
+                    <div className="mt-4 bg-zinc-900/50 p-3 rounded-lg border border-zinc-700/50 inline-block">
+                       <p className="text-zinc-400 text-xs uppercase font-bold tracking-widest mb-1">Ride OTP</p>
+                       <p className="text-white text-3xl font-black tracking-[0.2em]">{otp}</p>
+                    </div>
+                  )}
                   
                   {status === 'completed' && (
                     <button onClick={() => { setStatus('idle'); setCurrentRideId(null); setRouteGeometry(null) }} className="mt-4 w-full bg-white text-black font-bold py-3 rounded-xl hover:bg-zinc-200">

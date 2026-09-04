@@ -30,6 +30,8 @@ interface RideRequest {
   vehicleType?: string;
   pickupCoords?: [number, number];
   destCoords?: [number, number];
+  timestamp?: any;
+  otp?: string;
 }
 
 function ChangeView({ center }: { center: [number, number] }) {
@@ -56,6 +58,7 @@ function App() {
   const [appState, setAppState] = useState<'idle' | 'online' | 'incoming' | 'accepted' | 'arrived' | 'in_transit' | 'completed'>('idle')
   const [incomingRequest, setIncomingRequest] = useState<RideRequest | null>(null)
   const [currentRide, setCurrentRide] = useState<RideRequest | null>(null)
+  const [otpInput, setOtpInput] = useState('')
   
   // Distance helper function
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
@@ -272,6 +275,11 @@ function App() {
 
   const handleStartRide = async () => {
     if (!currentRide) return;
+    if (otpInput !== currentRide.otp) {
+      alert("Invalid OTP! Please ask the rider for the correct 4-digit code.");
+      return;
+    }
+    
     try {
       await updateDoc(doc(db, "rides", currentRide.id), { status: 'in_transit' });
       setAppState('in_transit')
@@ -474,8 +482,11 @@ function App() {
                <p className="text-blue-600 text-xs font-bold uppercase tracking-wider mb-1">Navigating to Pickup</p>
                <h2 className="text-2xl font-bold text-black truncate">{currentRide.pickup}</h2>
              </div>
-             <button onClick={handleArrived} className="w-full bg-black text-white font-bold py-4 rounded-xl hover:bg-zinc-800 transition-colors text-lg">
-               I've Arrived
+             <button 
+               onClick={handleArrived} 
+               disabled={!currentRide.pickupCoords || calculateDistance(driverPosition[0], driverPosition[1], currentRide.pickupCoords[0], currentRide.pickupCoords[1]) > 0.1}
+               className="w-full bg-black text-white font-bold py-4 rounded-xl hover:bg-zinc-800 transition-colors text-lg disabled:opacity-50 disabled:cursor-not-allowed">
+               {(!currentRide.pickupCoords || calculateDistance(driverPosition[0], driverPosition[1], currentRide.pickupCoords[0], currentRide.pickupCoords[1]) > 0.1) ? 'Move closer to Pickup' : "I've Arrived"}
              </button>
           </div>
         </div>
@@ -489,10 +500,19 @@ function App() {
                <div className="inline-block p-3 bg-blue-100 rounded-full mb-3">
                   <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
                </div>
-               <h2 className="text-2xl font-bold text-black">Waiting for Rider</h2>
-               <p className="text-zinc-500 text-sm mt-1">Please confirm when the rider is in your vehicle.</p>
+               <h2 className="text-2xl font-bold text-black">Enter OTP</h2>
+               <p className="text-zinc-500 text-sm mt-1">Ask the rider for their 4-digit PIN.</p>
+               
+               <input 
+                 type="text" 
+                 value={otpInput} 
+                 onChange={(e) => setOtpInput(e.target.value)} 
+                 maxLength={4}
+                 placeholder="0000"
+                 className="w-full text-center mt-4 text-4xl font-bold tracking-[0.3em] py-4 bg-zinc-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500" 
+               />
              </div>
-             <button onClick={handleStartRide} className="w-full bg-blue-600 text-white font-bold py-4 rounded-xl hover:bg-blue-700 transition-colors text-lg shadow-lg shadow-blue-900/30">
+             <button onClick={handleStartRide} disabled={otpInput.length !== 4} className="w-full bg-blue-600 text-white font-bold py-4 rounded-xl hover:bg-blue-700 transition-colors text-lg shadow-lg shadow-blue-900/30 disabled:opacity-50">
                Start Ride
              </button>
           </div>
@@ -507,8 +527,11 @@ function App() {
                <p className="text-green-600 text-xs font-bold uppercase tracking-wider mb-1">Navigating to Dropoff</p>
                <h2 className="text-2xl font-bold text-black truncate">{currentRide.destination}</h2>
              </div>
-             <button onClick={handleCompleteRide} className="w-full bg-green-600 text-white font-bold py-4 rounded-xl hover:bg-green-700 transition-colors text-lg shadow-lg shadow-green-900/30">
-               Complete Ride
+             <button 
+               onClick={handleCompleteRide} 
+               disabled={!currentRide.destCoords || calculateDistance(driverPosition[0], driverPosition[1], currentRide.destCoords[0], currentRide.destCoords[1]) > 0.1}
+               className="w-full bg-green-600 text-white font-bold py-4 rounded-xl hover:bg-green-700 transition-colors text-lg shadow-lg shadow-green-900/30 disabled:opacity-50 disabled:cursor-not-allowed">
+               {(!currentRide.destCoords || calculateDistance(driverPosition[0], driverPosition[1], currentRide.destCoords[0], currentRide.destCoords[1]) > 0.1) ? 'Move closer to Dropoff' : "Complete Ride"}
              </button>
           </div>
         </div>
