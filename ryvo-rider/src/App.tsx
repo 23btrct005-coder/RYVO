@@ -95,6 +95,10 @@ function App() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!email || !password) {
+      alert("Please enter both your email and password.")
+      return
+    }
     try {
       await signInWithEmailAndPassword(auth, email, password)
     } catch (error: any) {
@@ -104,6 +108,14 @@ function App() {
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!email || !email.includes('@')) {
+      alert("Please enter a valid email address (e.g. name@example.com).")
+      return
+    }
+    if (!password || password.length < 6) {
+      alert("Please enter a password that is at least 6 characters long.")
+      return
+    }
     try {
       await createUserWithEmailAndPassword(auth, email, password)
     } catch (error: any) {
