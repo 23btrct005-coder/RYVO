@@ -52,6 +52,7 @@ function App() {
   const [vehicleNumber, setVehicleNumber] = useState('')
 
   const [isOnline, setIsOnline] = useState(false)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [appState, setAppState] = useState<'idle' | 'online' | 'incoming' | 'accepted' | 'arrived' | 'in_transit' | 'completed'>('idle')
   const [incomingRequest, setIncomingRequest] = useState<RideRequest | null>(null)
   const [currentRide, setCurrentRide] = useState<RideRequest | null>(null)
@@ -86,6 +87,15 @@ function App() {
       await signInWithEmailAndPassword(auth, email, password)
     } catch (error: any) {
       alert("Login Failed: " + error.message)
+    }
+  }
+
+  const handleLogout = async () => {
+    try {
+      await auth.signOut()
+      setIsSidebarOpen(false)
+    } catch (e) {
+      console.error(e)
     }
   }
 
@@ -354,8 +364,13 @@ function App() {
       {/* Top Bar */}
       <div className="absolute top-0 left-0 right-0 z-10 p-4 bg-gradient-to-b from-black/80 to-transparent">
         <div className="flex justify-between items-center max-w-md mx-auto mt-2">
-          <div className="bg-zinc-900/90 backdrop-blur px-4 py-2 rounded-full shadow-lg border border-zinc-800">
-             <h1 className="text-xl font-bold tracking-tight text-white">RYVO</h1>
+          <div className="flex items-center space-x-3 pointer-events-auto">
+             <button onClick={() => setIsSidebarOpen(true)} className="p-3 bg-zinc-900/90 backdrop-blur rounded-full shadow-lg border border-zinc-800 text-white hover:bg-zinc-800 transition">
+               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+             </button>
+             <div className="bg-zinc-900/90 backdrop-blur px-4 py-2 rounded-full shadow-lg border border-zinc-800">
+                <h1 className="text-xl font-bold tracking-tight text-white">RYVO</h1>
+             </div>
           </div>
           
           {appState === 'idle' || appState === 'online' ? (
@@ -493,7 +508,45 @@ function App() {
           </div>
         </div>
       )}
-
+      
+      {/* Sidebar Overlay */}
+      {isSidebarOpen && (
+        <div className="absolute inset-0 z-[2000] flex">
+           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onClick={() => setIsSidebarOpen(false)}></div>
+           <div className="relative w-80 bg-zinc-950 h-full shadow-2xl flex flex-col border-r border-zinc-800 animate-slide-in">
+              <div className="p-6 bg-zinc-900 border-b border-zinc-800">
+                 <div className="flex items-center space-x-4 mb-4">
+                    <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center text-2xl font-bold border-2 border-blue-400">
+                       {driverProfile?.name?.charAt(0) || user?.email?.charAt(0)?.toUpperCase() || 'D'}
+                    </div>
+                    <div>
+                       <h2 className="text-xl font-bold text-white">{driverProfile?.name || 'Driver'}</h2>
+                       <p className="text-zinc-400 text-sm">4.9 ★ Rating</p>
+                    </div>
+                 </div>
+              </div>
+              <div className="flex-1 overflow-y-auto py-4">
+                 <button className="w-full text-left px-6 py-4 hover:bg-zinc-800 text-white font-medium flex items-center space-x-4 transition">
+                    <span className="text-xl">🕒</span><span>Ride History</span>
+                 </button>
+                 <button className="w-full text-left px-6 py-4 hover:bg-zinc-800 text-white font-medium flex items-center space-x-4 transition">
+                    <span className="text-xl">💰</span><span>Earnings</span>
+                 </button>
+                 <button className="w-full text-left px-6 py-4 hover:bg-zinc-800 text-white font-medium flex items-center space-x-4 transition">
+                    <span className="text-xl">⚙️</span><span>Settings</span>
+                 </button>
+                 <button className="w-full text-left px-6 py-4 hover:bg-zinc-800 text-white font-medium flex items-center space-x-4 transition">
+                    <span className="text-xl">❓</span><span>Help & Support</span>
+                 </button>
+              </div>
+              <div className="p-6 border-t border-zinc-800">
+                 <button onClick={handleLogout} className="w-full py-4 rounded-xl bg-red-500/10 text-red-500 font-bold hover:bg-red-500/20 transition flex items-center justify-center space-x-2">
+                    <span>🚪</span><span>Logout</span>
+                 </button>
+              </div>
+           </div>
+        </div>
+      )}
     </div>
   )
 }
