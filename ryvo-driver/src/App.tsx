@@ -156,7 +156,14 @@ function App() {
       return
     }
     try {
-      await signInWithEmailAndPassword(auth, email, password)
+      const userCredential = await signInWithEmailAndPassword(auth, email, password)
+      
+      // Verify this user is actually a driver by checking the drivers collection
+      const driverDoc = await getDoc(doc(db, "drivers", userCredential.user.uid))
+      if (!driverDoc.exists()) {
+        await signOut(auth)
+        alert("Access Denied: You do not have a Driver profile. If you are a Rider, please use a different email to register as a Driver.")
+      }
     } catch (error: any) {
       alert("Login Failed: " + error.message)
     }
@@ -424,6 +431,10 @@ function App() {
   }
 
   const toggleOnline = () => {
+    if (!driverProfile) {
+      alert("Error: Driver profile not found. If you created this account on the Rider app, please create a new Driver account.");
+      return;
+    }
     const newState = !isOnline
     setIsOnline(newState)
     setAppState(newState ? 'online' : 'idle')

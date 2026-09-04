@@ -136,7 +136,14 @@ function App() {
       return
     }
     try {
-      await signInWithEmailAndPassword(auth, email, password)
+      const userCredential = await signInWithEmailAndPassword(auth, email, password)
+      
+      // Verify this user is actually a rider by checking the riders collection
+      const riderDoc = await getDoc(doc(db, "riders", userCredential.user.uid))
+      if (!riderDoc.exists()) {
+        await auth.signOut()
+        alert("Access Denied: You do not have a Rider profile. If you are a Driver, please use a different email to register as a Rider.")
+      }
     } catch (error: any) {
       alert("Login Failed: " + error.message)
     }
