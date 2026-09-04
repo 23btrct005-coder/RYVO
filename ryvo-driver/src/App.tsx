@@ -76,6 +76,16 @@ function App() {
   const [routeGeometry, setRouteGeometry] = useState<[number, number][] | null>(null)
   
   const watchIdRef = useRef<string | null>(null)
+  const driverPositionRef = useRef(driverPosition)
+  const driverProfileRef = useRef(driverProfile)
+  
+  useEffect(() => {
+    driverPositionRef.current = driverPosition
+  }, [driverPosition])
+  
+  useEffect(() => {
+    driverProfileRef.current = driverProfile
+  }, [driverProfile])
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (currentUser) => {
@@ -208,8 +218,29 @@ function App() {
     const unsub = onSnapshot(q, (querySnapshot) => {
       let foundRequest = false;
       querySnapshot.forEach((doc) => {
-        if (!foundRequest && !currentRide) {
-          setIncomingRequest({ id: doc.id, ...doc.data() } as RideRequest);
+        const data = doc.data() as RideRequest;
+        
+        // 1. Vehicle Type Match
+        const driverType = (driverProfileRef.current?.vehicleType || 'mini').toLowerCase();
+        const requestType = (data.vehicleType || 'mini').toLowerCase();
+        const isTypeMatch = driverType === requestType;
+
+        // 2. Distance check (<= 5km)
+        let isNear = false;
+        if (data.pickupCoords) {
+           const dist = calculateDistance(
+             driverPositionRef.current[0], 
+             driverPositionRef.current[1], 
+             data.pickupCoords[0], 
+             data.pickupCoords[1]
+           );
+           if (dist <= 5.0) {
+             isNear = true;
+           }
+        }
+        
+        if (!foundRequest && !currentRide && isTypeMatch && isNear) {
+          setIncomingRequest({ ...data, id: doc.id });
           foundRequest = true;
         }
       });
