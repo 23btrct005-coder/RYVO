@@ -149,6 +149,7 @@ function App() {
       if (isOnline || currentRide) {
         try {
           const id = await Geolocation.watchPosition({ enableHighAccuracy: true }, (position, err) => {
+            if (err) console.error("Geolocation watch error:", err);
             if (position) {
               const newPos: [number, number] = [position.coords.latitude, position.coords.longitude]
               setDriverPosition(newPos)
