@@ -57,6 +57,18 @@ function App() {
   const [incomingRequest, setIncomingRequest] = useState<RideRequest | null>(null)
   const [currentRide, setCurrentRide] = useState<RideRequest | null>(null)
   
+  // Distance helper function
+  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+    const R = 6371; // km
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+              Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+  }
+  
   const [driverPosition, setDriverPosition] = useState<[number, number]>([40.7128, -74.0060])
   const [routeGeometry, setRouteGeometry] = useState<[number, number][] | null>(null)
   
@@ -422,11 +434,25 @@ function App() {
                  <h2 className="text-2xl font-bold text-white mb-1 truncate">{incomingRequest.pickup}</h2>
                  <p className="text-zinc-400 text-sm">Dropoff: {incomingRequest.destination}</p>
                </div>
-               <div className="text-right flex flex-col items-end shrink-0 ml-4">
+                 <div className="text-right flex flex-col items-end shrink-0 ml-4">
                  <p className="text-white text-2xl font-black mb-1">₹{incomingRequest.price?.toFixed(0)}</p>
                  <span className="bg-zinc-800 text-zinc-300 border border-zinc-700 text-xs font-bold px-2 py-1 rounded">CASH</span>
                </div>
              </div>
+             
+             {incomingRequest.pickupCoords && incomingRequest.destCoords && (
+               <div className="flex items-center space-x-4 mb-6 bg-zinc-800/50 p-3 rounded-xl border border-zinc-700">
+                  <div className="flex-1 text-center">
+                    <p className="text-zinc-400 text-xs uppercase font-bold tracking-wider mb-1">To Pickup</p>
+                    <p className="text-white font-bold">{calculateDistance(driverPosition[0], driverPosition[1], incomingRequest.pickupCoords[0], incomingRequest.pickupCoords[1]).toFixed(1)} km</p>
+                  </div>
+                  <div className="w-px h-8 bg-zinc-700"></div>
+                  <div className="flex-1 text-center">
+                    <p className="text-zinc-400 text-xs uppercase font-bold tracking-wider mb-1">Trip Dist</p>
+                    <p className="text-white font-bold">{calculateDistance(incomingRequest.pickupCoords[0], incomingRequest.pickupCoords[1], incomingRequest.destCoords[0], incomingRequest.destCoords[1]).toFixed(1)} km</p>
+                  </div>
+               </div>
+             )}
              
              <div className="flex space-x-3">
                 <button onClick={() => setIncomingRequest(null)} className="flex-1 bg-zinc-800 text-white font-bold py-4 rounded-xl hover:bg-zinc-700 transition-colors">
