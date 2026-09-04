@@ -8,7 +8,8 @@ import iconShadow from 'leaflet/dist/images/marker-shadow.png'
 
 import { db, auth } from './firebase'
 import { collection, query, where, onSnapshot, doc, updateDoc } from 'firebase/firestore'
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, User } from 'firebase/auth'
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged } from 'firebase/auth'
+import type { User } from 'firebase/auth'
 import { Geolocation } from '@capacitor/geolocation'
 
 let DefaultIcon = L.icon({
