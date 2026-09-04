@@ -1,0 +1,35 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+  
+    // 1. RIDERS COLLECTION
+    // Stores rider profile details
+    match /riders/{riderId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == riderId;
+    }
+
+    // 2. DRIVERS COLLECTION
+    // Stores driver profile and vehicle details
+    match /drivers/{driverId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == driverId;
+    }
+
+    // 3. RIDES COLLECTION
+    // Stores the live ride requests and trip lifecycles
+    match /rides/{rideId} {
+      // Anyone logged in can read rides
+      allow read: if request.auth != null;
+      
+      // Riders can create new rides
+      allow create: if request.auth != null 
+                    && request.resource.data.riderId == request.auth.uid
+                    && request.resource.data.status == 'pending';
+                    
+      // Drivers can update the ride to accept it or change status
+      allow update: if request.auth != null;
+    }
+  }
+}
