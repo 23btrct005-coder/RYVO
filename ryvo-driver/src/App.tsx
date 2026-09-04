@@ -214,14 +214,22 @@ function App() {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password)
       const uid = userCredential.user.uid
+      const safeUpload = async (file: File | null, path: string) => {
+        try {
+          return await uploadImage(file, path)
+        } catch (e) {
+          console.warn(`Failed to upload ${path}, proceeding without image:`, e)
+          return ''
+        }
+      }
       
       const [driverPhotoUrl, licensePhotoUrl, vehicleFrontUrl, vehicleBackUrl] = await Promise.all([
-        uploadImage(driverPhoto, `drivers/${uid}/driver_photo`),
-        uploadImage(licensePhoto, `drivers/${uid}/license_photo`),
-        uploadImage(vehicleFront, `drivers/${uid}/vehicle_front`),
-        uploadImage(vehicleBack, `drivers/${uid}/vehicle_back`)
+        safeUpload(driverPhoto, `drivers/${uid}/driver_photo`),
+        safeUpload(licensePhoto, `drivers/${uid}/license_photo`),
+        safeUpload(vehicleFront, `drivers/${uid}/vehicle_front`),
+        safeUpload(vehicleBack, `drivers/${uid}/vehicle_back`)
       ])
-      
+
       const profileData = {
         name,
         phone,
