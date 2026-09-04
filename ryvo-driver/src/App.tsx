@@ -277,10 +277,11 @@ function App() {
         driverId: user?.uid,
         driverLat: driverPosition[0],
         driverLng: driverPosition[1],
-        driverName: driverProfile?.name || 'Your Driver',
-        driverVehicleColor: driverProfile?.vehicleColor || 'White',
-        driverVehicleNumber: driverProfile?.vehicleNumber || 'XX-00-0000',
-        driverPhone: driverProfile?.phone || ''
+        driverName: driverProfileRef.current?.name || 'Your Driver',
+        driverVehicleColor: driverProfileRef.current?.vehicleColor || 'White',
+        driverVehicleNumber: driverProfileRef.current?.vehicleNumber || 'XX-00-0000',
+        driverPhone: driverProfileRef.current?.phone || '',
+        driverEmail: user?.email || email || ''
       });
       setCurrentRide(incomingRequest)
       setIncomingRequest(null)

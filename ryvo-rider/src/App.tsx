@@ -260,6 +260,9 @@ function App() {
       const docRef = await Promise.race([
         addDoc(collection(db, "rides"), {
           riderId: user?.uid,
+          riderName: riderProfile?.name || name || 'Rider',
+          riderPhone: riderProfile?.phone || phone || '',
+          riderEmail: user?.email || email || '',
           pickup: pickup,
           destination: destination,
           pickupCoords: pickupCoords,
