@@ -109,13 +109,14 @@ function App() {
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (currentUser) => {
-      setUser(currentUser)
       if (currentUser) {
         const docSnap = await getDoc(doc(db, "drivers", currentUser.uid))
         if (docSnap.exists()) {
           setDriverProfile(docSnap.data())
+          setUser(currentUser)
         }
       } else {
+        setUser(null)
         setDriverProfile(null)
       }
     })
@@ -239,6 +240,7 @@ function App() {
       }
       await setDoc(doc(db, "drivers", uid), profileData)
       setDriverProfile(profileData)
+      setUser(userCredential.user)
     } catch (error: any) {
       alert("Sign Up Failed: " + error.message)
     } finally {
