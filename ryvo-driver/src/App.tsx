@@ -165,9 +165,11 @@ function App() {
       const profileData = {
         name,
         phone,
+        email,
         vehicleType,
         vehicleColor,
-        vehicleNumber
+        vehicleNumber,
+        createdAt: new Date()
       }
       await setDoc(doc(db, "drivers", userCredential.user.uid), profileData)
       setDriverProfile(profileData)

@@ -155,6 +155,7 @@ function App() {
       await setDoc(doc(db, "riders", userCredential.user.uid), {
         name,
         phone,
+        email,
         createdAt: new Date()
       })
     } catch (error: any) {
