@@ -48,7 +48,7 @@ function App() {
   
   const [pickup, setPickup] = useState('')
   const [destination, setDestination] = useState('')
-  const [status, setStatus] = useState<'idle' | 'estimating' | 'confirming' | 'searching' | 'accepted'>('idle')
+  const [status, setStatus] = useState<'idle' | 'estimating' | 'confirming' | 'searching' | 'accepted' | 'arrived' | 'in_transit' | 'completed'>('idle')
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [currentRideId, setCurrentRideId] = useState<string | null>(null)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
@@ -282,13 +282,19 @@ function App() {
     if (!currentRideId) return;
     const unsub = onSnapshot(doc(db, "rides", currentRideId), (docSnap) => {
       const data = docSnap.data();
-      if (data && data.status === 'accepted') {
-        setStatus('accepted')
-        setDriverDetails({
-          name: data.driverName,
-          vehicleColor: data.driverVehicleColor,
-          vehicleNumber: data.driverVehicleNumber
-        })
+      if (data) {
+        if (['accepted', 'arrived', 'in_transit', 'completed'].includes(data.status)) {
+          setStatus(data.status)
+        }
+        
+        if (data.driverName) {
+          setDriverDetails({
+            name: data.driverName,
+            vehicleColor: data.driverVehicleColor,
+            vehicleNumber: data.driverVehicleNumber
+          })
+        }
+        
         if (data.driverLat && data.driverLng) {
            setDriverLocation([data.driverLat, data.driverLng])
         }
@@ -367,7 +373,7 @@ function App() {
         <div className="bg-zinc-900/95 backdrop-blur-xl border border-zinc-800 p-6 rounded-3xl shadow-2xl max-w-md mx-auto relative">
           <h1 className="text-3xl font-bold tracking-tight text-white mb-1">RYVO</h1>
           
-          {status === 'accepted' ? (
+          {['accepted', 'arrived', 'in_transit', 'completed'].includes(status) ? (
              <div className="py-2">
                <div className="flex items-center justify-between bg-zinc-800 p-4 rounded-2xl mb-4 border border-zinc-700">
                   <div className="flex items-center space-x-4">
@@ -376,7 +382,7 @@ function App() {
                      </div>
                      <div>
                         <h2 className="text-xl font-bold text-white">{driverDetails?.name || 'Driver'}</h2>
-                        <p className="text-zinc-400 text-sm font-medium">4.9 ★ • 1.2 km away</p>
+                        <p className="text-zinc-400 text-sm font-medium">4.9 ★</p>
                      </div>
                   </div>
                   <div className="text-right">
@@ -387,9 +393,30 @@ function App() {
                   </div>
                </div>
                
-               <div className="bg-green-600/20 border border-green-500/50 p-4 rounded-xl text-center">
-                  <h3 className="text-green-400 font-bold mb-1">Driver is on the way!</h3>
-                  <p className="text-green-200/70 text-sm">Please meet your driver at the pickup location.</p>
+               <div className={`border p-4 rounded-xl text-center ${
+                 status === 'accepted' ? 'bg-green-600/20 border-green-500/50 text-green-400' :
+                 status === 'arrived' ? 'bg-blue-600/20 border-blue-500/50 text-blue-400' :
+                 status === 'in_transit' ? 'bg-purple-600/20 border-purple-500/50 text-purple-400' :
+                 'bg-zinc-800 border-zinc-700 text-white'
+               }`}>
+                  <h3 className="font-bold mb-1">
+                    {status === 'accepted' && 'Driver is on the way!'}
+                    {status === 'arrived' && 'Driver has arrived!'}
+                    {status === 'in_transit' && 'Heading to destination...'}
+                    {status === 'completed' && 'Ride Completed!'}
+                  </h3>
+                  <p className="opacity-80 text-sm">
+                    {status === 'accepted' && 'Please meet your driver at the pickup location.'}
+                    {status === 'arrived' && 'Please meet your driver outside.'}
+                    {status === 'in_transit' && 'Sit back and relax.'}
+                    {status === 'completed' && 'Thank you for riding with RYVO!'}
+                  </p>
+                  
+                  {status === 'completed' && (
+                    <button onClick={() => { setStatus('idle'); setCurrentRideId(null); setRouteGeometry(null) }} className="mt-4 w-full bg-white text-black font-bold py-3 rounded-xl hover:bg-zinc-200">
+                      Request Another Ride
+                    </button>
+                  )}
                </div>
              </div>
           ) : status === 'searching' ? (
