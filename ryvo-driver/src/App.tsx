@@ -346,6 +346,46 @@ function App() {
     return () => unsub();
   }, [isOnline, currentRide]);
 
+  const playNotificationSound = () => {
+    try {
+      if (navigator.vibrate) {
+        navigator.vibrate([200, 100, 200, 100, 200, 100, 400]);
+      }
+      
+      const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContext) return;
+      const ctx = new AudioContext();
+      
+      // Play a quick double beep
+      const playBeep = (time: number, freq: number) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, time);
+        gain.gain.setValueAtTime(1, time);
+        gain.gain.exponentialRampToValueAtTime(0.01, time + 0.3);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(time);
+        osc.stop(time + 0.3);
+      }
+      
+      const now = ctx.currentTime;
+      playBeep(now, 880);       // A5
+      playBeep(now + 0.4, 1108.73); // C#6
+      playBeep(now + 0.8, 1318.51); // E6
+      
+    } catch(e) {
+      console.error("Audio error", e)
+    }
+  }
+
+  useEffect(() => {
+    if (incomingRequest && appState === 'incoming') {
+      playNotificationSound();
+    }
+  }, [incomingRequest?.id, appState]);
+
   // Route drawing function
   const fetchRoute = async (start: [number, number], end: [number, number]) => {
     try {
