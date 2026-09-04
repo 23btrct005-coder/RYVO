@@ -216,9 +216,16 @@ function App() {
       const uid = userCredential.user.uid
       const safeUpload = async (file: File | null, path: string) => {
         try {
-          return await uploadImage(file, path)
+          // Add a 10-second timeout to prevent infinite hanging
+          const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error("Upload timed out")), 10000)
+          })
+          return await Promise.race([
+            uploadImage(file, path),
+            timeoutPromise
+          ]) as string | null
         } catch (e) {
-          console.warn(`Failed to upload ${path}, proceeding without image:`, e)
+          console.warn(`Failed or timed out uploading ${path}, proceeding without image:`, e)
           return ''
         }
       }
