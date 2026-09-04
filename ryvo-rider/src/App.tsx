@@ -7,7 +7,7 @@ import icon from 'leaflet/dist/images/marker-icon.png'
 import iconShadow from 'leaflet/dist/images/marker-shadow.png'
 
 import { db, auth } from './firebase'
-import { collection, addDoc, onSnapshot, doc, getDoc, setDoc } from 'firebase/firestore'
+import { collection, addDoc, onSnapshot, updateDoc, doc, setDoc, getDoc } from 'firebase/firestore'
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged } from 'firebase/auth'
 import type { User } from 'firebase/auth'
 import { Geolocation } from '@capacitor/geolocation'
@@ -70,6 +70,10 @@ function App() {
   const [routeGeometry, setRouteGeometry] = useState<[number, number][] | null>(null)
   const [distance, setDistance] = useState<number>(0)
   const [otp, setOtp] = useState<string | null>(null)
+  
+  const [rating, setRating] = useState<number>(0)
+  const [review, setReview] = useState<string>('')
+  const [hasRated, setHasRated] = useState<boolean>(false)
   
   const [selectedVehicle, setSelectedVehicle] = useState<VehicleType>('mini')
   
@@ -315,7 +319,8 @@ function App() {
             vehicleColor: data.driverVehicleColor,
             vehicleNumber: data.driverVehicleNumber,
             vehicleType: data.driverVehicleType || data.vehicleType || 'MINI',
-            phone: data.driverPhone
+            phone: data.driverPhone,
+            rating: data.driverRating || '5.0'
           })
         }
         
@@ -410,7 +415,7 @@ function App() {
                      </div>
                      <div>
                         <h2 className="text-xl font-bold text-white">{driverDetails?.name || 'Driver'}</h2>
-                        <p className="text-zinc-400 text-sm font-medium">4.9 ★</p>
+                        <p className="text-zinc-400 text-sm font-medium">{(driverDetails as any)?.rating || '5.0'} ★</p>
                      </div>
                   </div>
                   <div className="text-right">
@@ -452,8 +457,63 @@ function App() {
                     </div>
                   )}
                   
+                  {status === 'completed' && !hasRated && (
+                    <div className="mt-4 bg-zinc-900 border border-zinc-700 rounded-xl p-4">
+                      <h4 className="font-bold text-white mb-2">Rate your driver</h4>
+                      <div className="flex justify-center space-x-2 mb-4">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <button 
+                            key={star} 
+                            onClick={() => setRating(star)}
+                            className={`text-3xl transition-transform hover:scale-110 ${rating >= star ? 'text-yellow-400' : 'text-zinc-600'}`}
+                          >
+                            ★
+                          </button>
+                        ))}
+                      </div>
+                      {rating > 0 && (
+                        <div className="space-y-3 animate-slide-in">
+                          <textarea 
+                            value={review}
+                            onChange={(e) => setReview(e.target.value)}
+                            placeholder="Leave a compliment (optional)" 
+                            className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg p-3 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none h-20"
+                          />
+                          <button 
+                            onClick={async () => {
+                              if (currentRideId) {
+                                await updateDoc(doc(db, "rides", currentRideId), {
+                                  rating,
+                                  review,
+                                  ratedAt: new Date()
+                                })
+                              }
+                              setHasRated(true)
+                            }}
+                            className="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-500"
+                          >
+                            Submit Rating
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
+                  {status === 'completed' && hasRated && (
+                    <div className="mt-4 bg-green-500/10 border border-green-500/20 text-green-400 p-4 rounded-xl mb-4">
+                      <p className="font-bold">Thank you for your feedback!</p>
+                    </div>
+                  )}
+                  
                   {status === 'completed' && (
-                    <button onClick={() => { setStatus('idle'); setCurrentRideId(null); setRouteGeometry(null) }} className="mt-4 w-full bg-white text-black font-bold py-3 rounded-xl hover:bg-zinc-200">
+                    <button onClick={() => { 
+                      setStatus('idle'); 
+                      setCurrentRideId(null); 
+                      setRouteGeometry(null);
+                      setRating(0);
+                      setReview('');
+                      setHasRated(false);
+                    }} className="mt-4 w-full bg-white text-black font-bold py-3 rounded-xl hover:bg-zinc-200">
                       Request Another Ride
                     </button>
                   )}

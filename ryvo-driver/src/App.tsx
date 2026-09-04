@@ -74,6 +74,12 @@ function App() {
   const [activeModal, setActiveModal] = useState<'none' | 'history' | 'earnings' | 'settings' | 'help'>('none')
   const [completedRides, setCompletedRides] = useState<any[]>([])
   
+  // Calculate average rating dynamically
+  const ratedRides = completedRides.filter(r => r.rating && typeof r.rating === 'number');
+  const avgRating = ratedRides.length > 0 
+    ? (ratedRides.reduce((acc, r) => acc + r.rating, 0) / ratedRides.length).toFixed(1)
+    : '5.0';
+  
   // Distance helper function
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
     const R = 6371; // km
@@ -133,6 +139,15 @@ function App() {
     })
     return () => unsub()
   }, [user])
+
+  useEffect(() => {
+    if (user && avgRating !== '5.0') {
+      updateDoc(doc(db, "drivers", user.uid), {
+        rating: avgRating,
+        totalReviews: ratedRides.length
+      }).catch(console.error);
+    }
+  }, [avgRating, user]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -351,7 +366,8 @@ function App() {
         driverVehicleNumber: driverProfileRef.current?.vehicleNumber || 'XX-00-0000',
         driverVehicleType: driverProfileRef.current?.vehicleType || 'MINI',
         driverPhone: driverProfileRef.current?.phone || '',
-        driverEmail: user?.email || email || ''
+        driverEmail: user?.email || email || '',
+        driverRating: avgRating
       });
       setCurrentRide(incomingRequest)
       setIncomingRequest(null)
@@ -727,10 +743,10 @@ function App() {
                     <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center text-2xl font-bold border-2 border-blue-400">
                        {driverProfile?.name?.charAt(0) || user?.email?.charAt(0)?.toUpperCase() || 'D'}
                     </div>
-                    <div>
-                       <h2 className="text-xl font-bold text-white">{driverProfile?.name || 'Driver'}</h2>
-                       <p className="text-zinc-400 text-sm">4.9 ★ Rating</p>
-                    </div>
+                     <div>
+                        <h2 className="text-xl font-bold text-white">{driverProfile?.name || 'Driver'}</h2>
+                        <p className="text-zinc-400 text-sm">{avgRating} ★ Rating ({ratedRides.length} reviews)</p>
+                     </div>
                  </div>
               </div>
               <div className="flex-1 overflow-y-auto py-4">
@@ -786,6 +802,14 @@ function App() {
                            <div className="mb-1"><span className="text-zinc-500">From:</span> {ride.pickup}</div>
                            <div><span className="text-zinc-500">To:</span> {ride.destination}</div>
                         </div>
+                        {ride.rating && (
+                          <div className="mt-3 pt-3 border-t border-zinc-800">
+                            <div className="text-yellow-400 font-bold mb-1">
+                              {'★'.repeat(ride.rating)}{'☆'.repeat(5 - ride.rating)}
+                            </div>
+                            {ride.review && <p className="text-zinc-400 text-sm italic">"{ride.review}"</p>}
+                          </div>
+                        )}
                       </div>
                     ))
                   )}
@@ -800,6 +824,15 @@ function App() {
                       ₹{completedRides.reduce((acc, ride) => acc + (ride.price || 0), 0).toFixed(0)}
                     </h2>
                   </div>
+                  <div className="bg-zinc-900 p-6 rounded-2xl border border-zinc-800 flex justify-between items-center mt-4">
+                     <div>
+                        <p className="text-zinc-400 text-sm font-medium mb-1">Driver Rating</p>
+                        <h2 className="text-3xl font-bold text-white">{avgRating} <span className="text-yellow-500">★</span></h2>
+                     </div>
+                     <div className="w-16 h-16 bg-yellow-500/10 rounded-full flex items-center justify-center">
+                        <span className="text-2xl text-yellow-500">★</span>
+                     </div>
+                  </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="bg-zinc-900 border border-zinc-800 p-4 rounded-xl text-center">
                       <p className="text-zinc-500 text-xs uppercase font-bold mb-1">Total Trips</p>
@@ -807,7 +840,7 @@ function App() {
                     </div>
                     <div className="bg-zinc-900 border border-zinc-800 p-4 rounded-xl text-center">
                       <p className="text-zinc-500 text-xs uppercase font-bold mb-1">Avg Rating</p>
-                      <p className="text-2xl font-bold text-white">4.9 ★</p>
+                      <p className="text-2xl font-bold text-white">{avgRating} ★</p>
                     </div>
                   </div>
                 </div>
