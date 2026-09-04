@@ -6,9 +6,10 @@ import L from 'leaflet'
 import icon from 'leaflet/dist/images/marker-icon.png'
 import iconShadow from 'leaflet/dist/images/marker-shadow.png'
 
-import { db, auth } from './firebase'
+import { db, auth, storage } from './firebase'
 import { collection, query, where, onSnapshot, doc, updateDoc, setDoc, getDoc } from 'firebase/firestore'
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from 'firebase/auth'
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
 import type { User } from 'firebase/auth'
 import { Geolocation } from '@capacitor/geolocation'
 
@@ -53,6 +54,15 @@ function App() {
   const [vehicleType, setVehicleType] = useState('MINI')
   const [vehicleColor, setVehicleColor] = useState('')
   const [vehicleNumber, setVehicleNumber] = useState('')
+  
+  // Document State
+  const [signupStep, setSignupStep] = useState(1)
+  const [licenseNumber, setLicenseNumber] = useState('')
+  const [driverPhoto, setDriverPhoto] = useState<File | null>(null)
+  const [licensePhoto, setLicensePhoto] = useState<File | null>(null)
+  const [vehicleFront, setVehicleFront] = useState<File | null>(null)
+  const [vehicleBack, setVehicleBack] = useState<File | null>(null)
+  const [isUploading, setIsUploading] = useState(false)
 
   const [isOnline, setIsOnline] = useState(false)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
@@ -146,10 +156,17 @@ function App() {
     }
   }
 
-  const handleSignUp = async (e: React.FormEvent) => {
+  const uploadImage = async (file: File | null, path: string) => {
+    if (!file) return null;
+    const storageRef = ref(storage, path);
+    await uploadBytes(storageRef, file);
+    return await getDownloadURL(storageRef);
+  }
+
+  const handleNextStep = (e: React.FormEvent) => {
     e.preventDefault()
     if (!email || !email.includes('@')) {
-      alert("Please enter a valid email address (e.g. name@example.com).")
+      alert("Please enter a valid email address.")
       return
     }
     if (!password || password.length < 6) {
@@ -157,11 +174,30 @@ function App() {
       return
     }
     if (!name || !phone || !vehicleColor || !vehicleNumber) {
-      alert("Please fill in all details.")
+      alert("Please fill in all basic details.")
       return
     }
+    setSignupStep(2)
+  }
+
+  const handleSignUp = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!licenseNumber || !driverPhoto || !licensePhoto || !vehicleFront || !vehicleBack) {
+      alert("Please provide all required documents and photos.")
+      return
+    }
+    
+    setIsUploading(true)
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password)
+      const uid = userCredential.user.uid
+      
+      const [driverPhotoUrl, licensePhotoUrl, vehicleFrontUrl, vehicleBackUrl] = await Promise.all([
+        uploadImage(driverPhoto, `drivers/${uid}/driver_photo`),
+        uploadImage(licensePhoto, `drivers/${uid}/license_photo`),
+        uploadImage(vehicleFront, `drivers/${uid}/vehicle_front`),
+        uploadImage(vehicleBack, `drivers/${uid}/vehicle_back`)
+      ])
       
       const profileData = {
         name,
@@ -170,12 +206,21 @@ function App() {
         vehicleType,
         vehicleColor,
         vehicleNumber,
+        licenseNumber,
+        documents: {
+          driverPhotoUrl,
+          licensePhotoUrl,
+          vehicleFrontUrl,
+          vehicleBackUrl
+        },
         createdAt: new Date()
       }
-      await setDoc(doc(db, "drivers", userCredential.user.uid), profileData)
+      await setDoc(doc(db, "drivers", uid), profileData)
       setDriverProfile(profileData)
     } catch (error: any) {
       alert("Sign Up Failed: " + error.message)
+    } finally {
+      setIsUploading(false)
     }
   }
 
@@ -385,23 +430,64 @@ function App() {
               <button type="submit" className="w-full bg-white text-black font-bold py-4 rounded-xl hover:bg-zinc-200 mt-2">Login</button>
             </form>
           ) : (
-            <form onSubmit={handleSignUp} className="space-y-4">
-              <input type="text" placeholder="Full Name" value={name} onChange={e => setName(e.target.value)} className="w-full bg-zinc-800 text-white rounded-xl px-4 py-3" />
-              <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} className="w-full bg-zinc-800 text-white rounded-xl px-4 py-3" />
-              <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-zinc-800 text-white rounded-xl px-4 py-3" />
-              <input type="tel" placeholder="Phone Number" value={phone} onChange={e => setPhone(e.target.value)} className="w-full bg-zinc-800 text-white rounded-xl px-4 py-3" />
-              
-              <div className="flex space-x-2">
-                <select value={vehicleType} onChange={e => setVehicleType(e.target.value)} className="flex-1 bg-zinc-800 text-white rounded-xl px-4 py-3">
-                  <option value="MINI">Mini (Car)</option>
-                  <option value="AUTO">Auto</option>
-                  <option value="BIKE">Bike</option>
-                </select>
-                <input type="text" placeholder="Color (e.g. White)" value={vehicleColor} onChange={e => setVehicleColor(e.target.value)} className="flex-1 bg-zinc-800 text-white rounded-xl px-4 py-3" />
-              </div>
-              <input type="text" placeholder="License Plate (e.g. KA-01-AB-1234)" value={vehicleNumber} onChange={e => setVehicleNumber(e.target.value)} className="w-full bg-zinc-800 text-white rounded-xl px-4 py-3 uppercase" />
-              
-              <button type="submit" className="w-full bg-blue-600 text-white font-bold py-4 rounded-xl hover:bg-blue-500 mt-2">Create Driver Account</button>
+            <form onSubmit={signupStep === 1 ? handleNextStep : handleSignUp} className="space-y-4">
+              {signupStep === 1 ? (
+                <>
+                  <input type="text" placeholder="Full Name" value={name} onChange={e => setName(e.target.value)} className="w-full bg-zinc-800 text-white rounded-xl px-4 py-3" />
+                  <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} className="w-full bg-zinc-800 text-white rounded-xl px-4 py-3" />
+                  <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-zinc-800 text-white rounded-xl px-4 py-3" />
+                  <input type="tel" placeholder="Phone Number" value={phone} onChange={e => setPhone(e.target.value)} className="w-full bg-zinc-800 text-white rounded-xl px-4 py-3" />
+                  
+                  <div className="flex space-x-2">
+                    <select value={vehicleType} onChange={e => setVehicleType(e.target.value)} className="flex-1 bg-zinc-800 text-white rounded-xl px-4 py-3">
+                      <option value="MINI">Mini (Car)</option>
+                      <option value="AUTO">Auto</option>
+                      <option value="BIKE">Bike</option>
+                    </select>
+                    <input type="text" placeholder="Color (e.g. White)" value={vehicleColor} onChange={e => setVehicleColor(e.target.value)} className="flex-1 bg-zinc-800 text-white rounded-xl px-4 py-3" />
+                  </div>
+                  <input type="text" placeholder="License Plate (e.g. KA-01-AB-1234)" value={vehicleNumber} onChange={e => setVehicleNumber(e.target.value)} className="w-full bg-zinc-800 text-white rounded-xl px-4 py-3 uppercase" />
+                  
+                  <button type="submit" className="w-full bg-blue-600 text-white font-bold py-4 rounded-xl hover:bg-blue-500 mt-2 transition">Continue to Documents ➔</button>
+                </>
+              ) : (
+                <div className="space-y-4 animate-slide-in">
+                  <div className="flex items-center space-x-2 mb-2">
+                     <button type="button" onClick={() => setSignupStep(1)} className="text-zinc-400 hover:text-white">← Back</button>
+                     <span className="text-white font-bold">Document Verification</span>
+                  </div>
+                  
+                  <input type="text" placeholder="Driving License Number" value={licenseNumber} onChange={e => setLicenseNumber(e.target.value)} className="w-full bg-zinc-800 text-white rounded-xl px-4 py-3 uppercase" />
+                  
+                  <div className="space-y-3">
+                     <div>
+                        <label className="block text-xs font-bold text-zinc-400 uppercase tracking-wider mb-1">Your Profile Photo</label>
+                        <input type="file" accept="image/*" onChange={e => setDriverPhoto(e.target.files?.[0] || null)} className="w-full text-sm text-zinc-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-bold file:bg-blue-600 file:text-white hover:file:bg-blue-700" />
+                     </div>
+                     <div>
+                        <label className="block text-xs font-bold text-zinc-400 uppercase tracking-wider mb-1">Driving License Photo</label>
+                        <input type="file" accept="image/*" onChange={e => setLicensePhoto(e.target.files?.[0] || null)} className="w-full text-sm text-zinc-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-bold file:bg-zinc-700 file:text-white hover:file:bg-zinc-600" />
+                     </div>
+                     <div>
+                        <label className="block text-xs font-bold text-zinc-400 uppercase tracking-wider mb-1">Vehicle Photo (Front)</label>
+                        <input type="file" accept="image/*" onChange={e => setVehicleFront(e.target.files?.[0] || null)} className="w-full text-sm text-zinc-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-bold file:bg-zinc-700 file:text-white hover:file:bg-zinc-600" />
+                     </div>
+                     <div>
+                        <label className="block text-xs font-bold text-zinc-400 uppercase tracking-wider mb-1">Vehicle Photo (Back)</label>
+                        <input type="file" accept="image/*" onChange={e => setVehicleBack(e.target.files?.[0] || null)} className="w-full text-sm text-zinc-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-bold file:bg-zinc-700 file:text-white hover:file:bg-zinc-600" />
+                     </div>
+                  </div>
+                  
+                  <button type="submit" disabled={isUploading} className="w-full bg-blue-600 text-white font-bold py-4 rounded-xl hover:bg-blue-500 mt-4 disabled:opacity-50 flex justify-center items-center">
+                    {isUploading ? (
+                      <span className="flex items-center space-x-2">
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        <span>Uploading Documents...</span>
+                      </span>
+                    ) : 'Complete Signup'}
+                  </button>
+                </div>
+              )}
             </form>
           )}
         </div>
