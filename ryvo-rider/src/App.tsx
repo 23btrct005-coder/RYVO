@@ -204,22 +204,47 @@ function App() {
 
   const handleConfirmRide = async () => {
     setStatus('searching')
-    try {
-      const docRef = await addDoc(collection(db, "rides"), {
+    console.log("Confirm Ride clicked. Attempting to addDoc to 'rides' collection...");
+    console.log("Data:", {
         riderId: user?.uid,
         pickup: pickup,
         destination: destination,
         pickupCoords: pickupCoords,
         destCoords: destCoords,
         status: 'pending',
-        timestamp: new Date(),
         paymentMethod: 'CASH',
         price: getPrice(selectedVehicle, distance),
         vehicleType: selectedVehicle
-      });
+    });
+    
+    try {
+      // Create a timeout promise that rejects after 10 seconds
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error("Firestore write timed out after 10 seconds. Check your internet connection or adblocker.")), 10000)
+      );
+
+      // Race the addDoc against the timeout
+      const docRef = await Promise.race([
+        addDoc(collection(db, "rides"), {
+          riderId: user?.uid,
+          pickup: pickup,
+          destination: destination,
+          pickupCoords: pickupCoords,
+          destCoords: destCoords,
+          status: 'pending',
+          timestamp: new Date(),
+          paymentMethod: 'CASH',
+          price: getPrice(selectedVehicle, distance),
+          vehicleType: selectedVehicle
+        }),
+        timeoutPromise
+      ]) as any;
+
+      console.log("Successfully wrote to Firestore with ID:", docRef.id);
       setCurrentRideId(docRef.id)
-    } catch (e) {
+    } catch (e: any) {
       console.error("Error adding document: ", e);
+      alert("Failed to request ride: " + (e.message || e));
       setStatus('idle')
     }
   }
