@@ -49,6 +49,7 @@ function App() {
   const [pickup, setPickup] = useState('')
   const [destination, setDestination] = useState('')
   const [status, setStatus] = useState<'idle' | 'estimating' | 'confirming' | 'searching' | 'accepted'>('idle')
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [currentRideId, setCurrentRideId] = useState<string | null>(null)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [driverLocation, setDriverLocation] = useState<[number, number] | null>(null)
@@ -231,6 +232,7 @@ function App() {
 
   const handleConfirmRide = async () => {
     setStatus('searching')
+    setErrorMessage(null)
     console.log("Confirm Ride clicked. Attempting to addDoc to 'rides' collection...");
     console.log("Data:", {
         riderId: user?.uid,
@@ -271,7 +273,7 @@ function App() {
       setCurrentRideId(docRef.id)
     } catch (e: any) {
       console.error("Error adding document: ", e);
-      alert("Failed to request ride: " + (e.message || e));
+      setErrorMessage("Network error: Could not reach Firebase. Please turn off your adblocker (uBlock/Brave Shields).")
       setStatus('idle')
     }
   }
@@ -461,6 +463,11 @@ function App() {
             </div>
           ) : (
             <>
+              {errorMessage && (
+                <div className="bg-red-500/10 border border-red-500/30 p-4 rounded-xl mb-4 text-red-500 text-sm font-bold">
+                  {errorMessage}
+                </div>
+              )}
               <p className="text-zinc-400 text-sm mb-6 font-medium">Where to?</p>
               <div className="space-y-4 relative">
                 
