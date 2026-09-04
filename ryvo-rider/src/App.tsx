@@ -50,12 +50,17 @@ function App() {
     e.preventDefault()
     try {
       await signInWithEmailAndPassword(auth, email, password)
-    } catch (error) {
-      try {
-        await createUserWithEmailAndPassword(auth, email, password)
-      } catch (err: any) {
-        alert(err.message)
-      }
+    } catch (error: any) {
+      alert("Login Failed: " + error.message)
+    }
+  }
+
+  const handleSignUp = async (e: React.FormEvent) => {
+    e.preventDefault()
+    try {
+      await createUserWithEmailAndPassword(auth, email, password)
+    } catch (error: any) {
+      alert("Sign Up Failed: " + error.message)
     }
   }
 
@@ -162,10 +167,13 @@ function App() {
       <div className="flex flex-col items-center justify-center min-h-screen bg-black text-white w-full">
         <div className="p-8 max-w-md w-full bg-zinc-900 rounded-3xl shadow-2xl border border-zinc-800">
           <h1 className="text-4xl font-bold text-center mb-8">RYVO Rider</h1>
-          <form onSubmit={handleLogin} className="space-y-4">
+          <form className="space-y-4">
             <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} className="w-full bg-zinc-800 text-white rounded-xl px-4 py-3" />
             <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-zinc-800 text-white rounded-xl px-4 py-3" />
-            <button type="submit" className="w-full bg-white text-black font-bold py-4 rounded-xl">Login / Sign Up</button>
+            <div className="flex space-x-3">
+              <button onClick={handleLogin} type="button" className="flex-1 bg-white text-black font-bold py-4 rounded-xl">Login</button>
+              <button onClick={handleSignUp} type="button" className="flex-1 bg-zinc-700 text-white font-bold py-4 rounded-xl">Sign Up</button>
+            </div>
           </form>
         </div>
       </div>
