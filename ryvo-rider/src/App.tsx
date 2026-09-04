@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet'
+import { useState, useEffect, useRef } from 'react'
+import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 
 import L from 'leaflet'
@@ -10,6 +10,7 @@ import { db, auth } from './firebase'
 import { collection, addDoc, onSnapshot, doc } from 'firebase/firestore'
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged } from 'firebase/auth'
 import type { User } from 'firebase/auth'
+import { Geolocation } from '@capacitor/geolocation'
 
 let DefaultIcon = L.icon({
   iconUrl: icon,
@@ -20,6 +21,19 @@ let DefaultIcon = L.icon({
 L.Marker.prototype.options.icon = DefaultIcon
 
 type VehicleType = 'bike' | 'auto' | 'mini'
+
+interface Suggestion {
+  name: string;
+  city?: string;
+  state?: string;
+}
+
+// A simple component to re-center the map when position changes
+function ChangeView({ center }: { center: [number, number] }) {
+  const map = useMap();
+  map.setView(center, map.getZoom());
+  return null;
+}
 
 function App() {
   const [user, setUser] = useState<User | null>(null)
@@ -36,14 +50,43 @@ function App() {
   const [distance, setDistance] = useState<number>(0)
   
   const [selectedVehicle, setSelectedVehicle] = useState<VehicleType>('mini')
+  
+  const [currentPosition, setCurrentPosition] = useState<[number, number]>([40.7128, -74.0060])
 
-  const defaultPosition: [number, number] = [40.7128, -74.0060]
+  const [pickupSuggestions, setPickupSuggestions] = useState<Suggestion[]>([])
+  const [destSuggestions, setDestSuggestions] = useState<Suggestion[]>([])
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser)
     })
     return () => unsub()
+  }, [])
+
+  // Fetch current location on load
+  useEffect(() => {
+    const getLocation = async () => {
+      try {
+        const position = await Geolocation.getCurrentPosition({ enableHighAccuracy: true })
+        const lat = position.coords.latitude
+        const lon = position.coords.longitude
+        setCurrentPosition([lat, lon])
+        
+        // Reverse geocode to get a readable address for Pickup
+        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`)
+        const data = await res.json()
+        if (data && data.display_name) {
+          // Split and take the first few parts for brevity
+          const shortName = data.display_name.split(',').slice(0, 3).join(',')
+          setPickup(shortName)
+        } else {
+           setPickup("Current Location")
+        }
+      } catch(e) {
+        console.error("Error getting location", e)
+      }
+    }
+    getLocation()
   }, [])
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -61,6 +104,28 @@ function App() {
       await createUserWithEmailAndPassword(auth, email, password)
     } catch (error: any) {
       alert("Sign Up Failed: " + error.message)
+    }
+  }
+
+  // Fetch suggestions using Photon API
+  const fetchSuggestions = async (query: string, setter: (s: Suggestion[]) => void) => {
+    if (query.length < 3) {
+      setter([])
+      return
+    }
+    try {
+      const res = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=5`)
+      const data = await res.json()
+      if (data && data.features) {
+        const results = data.features.map((f: any) => ({
+          name: f.properties.name,
+          city: f.properties.city || f.properties.county,
+          state: f.properties.state
+        })).filter((s: Suggestion) => s.name)
+        setter(results)
+      }
+    } catch (e) {
+      setter([])
     }
   }
 
@@ -183,12 +248,13 @@ function App() {
   return (
     <div className="relative w-full h-screen bg-zinc-900 text-white">
       <div className="absolute inset-0 z-0">
-        <MapContainer center={defaultPosition} zoom={12} style={{ height: '100%', width: '100%' }} zoomControl={false}>
+        <MapContainer center={currentPosition} zoom={14} style={{ height: '100%', width: '100%' }} zoomControl={false}>
+          <ChangeView center={currentPosition} />
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
-          <Marker position={defaultPosition}>
+          <Marker position={currentPosition}>
             <Popup>You are here.</Popup>
           </Marker>
           
@@ -205,7 +271,7 @@ function App() {
       </div>
 
       <div className="absolute bottom-0 left-0 right-0 z-10 p-4 pb-8 bg-gradient-to-t from-black/90 to-transparent">
-        <div className="bg-zinc-900/95 backdrop-blur-md border border-zinc-800 p-6 rounded-3xl shadow-2xl max-w-md mx-auto">
+        <div className="bg-zinc-900/95 backdrop-blur-md border border-zinc-800 p-6 rounded-3xl shadow-2xl max-w-md mx-auto relative">
           <h1 className="text-3xl font-bold tracking-tight text-white mb-1">RYVO</h1>
           
           {status === 'accepted' ? (
@@ -289,21 +355,62 @@ function App() {
           ) : (
             <>
               <p className="text-zinc-400 text-sm mb-6 font-medium">Where to?</p>
-              <div className="space-y-4">
-                <input 
-                  type="text" 
-                  value={pickup}
-                  onChange={(e) => setPickup(e.target.value)}
-                  placeholder="Enter pickup location (e.g., Brooklyn, NY)" 
-                  className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-white transition-all"
-                />
-                <input 
-                  type="text" 
-                  value={destination}
-                  onChange={(e) => setDestination(e.target.value)}
-                  placeholder="Enter destination (e.g., Queens, NY)" 
-                  className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-white transition-all"
-                />
+              <div className="space-y-4 relative">
+                <div>
+                  <input 
+                    type="text" 
+                    value={pickup}
+                    onChange={(e) => {
+                      setPickup(e.target.value); 
+                      fetchSuggestions(e.target.value, setPickupSuggestions)
+                    }}
+                    onBlur={() => setTimeout(() => setPickupSuggestions([]), 200)}
+                    placeholder="Enter pickup location" 
+                    className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-white transition-all"
+                  />
+                  {pickupSuggestions.length > 0 && (
+                    <div className="absolute z-50 w-full bg-zinc-800 border border-zinc-700 mt-1 rounded-xl shadow-lg max-h-48 overflow-y-auto">
+                      {pickupSuggestions.map((s, i) => (
+                        <div 
+                          key={i} 
+                          className="px-4 py-2 hover:bg-zinc-700 cursor-pointer text-sm"
+                          onClick={() => { setPickup(`${s.name}, ${s.city || s.state || ''}`); setPickupSuggestions([]); }}
+                        >
+                          <p className="text-white font-medium">{s.name}</p>
+                          <p className="text-zinc-400 text-xs">{s.city ? s.city + ', ' : ''}{s.state}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                
+                <div>
+                  <input 
+                    type="text" 
+                    value={destination}
+                    onChange={(e) => {
+                      setDestination(e.target.value);
+                      fetchSuggestions(e.target.value, setDestSuggestions)
+                    }}
+                    onBlur={() => setTimeout(() => setDestSuggestions([]), 200)}
+                    placeholder="Enter destination" 
+                    className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-white transition-all"
+                  />
+                  {destSuggestions.length > 0 && (
+                    <div className="absolute z-50 w-full bg-zinc-800 border border-zinc-700 mt-1 rounded-xl shadow-lg max-h-48 overflow-y-auto">
+                      {destSuggestions.map((s, i) => (
+                        <div 
+                          key={i} 
+                          className="px-4 py-2 hover:bg-zinc-700 cursor-pointer text-sm"
+                          onClick={() => { setDestination(`${s.name}, ${s.city || s.state || ''}`); setDestSuggestions([]); }}
+                        >
+                          <p className="text-white font-medium">{s.name}</p>
+                          <p className="text-zinc-400 text-xs">{s.city ? s.city + ', ' : ''}{s.state}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
                 
                 <button 
                   onClick={handleEstimate}
