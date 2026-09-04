@@ -60,6 +60,9 @@ function App() {
   const [currentRide, setCurrentRide] = useState<RideRequest | null>(null)
   const [otpInput, setOtpInput] = useState('')
   
+  const [activeModal, setActiveModal] = useState<'none' | 'history' | 'earnings' | 'settings' | 'help'>('none')
+  const [completedRides, setCompletedRides] = useState<any[]>([])
+  
   // Distance helper function
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
     const R = 6371; // km
@@ -101,6 +104,24 @@ function App() {
     })
     return () => unsub()
   }, [])
+  
+  useEffect(() => {
+    if (!user) return
+    const q = query(
+      collection(db, "rides"),
+      where("driverId", "==", user.uid),
+      where("status", "==", "completed")
+    )
+    const unsub = onSnapshot(q, (snapshot) => {
+      const rides = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+      // Sort descending by timestamp manually to avoid requiring a composite index immediately
+      rides.sort((a: any, b: any) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0))
+      setCompletedRides(rides)
+    }, (error) => {
+      console.error("Error fetching completed rides:", error)
+    })
+    return () => unsub()
+  }, [user])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -608,16 +629,16 @@ function App() {
                  </div>
               </div>
               <div className="flex-1 overflow-y-auto py-4">
-                 <button onClick={() => alert("Ride History is coming soon!")} className="w-full text-left px-6 py-4 hover:bg-zinc-800 text-white font-medium flex items-center space-x-4 transition">
+                 <button onClick={() => { setActiveModal('history'); setIsSidebarOpen(false); }} className="w-full text-left px-6 py-4 hover:bg-zinc-800 text-white font-medium flex items-center space-x-4 transition">
                     <span className="text-xl">🕒</span><span>Ride History</span>
                  </button>
-                 <button onClick={() => alert("Earnings Dashboard is coming soon!")} className="w-full text-left px-6 py-4 hover:bg-zinc-800 text-white font-medium flex items-center space-x-4 transition">
+                 <button onClick={() => { setActiveModal('earnings'); setIsSidebarOpen(false); }} className="w-full text-left px-6 py-4 hover:bg-zinc-800 text-white font-medium flex items-center space-x-4 transition">
                     <span className="text-xl">💰</span><span>Earnings</span>
                  </button>
-                 <button onClick={() => alert("Settings is coming soon!")} className="w-full text-left px-6 py-4 hover:bg-zinc-800 text-white font-medium flex items-center space-x-4 transition">
+                 <button onClick={() => { setActiveModal('settings'); setIsSidebarOpen(false); }} className="w-full text-left px-6 py-4 hover:bg-zinc-800 text-white font-medium flex items-center space-x-4 transition">
                     <span className="text-xl">⚙️</span><span>Settings</span>
                  </button>
-                 <button onClick={() => alert("Help & Support is coming soon!")} className="w-full text-left px-6 py-4 hover:bg-zinc-800 text-white font-medium flex items-center space-x-4 transition">
+                 <button onClick={() => { setActiveModal('help'); setIsSidebarOpen(false); }} className="w-full text-left px-6 py-4 hover:bg-zinc-800 text-white font-medium flex items-center space-x-4 transition">
                     <span className="text-xl">❓</span><span>Help & Support</span>
                  </button>
               </div>
@@ -626,6 +647,98 @@ function App() {
                     <span>🚪</span><span>Logout</span>
                  </button>
               </div>
+           </div>
+        </div>
+      )}
+      
+      {/* Modals */}
+      {activeModal !== 'none' && (
+        <div className="absolute inset-0 z-[3000] flex flex-col bg-zinc-950 animate-slide-in">
+           <div className="p-4 border-b border-zinc-800 flex items-center">
+              <button onClick={() => setActiveModal('none')} className="p-2 mr-4 bg-zinc-900 rounded-full hover:bg-zinc-800 transition">
+                 <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+              </button>
+              <h1 className="text-2xl font-bold text-white capitalize">
+                {activeModal === 'help' ? 'Help & Support' : activeModal}
+              </h1>
+           </div>
+           
+           <div className="flex-1 overflow-y-auto p-4">
+              {activeModal === 'history' && (
+                <div className="space-y-4">
+                  {completedRides.length === 0 ? (
+                    <div className="text-center py-10 text-zinc-500">No completed rides yet.</div>
+                  ) : (
+                    completedRides.map(ride => (
+                      <div key={ride.id} className="bg-zinc-900 p-4 rounded-xl border border-zinc-800">
+                        <div className="flex justify-between items-start mb-2">
+                           <div className="text-zinc-400 text-sm">
+                              {ride.timestamp ? new Date(ride.timestamp.seconds * 1000).toLocaleDateString() : 'Unknown Date'}
+                           </div>
+                           <div className="font-bold text-green-500">₹{ride.price?.toFixed(0)}</div>
+                        </div>
+                        <div className="text-white text-sm">
+                           <div className="mb-1"><span className="text-zinc-500">From:</span> {ride.pickup}</div>
+                           <div><span className="text-zinc-500">To:</span> {ride.destination}</div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+              
+              {activeModal === 'earnings' && (
+                <div className="space-y-6">
+                  <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl text-center">
+                    <p className="text-zinc-500 uppercase text-xs font-bold tracking-wider mb-2">Total Lifetime Earnings</p>
+                    <h2 className="text-5xl font-black text-green-500">
+                      ₹{completedRides.reduce((acc, ride) => acc + (ride.price || 0), 0).toFixed(0)}
+                    </h2>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-zinc-900 border border-zinc-800 p-4 rounded-xl text-center">
+                      <p className="text-zinc-500 text-xs uppercase font-bold mb-1">Total Trips</p>
+                      <p className="text-2xl font-bold text-white">{completedRides.length}</p>
+                    </div>
+                    <div className="bg-zinc-900 border border-zinc-800 p-4 rounded-xl text-center">
+                      <p className="text-zinc-500 text-xs uppercase font-bold mb-1">Avg Rating</p>
+                      <p className="text-2xl font-bold text-white">4.9 ★</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {activeModal === 'settings' && (
+                <div className="space-y-4">
+                  <div className="bg-zinc-900 rounded-xl border border-zinc-800 p-4">
+                    <h3 className="text-white font-bold mb-4">Vehicle Details</h3>
+                    <div className="space-y-2 text-sm">
+                      <p className="text-zinc-400">Type: <span className="text-white uppercase">{driverProfile?.vehicleType}</span></p>
+                      <p className="text-zinc-400">Number: <span className="text-white">{driverProfile?.vehicleNumber}</span></p>
+                      <p className="text-zinc-400">Color: <span className="text-white">{driverProfile?.vehicleColor}</span></p>
+                    </div>
+                  </div>
+                  <div className="bg-zinc-900 rounded-xl border border-zinc-800 p-4">
+                    <h3 className="text-white font-bold mb-4">Account</h3>
+                    <button className="w-full py-3 bg-zinc-800 text-white rounded-lg font-medium hover:bg-zinc-700 transition">Change Password</button>
+                  </div>
+                </div>
+              )}
+              
+              {activeModal === 'help' && (
+                <div className="space-y-4">
+                  <div className="bg-zinc-900 rounded-xl border border-zinc-800 p-4">
+                     <h3 className="text-white font-bold mb-2">Safety Toolkit</h3>
+                     <p className="text-zinc-400 text-sm mb-4">Access emergency services and share your ride details.</p>
+                     <button className="w-full py-3 bg-red-500/10 text-red-500 font-bold rounded-lg hover:bg-red-500/20 transition">Emergency SOS</button>
+                  </div>
+                  <div className="bg-zinc-900 rounded-xl border border-zinc-800 p-4">
+                     <h3 className="text-white font-bold mb-2">Support Tickets</h3>
+                     <p className="text-zinc-400 text-sm mb-4">You have no active support tickets.</p>
+                     <button className="w-full py-3 bg-zinc-800 text-white rounded-lg font-medium hover:bg-zinc-700 transition">Contact Support</button>
+                  </div>
+                </div>
+              )}
            </div>
         </div>
       )}
