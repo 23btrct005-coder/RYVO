@@ -20,6 +20,19 @@ let DefaultIcon = L.icon({
 })
 L.Marker.prototype.options.icon = DefaultIcon
 
+const createVehicleIcon = (type: string) => {
+  let emoji = '🚗'; // default MINI
+  if (type.toUpperCase() === 'AUTO') emoji = '🛺';
+  if (type.toUpperCase() === 'BIKE') emoji = '🛵';
+  
+  return L.divIcon({
+    html: `<div style="background-color: white; border: 2px solid #3b82f6; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);">${emoji}</div>`,
+    className: 'custom-vehicle-marker',
+    iconSize: [40, 40],
+    iconAnchor: [20, 20]
+  });
+}
+
 type VehicleType = 'bike' | 'auto' | 'mini'
 
 interface Suggestion {
@@ -301,6 +314,7 @@ function App() {
             name: data.driverName,
             vehicleColor: data.driverVehicleColor,
             vehicleNumber: data.driverVehicleNumber,
+            vehicleType: data.driverVehicleType || data.vehicleType || 'MINI',
             phone: data.driverPhone
           })
         }
@@ -365,7 +379,7 @@ function App() {
           )}
 
           {driverLocation && (
-            <Marker position={driverLocation}>
+            <Marker position={driverLocation} icon={createVehicleIcon(driverDetails?.vehicleType || 'MINI')}>
               <Popup>Driver is here</Popup>
             </Marker>
           )}

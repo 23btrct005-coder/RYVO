@@ -349,6 +349,7 @@ function App() {
         driverName: driverProfileRef.current?.name || 'Your Driver',
         driverVehicleColor: driverProfileRef.current?.vehicleColor || 'White',
         driverVehicleNumber: driverProfileRef.current?.vehicleNumber || 'XX-00-0000',
+        driverVehicleType: driverProfileRef.current?.vehicleType || 'MINI',
         driverPhone: driverProfileRef.current?.phone || '',
         driverEmail: user?.email || email || ''
       });
