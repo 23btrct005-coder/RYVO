@@ -256,6 +256,22 @@ function App() {
     }
   }
 
+  const cancelRide = async () => {
+    if (!currentRideId) return;
+    try {
+      await updateDoc(doc(db, "rides", currentRideId), {
+        status: 'cancelled'
+      });
+      setStatus('idle');
+      setCurrentRideId(null);
+      setDriverDetails(null);
+      setDriverLocation(null);
+      setRouteGeometry(null);
+    } catch(e) {
+      console.error("Cancel failed", e);
+    }
+  }
+
   const handleConfirmRide = async () => {
     setStatus('searching')
     setErrorMessage(null)
@@ -463,6 +479,15 @@ function App() {
                        <p className="text-white text-3xl font-black tracking-[0.2em]">{otp}</p>
                     </div>
                   )}
+
+                  {['accepted', 'arrived'].includes(status) && (
+                    <button 
+                      onClick={cancelRide}
+                      className="w-full mt-4 bg-red-900/40 text-red-400 border border-red-900/50 hover:bg-red-900/60 font-bold py-3 rounded-xl transition"
+                    >
+                      Cancel Ride
+                    </button>
+                  )}
                   
                   {status === 'completed' && !hasRated && (
                     <div className="mt-4 bg-zinc-900 border border-zinc-700 rounded-xl p-4">
@@ -529,7 +554,13 @@ function App() {
           ) : status === 'searching' ? (
             <div className="text-center py-8">
                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
-               <p className="text-zinc-300 font-medium animate-pulse">Finding a nearby driver...</p>
+               <p className="text-zinc-300 font-medium animate-pulse mb-6">Finding a nearby driver...</p>
+               <button 
+                 onClick={cancelRide}
+                 className="w-full bg-red-900/40 text-red-400 border border-red-900/50 hover:bg-red-900/60 font-bold py-3 rounded-xl transition"
+               >
+                 Cancel Request
+               </button>
             </div>
           ) : status === 'confirming' ? (
             <div className="py-2">

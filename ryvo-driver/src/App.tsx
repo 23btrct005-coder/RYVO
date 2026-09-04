@@ -348,6 +348,21 @@ function App() {
     return () => unsub();
   }, [isOnline, currentRide]);
 
+  // Listen for current ride status changes (like rider cancellation)
+  useEffect(() => {
+    if (!currentRide) return;
+    const unsub = onSnapshot(doc(db, "rides", currentRide.id), (docSnap) => {
+      const data = docSnap.data();
+      if (data && data.status === 'cancelled') {
+        alert("The rider has cancelled the ride request.");
+        setCurrentRide(null);
+        setAppState('online');
+        setRouteGeometry(null);
+      }
+    });
+    return () => unsub();
+  }, [currentRide]);
+
   const playNotificationSound = () => {
     try {
       if (navigator.vibrate) {
