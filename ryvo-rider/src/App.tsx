@@ -7,7 +7,7 @@ import icon from 'leaflet/dist/images/marker-icon.png'
 import iconShadow from 'leaflet/dist/images/marker-shadow.png'
 
 import { db, auth } from './firebase'
-import { collection, addDoc, onSnapshot, doc } from 'firebase/firestore'
+import { collection, addDoc, onSnapshot, doc, getDoc, setDoc } from 'firebase/firestore'
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged } from 'firebase/auth'
 import type { User } from 'firebase/auth'
 import { Geolocation } from '@capacitor/geolocation'
@@ -38,8 +38,13 @@ function ChangeView({ center }: { center: [number, number] }) {
 
 function App() {
   const [user, setUser] = useState<User | null>(null)
+  const [riderProfile, setRiderProfile] = useState<any>(null)
+  
+  const [isSignupMode, setIsSignupMode] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [name, setName] = useState('')
+  const [phone, setPhone] = useState('')
   
   const [pickup, setPickup] = useState('')
   const [destination, setDestination] = useState('')
@@ -62,8 +67,19 @@ function App() {
   const [destCoords, setDestCoords] = useState<[number, number] | null>(null)
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (currentUser) => {
+    const unsub = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser)
+      if (currentUser) {
+        // Fetch rider profile
+        try {
+           const docSnap = await getDoc(doc(db, "riders", currentUser.uid))
+           if (docSnap.exists()) {
+             setRiderProfile(docSnap.data())
+           }
+        } catch(e) {}
+      } else {
+        setRiderProfile(null)
+      }
     })
     return () => unsub()
   }, [])
@@ -126,8 +142,19 @@ function App() {
       alert("Please enter a password that is at least 6 characters long.")
       return
     }
+    if (!name || !phone) {
+      alert("Please fill in your name and phone number.")
+      return
+    }
     try {
-      await createUserWithEmailAndPassword(auth, email, password)
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password)
+      
+      // Save rider profile
+      await setDoc(doc(db, "riders", userCredential.user.uid), {
+        name,
+        phone,
+        createdAt: new Date()
+      })
     } catch (error: any) {
       alert("Sign Up Failed: " + error.message)
     }
@@ -273,14 +300,26 @@ function App() {
       <div className="flex flex-col items-center justify-center min-h-screen bg-black text-white w-full">
         <div className="p-8 max-w-md w-full bg-zinc-900 rounded-3xl shadow-2xl border border-zinc-800">
           <h1 className="text-4xl font-bold text-center mb-8">RYVO Rider</h1>
-          <form className="space-y-4">
-            <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} className="w-full bg-zinc-800 text-white rounded-xl px-4 py-3" />
-            <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-zinc-800 text-white rounded-xl px-4 py-3" />
-            <div className="flex space-x-3">
-              <button onClick={handleLogin} type="button" className="flex-1 bg-white text-black font-bold py-4 rounded-xl">Login</button>
-              <button onClick={handleSignUp} type="button" className="flex-1 bg-zinc-700 text-white font-bold py-4 rounded-xl">Sign Up</button>
-            </div>
-          </form>
+          <div className="flex bg-zinc-800 rounded-xl p-1 mb-6">
+            <button onClick={() => setIsSignupMode(false)} className={`flex-1 py-2 text-sm font-bold rounded-lg transition-colors ${!isSignupMode ? 'bg-white text-black' : 'text-zinc-400'}`}>Login</button>
+            <button onClick={() => setIsSignupMode(true)} className={`flex-1 py-2 text-sm font-bold rounded-lg transition-colors ${isSignupMode ? 'bg-white text-black' : 'text-zinc-400'}`}>Sign Up</button>
+          </div>
+
+          {!isSignupMode ? (
+            <form onSubmit={handleLogin} className="space-y-4">
+              <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} className="w-full bg-zinc-800 text-white rounded-xl px-4 py-3" />
+              <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-zinc-800 text-white rounded-xl px-4 py-3" />
+              <button type="submit" className="w-full bg-white text-black font-bold py-4 rounded-xl hover:bg-zinc-200 mt-2">Login</button>
+            </form>
+          ) : (
+            <form onSubmit={handleSignUp} className="space-y-4">
+              <input type="text" placeholder="Full Name" value={name} onChange={e => setName(e.target.value)} className="w-full bg-zinc-800 text-white rounded-xl px-4 py-3" />
+              <input type="tel" placeholder="Phone Number" value={phone} onChange={e => setPhone(e.target.value)} className="w-full bg-zinc-800 text-white rounded-xl px-4 py-3" />
+              <input type="email" placeholder="Email Address" value={email} onChange={e => setEmail(e.target.value)} className="w-full bg-zinc-800 text-white rounded-xl px-4 py-3" />
+              <input type="password" placeholder="Password (min 6 chars)" value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-zinc-800 text-white rounded-xl px-4 py-3" />
+              <button type="submit" className="w-full bg-blue-600 text-white font-bold py-4 rounded-xl hover:bg-blue-500 mt-2">Create Rider Account</button>
+            </form>
+          )}
         </div>
       </div>
     )
@@ -530,10 +569,10 @@ function App() {
               <div className="p-6 bg-zinc-900 border-b border-zinc-800">
                  <div className="flex items-center space-x-4 mb-4">
                     <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center text-2xl font-bold border-2 border-blue-400">
-                       {user?.email?.charAt(0)?.toUpperCase() || 'R'}
+                       {riderProfile?.name?.charAt(0) || user?.email?.charAt(0)?.toUpperCase() || 'R'}
                     </div>
                     <div>
-                       <h2 className="text-xl font-bold text-white">Rider</h2>
+                       <h2 className="text-xl font-bold text-white">{riderProfile?.name || 'Rider'}</h2>
                        <p className="text-zinc-400 text-sm">5.0 ★ Rating</p>
                     </div>
                  </div>
