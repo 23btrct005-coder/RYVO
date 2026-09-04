@@ -32,6 +32,7 @@ interface RideRequest {
   destCoords?: [number, number];
   timestamp?: any;
   otp?: string;
+  riderPhone?: string;
 }
 
 function ChangeView({ center }: { center: [number, number] }) {
@@ -536,6 +537,11 @@ function App() {
              <div className="mb-6">
                <p className="text-blue-600 text-xs font-bold uppercase tracking-wider mb-1">Navigating to Pickup</p>
                <h2 className="text-2xl font-bold text-black truncate">{currentRide.pickup}</h2>
+               {currentRide.riderPhone && (
+                 <a href={`tel:${currentRide.riderPhone}`} className="inline-block mt-2 text-sm font-bold text-green-600 bg-green-50 px-3 py-1.5 rounded-lg border border-green-200">
+                   📞 Call Rider: {currentRide.riderPhone}
+                 </a>
+               )}
              </div>
              <button 
                onClick={handleArrived} 
@@ -557,6 +563,11 @@ function App() {
                </div>
                <h2 className="text-2xl font-bold text-black">Enter OTP</h2>
                <p className="text-zinc-500 text-sm mt-1">Ask the rider for their 4-digit PIN.</p>
+               {currentRide.riderPhone && (
+                 <a href={`tel:${currentRide.riderPhone}`} className="inline-block mt-2 text-sm font-bold text-green-600 bg-green-50 px-3 py-1.5 rounded-lg border border-green-200">
+                   📞 Call Rider: {currentRide.riderPhone}
+                 </a>
+               )}
                
                <input 
                  type="text" 
@@ -581,6 +592,11 @@ function App() {
              <div className="mb-6">
                <p className="text-green-600 text-xs font-bold uppercase tracking-wider mb-1">Navigating to Dropoff</p>
                <h2 className="text-2xl font-bold text-black truncate">{currentRide.destination}</h2>
+               {currentRide.riderPhone && (
+                 <a href={`tel:${currentRide.riderPhone}`} className="inline-block mt-2 text-sm font-bold text-green-600 bg-green-50 px-3 py-1.5 rounded-lg border border-green-200">
+                   📞 Call Rider: {currentRide.riderPhone}
+                 </a>
+               )}
              </div>
              <button 
                onClick={handleCompleteRide} 

@@ -300,7 +300,8 @@ function App() {
           setDriverDetails({
             name: data.driverName,
             vehicleColor: data.driverVehicleColor,
-            vehicleNumber: data.driverVehicleNumber
+            vehicleNumber: data.driverVehicleNumber,
+            phone: data.driverPhone
           })
         }
         
@@ -403,6 +404,11 @@ function App() {
                         {driverDetails?.vehicleNumber || 'XX00XX'}
                      </p>
                      <p className="text-zinc-400 text-xs mt-1 font-bold uppercase">{driverDetails?.vehicleColor || ''} {selectedVehicle}</p>
+                     {driverDetails?.phone && (
+                        <a href={`tel:${driverDetails.phone}`} className="inline-block mt-2 text-sm font-bold text-green-400 bg-green-500/10 px-2 py-1 rounded hover:bg-green-500/20">
+                          📞 {driverDetails.phone}
+                        </a>
+                     )}
                   </div>
                </div>
                
