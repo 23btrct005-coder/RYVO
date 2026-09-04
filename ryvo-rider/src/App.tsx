@@ -75,6 +75,8 @@ function App() {
   const [review, setReview] = useState<string>('')
   const [hasRated, setHasRated] = useState<boolean>(false)
   
+  const [onlineDrivers, setOnlineDrivers] = useState<any[]>([])
+  
   const [selectedVehicle, setSelectedVehicle] = useState<VehicleType>('mini')
   
   const [currentPosition, setCurrentPosition] = useState<[number, number]>([40.7128, -74.0060])
@@ -128,6 +130,26 @@ function App() {
     }
     getLocation()
   }, [])
+
+  // Listen for online drivers in real-time
+  useEffect(() => {
+    if (!user || (status !== 'idle' && status !== 'estimating')) return;
+    
+    const unsub = onSnapshot(
+      collection(db, "drivers"), 
+      (snapshot) => {
+        const drivers: any[] = []
+        snapshot.forEach(doc => {
+          const data = doc.data()
+          if (data.isOnline && data.lat && data.lng) {
+            drivers.push({ id: doc.id, ...data })
+          }
+        })
+        setOnlineDrivers(drivers)
+      }
+    )
+    return () => unsub()
+  }, [user, status])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -405,6 +427,17 @@ function App() {
           {routeGeometry && (
              <Polyline positions={routeGeometry} color="black" weight={6} opacity={0.8} />
           )}
+
+          {/* Show Online Drivers when idling or estimating */}
+          {(status === 'idle' || status === 'estimating') && onlineDrivers.map(driver => (
+            <Marker 
+               key={driver.id} 
+               position={[driver.lat, driver.lng]} 
+               icon={createVehicleIcon(driver.vehicleType || 'mini')}
+               zIndexOffset={100}
+            />
+          ))}
+
 
           {driverLocation && (
             <Marker position={driverLocation} icon={createVehicleIcon(driverDetails?.vehicleType || 'MINI')}>

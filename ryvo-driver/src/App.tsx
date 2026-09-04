@@ -285,6 +285,11 @@ function App() {
                   driverLat: position.coords.latitude,
                   driverLng: position.coords.longitude
                 })
+              } else if (isOnline && user) {
+                updateDoc(doc(db, "drivers", user.uid), {
+                  lat: position.coords.latitude,
+                  lng: position.coords.longitude
+                })
               }
             }
           });
@@ -495,14 +500,28 @@ function App() {
     setAppState('online')
   }
 
-  const toggleOnline = () => {
-    if (!driverProfile) {
+  const toggleOnline = async () => {
+    if (!driverProfile || !user) {
       alert("Error: Driver profile not found. If you created this account on the Rider app, please create a new Driver account.");
       return;
     }
     const newState = !isOnline
     setIsOnline(newState)
     setAppState(newState ? 'online' : 'idle')
+    
+    // Update online status in Firestore
+    try {
+      await updateDoc(doc(db, "drivers", user.uid), {
+        isOnline: newState,
+        // Also update initial location if going online
+        ...(newState && driverPosition ? {
+          lat: driverPosition[0],
+          lng: driverPosition[1]
+        } : {})
+      })
+    } catch (e) {
+      console.error("Error updating online status:", e)
+    }
   }
 
   if (!user) {
