@@ -7,7 +7,7 @@ import icon from 'leaflet/dist/images/marker-icon.png'
 import iconShadow from 'leaflet/dist/images/marker-shadow.png'
 
 import { db, auth } from './firebase'
-import { collection, query, where, onSnapshot, doc, updateDoc } from 'firebase/firestore'
+import { collection, query, where, onSnapshot, doc, updateDoc, setDoc, getDoc } from 'firebase/firestore'
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged } from 'firebase/auth'
 import type { User } from 'firebase/auth'
 import { Geolocation } from '@capacitor/geolocation'
@@ -40,8 +40,16 @@ function ChangeView({ center }: { center: [number, number] }) {
 
 function App() {
   const [user, setUser] = useState<User | null>(null)
+  const [driverProfile, setDriverProfile] = useState<any>(null)
+  
+  const [isSignupMode, setIsSignupMode] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [name, setName] = useState('')
+  const [phone, setPhone] = useState('')
+  const [vehicleType, setVehicleType] = useState('MINI')
+  const [vehicleColor, setVehicleColor] = useState('')
+  const [vehicleNumber, setVehicleNumber] = useState('')
 
   const [isOnline, setIsOnline] = useState(false)
   const [appState, setAppState] = useState<'idle' | 'online' | 'incoming' | 'accepted' | 'arrived' | 'in_transit' | 'completed'>('idle')
@@ -54,8 +62,16 @@ function App() {
   const watchIdRef = useRef<string | null>(null)
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (currentUser) => {
+    const unsub = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser)
+      if (currentUser) {
+        const docSnap = await getDoc(doc(db, "drivers", currentUser.uid))
+        if (docSnap.exists()) {
+          setDriverProfile(docSnap.data())
+        }
+      } else {
+        setDriverProfile(null)
+      }
     })
     return () => unsub()
   }, [])
@@ -83,8 +99,22 @@ function App() {
       alert("Please enter a password that is at least 6 characters long.")
       return
     }
+    if (!name || !phone || !vehicleColor || !vehicleNumber) {
+      alert("Please fill in all details.")
+      return
+    }
     try {
-      await createUserWithEmailAndPassword(auth, email, password)
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password)
+      
+      const profileData = {
+        name,
+        phone,
+        vehicleType,
+        vehicleColor,
+        vehicleNumber
+      }
+      await setDoc(doc(db, "drivers", userCredential.user.uid), profileData)
+      setDriverProfile(profileData)
     } catch (error: any) {
       alert("Sign Up Failed: " + error.message)
     }
@@ -189,7 +219,11 @@ function App() {
         status: 'accepted',
         driverId: user?.uid,
         driverLat: driverPosition[0],
-        driverLng: driverPosition[1]
+        driverLng: driverPosition[1],
+        driverName: driverProfile?.name || 'Your Driver',
+        driverVehicleColor: driverProfile?.vehicleColor || 'White',
+        driverVehicleNumber: driverProfile?.vehicleNumber || 'XX-00-0000',
+        driverPhone: driverProfile?.phone || ''
       });
       setCurrentRide(incomingRequest)
       setIncomingRequest(null)
@@ -251,14 +285,38 @@ function App() {
       <div className="flex flex-col items-center justify-center min-h-screen bg-black text-white w-full">
         <div className="p-8 max-w-md w-full bg-zinc-900 rounded-3xl shadow-2xl border border-zinc-800">
           <h1 className="text-4xl font-bold text-center mb-8">RYVO Driver</h1>
-          <form className="space-y-4">
-            <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} className="w-full bg-zinc-800 text-white rounded-xl px-4 py-3" />
-            <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-zinc-800 text-white rounded-xl px-4 py-3" />
-            <div className="flex space-x-3">
-              <button onClick={handleLogin} type="button" className="flex-1 bg-white text-black font-bold py-4 rounded-xl hover:bg-zinc-200">Login</button>
-              <button onClick={handleSignUp} type="button" className="flex-1 bg-zinc-700 text-white font-bold py-4 rounded-xl hover:bg-zinc-600">Sign Up</button>
-            </div>
-          </form>
+          
+          <div className="flex bg-zinc-800 rounded-xl p-1 mb-6">
+            <button onClick={() => setIsSignupMode(false)} className={`flex-1 py-2 text-sm font-bold rounded-lg transition-colors ${!isSignupMode ? 'bg-white text-black' : 'text-zinc-400'}`}>Login</button>
+            <button onClick={() => setIsSignupMode(true)} className={`flex-1 py-2 text-sm font-bold rounded-lg transition-colors ${isSignupMode ? 'bg-white text-black' : 'text-zinc-400'}`}>Sign Up</button>
+          </div>
+
+          {!isSignupMode ? (
+            <form onSubmit={handleLogin} className="space-y-4">
+              <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} className="w-full bg-zinc-800 text-white rounded-xl px-4 py-3" />
+              <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-zinc-800 text-white rounded-xl px-4 py-3" />
+              <button type="submit" className="w-full bg-white text-black font-bold py-4 rounded-xl hover:bg-zinc-200 mt-2">Login</button>
+            </form>
+          ) : (
+            <form onSubmit={handleSignUp} className="space-y-4">
+              <input type="text" placeholder="Full Name" value={name} onChange={e => setName(e.target.value)} className="w-full bg-zinc-800 text-white rounded-xl px-4 py-3" />
+              <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} className="w-full bg-zinc-800 text-white rounded-xl px-4 py-3" />
+              <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-zinc-800 text-white rounded-xl px-4 py-3" />
+              <input type="tel" placeholder="Phone Number" value={phone} onChange={e => setPhone(e.target.value)} className="w-full bg-zinc-800 text-white rounded-xl px-4 py-3" />
+              
+              <div className="flex space-x-2">
+                <select value={vehicleType} onChange={e => setVehicleType(e.target.value)} className="flex-1 bg-zinc-800 text-white rounded-xl px-4 py-3">
+                  <option value="MINI">Mini (Car)</option>
+                  <option value="AUTO">Auto</option>
+                  <option value="BIKE">Bike</option>
+                </select>
+                <input type="text" placeholder="Color (e.g. White)" value={vehicleColor} onChange={e => setVehicleColor(e.target.value)} className="flex-1 bg-zinc-800 text-white rounded-xl px-4 py-3" />
+              </div>
+              <input type="text" placeholder="License Plate (e.g. KA-01-AB-1234)" value={vehicleNumber} onChange={e => setVehicleNumber(e.target.value)} className="w-full bg-zinc-800 text-white rounded-xl px-4 py-3 uppercase" />
+              
+              <button type="submit" className="w-full bg-blue-600 text-white font-bold py-4 rounded-xl hover:bg-blue-500 mt-2">Create Driver Account</button>
+            </form>
+          )}
         </div>
       </div>
     )

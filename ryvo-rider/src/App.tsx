@@ -45,8 +45,8 @@ function App() {
   const [destination, setDestination] = useState('')
   const [status, setStatus] = useState<'idle' | 'estimating' | 'confirming' | 'searching' | 'accepted'>('idle')
   const [currentRideId, setCurrentRideId] = useState<string | null>(null)
-  
   const [driverLocation, setDriverLocation] = useState<[number, number] | null>(null)
+  const [driverDetails, setDriverDetails] = useState<any>(null)
   const [routeGeometry, setRouteGeometry] = useState<[number, number][] | null>(null)
   const [distance, setDistance] = useState<number>(0)
   
@@ -220,6 +220,11 @@ function App() {
       const data = docSnap.data();
       if (data && data.status === 'accepted') {
         setStatus('accepted')
+        setDriverDetails({
+          name: data.driverName,
+          vehicleColor: data.driverVehicleColor,
+          vehicleNumber: data.driverVehicleNumber
+        })
         if (data.driverLat && data.driverLng) {
            setDriverLocation([data.driverLat, data.driverLng])
         }
@@ -276,13 +281,29 @@ function App() {
           <h1 className="text-3xl font-bold tracking-tight text-white mb-1">RYVO</h1>
           
           {status === 'accepted' ? (
-             <div className="text-center py-4">
-               <div className="inline-block p-4 bg-green-500/20 rounded-full mb-4">
-                  <svg className="w-12 h-12 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
+             <div className="py-2">
+               <div className="flex items-center justify-between bg-zinc-800 p-4 rounded-2xl mb-4 border border-zinc-700">
+                  <div className="flex items-center space-x-4">
+                     <div className="w-14 h-14 bg-blue-600 rounded-full flex items-center justify-center text-xl font-bold border-2 border-blue-400">
+                        {driverDetails?.name?.charAt(0) || 'D'}
+                     </div>
+                     <div>
+                        <h2 className="text-xl font-bold text-white">{driverDetails?.name || 'Driver'}</h2>
+                        <p className="text-zinc-400 text-sm font-medium">4.9 ★ • 1.2 km away</p>
+                     </div>
+                  </div>
+                  <div className="text-right">
+                     <p className="bg-zinc-900 border border-zinc-600 px-3 py-1 rounded-md font-mono font-bold text-white tracking-widest text-lg shadow-sm">
+                        {driverDetails?.vehicleNumber || 'XX00XX'}
+                     </p>
+                     <p className="text-zinc-400 text-xs mt-1 font-bold uppercase">{driverDetails?.vehicleColor || ''} {selectedVehicle}</p>
+                  </div>
                </div>
-               <h2 className="text-2xl font-bold text-white mb-2">Driver is on the way!</h2>
-               <p className="text-zinc-400">Vehicle: <span className="uppercase text-white font-bold">{selectedVehicle}</span></p>
-               <p className="text-zinc-400">Payment: Cash after drop</p>
+               
+               <div className="bg-green-600/20 border border-green-500/50 p-4 rounded-xl text-center">
+                  <h3 className="text-green-400 font-bold mb-1">Driver is on the way!</h3>
+                  <p className="text-green-200/70 text-sm">Please meet your driver at the pickup location.</p>
+               </div>
              </div>
           ) : status === 'searching' ? (
             <div className="text-center py-8">
