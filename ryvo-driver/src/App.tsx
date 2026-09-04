@@ -8,7 +8,7 @@ import iconShadow from 'leaflet/dist/images/marker-shadow.png'
 
 import { db, auth } from './firebase'
 import { collection, query, where, onSnapshot, doc, updateDoc, setDoc, getDoc } from 'firebase/firestore'
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged } from 'firebase/auth'
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from 'firebase/auth'
 import type { User } from 'firebase/auth'
 import { Geolocation } from '@capacitor/geolocation'
 
@@ -117,7 +117,7 @@ function App() {
 
   const handleLogout = async () => {
     try {
-      await auth.signOut()
+      await signOut(auth)
       setIsSidebarOpen(false)
     } catch (e) {
       console.error(e)
@@ -608,16 +608,16 @@ function App() {
                  </div>
               </div>
               <div className="flex-1 overflow-y-auto py-4">
-                 <button className="w-full text-left px-6 py-4 hover:bg-zinc-800 text-white font-medium flex items-center space-x-4 transition">
+                 <button onClick={() => alert("Ride History is coming soon!")} className="w-full text-left px-6 py-4 hover:bg-zinc-800 text-white font-medium flex items-center space-x-4 transition">
                     <span className="text-xl">🕒</span><span>Ride History</span>
                  </button>
-                 <button className="w-full text-left px-6 py-4 hover:bg-zinc-800 text-white font-medium flex items-center space-x-4 transition">
+                 <button onClick={() => alert("Earnings Dashboard is coming soon!")} className="w-full text-left px-6 py-4 hover:bg-zinc-800 text-white font-medium flex items-center space-x-4 transition">
                     <span className="text-xl">💰</span><span>Earnings</span>
                  </button>
-                 <button className="w-full text-left px-6 py-4 hover:bg-zinc-800 text-white font-medium flex items-center space-x-4 transition">
+                 <button onClick={() => alert("Settings is coming soon!")} className="w-full text-left px-6 py-4 hover:bg-zinc-800 text-white font-medium flex items-center space-x-4 transition">
                     <span className="text-xl">⚙️</span><span>Settings</span>
                  </button>
-                 <button className="w-full text-left px-6 py-4 hover:bg-zinc-800 text-white font-medium flex items-center space-x-4 transition">
+                 <button onClick={() => alert("Help & Support is coming soon!")} className="w-full text-left px-6 py-4 hover:bg-zinc-800 text-white font-medium flex items-center space-x-4 transition">
                     <span className="text-xl">❓</span><span>Help & Support</span>
                  </button>
               </div>
