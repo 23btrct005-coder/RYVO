@@ -188,12 +188,15 @@ function App() {
 
   const handleLogout = async () => {
     try {
-      await supabase.auth.signOut()
+      const { error } = await supabase.auth.signOut()
+      if (error) {
+        console.error("Sign out failed on server, forcing local logout:", error)
+      }
     } catch (e) {
-      console.error("Sign out failed on server, forcing local logout:", e)
-      // Force clear local storage if server fails (e.g. user was deleted from DB)
-      localStorage.clear()
+      console.error("Sign out exception:", e)
     } finally {
+      // Always forcefully clear local storage to prevent ghost sessions
+      localStorage.clear()
       setIsSidebarOpen(false)
       setUser(null)
       setDriverProfile(null)
