@@ -1,3 +1,4 @@
+// Vercel Production Trigger: 2026-09-05T19:55:00
 import { useState, useEffect, useRef } from 'react'
 import Map, { Marker, Source, Layer } from 'react-map-gl/mapbox'
 import type { MapRef } from 'react-map-gl/mapbox'
