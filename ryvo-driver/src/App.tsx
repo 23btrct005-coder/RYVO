@@ -137,6 +137,11 @@ function App() {
              
            if (error) {
              console.error("Failed to fetch driver profile:", error);
+             if (error.code === 'PGRST116') {
+                console.warn("User is not a driver. Forcing logout.");
+                await supabase.auth.signOut();
+                setUser(null);
+             }
            }
            if (data) {
              setDriverProfile(data)
@@ -159,7 +164,14 @@ function App() {
   // Robust fetch: If we have a user from getSession but driverProfile is still null, fetch it
   useEffect(() => {
     if (user && !driverProfile) {
-      supabase.from('drivers').select('*').eq('id', user.id).single().then(({ data }) => {
+      supabase.from('drivers').select('*').eq('id', user.id).single().then(({ data, error }) => {
+        if (error) {
+          console.error("Robust fetch error:", error);
+          if (error.code === 'PGRST116') {
+             console.warn("Robust fetch: User is not a driver. Forcing logout.");
+             supabase.auth.signOut().then(() => setUser(null));
+          }
+        }
         if (data) {
           setDriverProfile(data);
           setAppState(data.isonline ? 'online' : 'idle');
