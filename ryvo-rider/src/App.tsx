@@ -149,6 +149,12 @@ function App() {
   const [review, setReview] = useState<string>('')
   const [hasRated, setHasRated] = useState<boolean>(false)
   
+  // Tip, Session Timeout, and Alternative Vehicle Suggestion state
+  const [tipAmount, setTipAmount] = useState<number>(0);
+  const [searchingTimer, setSearchingTimer] = useState<number>(30);
+  const [noDriverFound, setNoDriverFound] = useState<boolean>(false);
+  const [suggestedVehicle, setSuggestedVehicle] = useState<VehicleType | null>(null);
+
   const [onlineDrivers, setOnlineDrivers] = useState<any[]>([])
   
     
@@ -786,14 +792,23 @@ function App() {
     }
   }
 
-  const handleConfirmRide = async () => {
-    setStatus('searching')
-    setErrorMessage(null)
-    console.log("Confirm Ride clicked. Attempting to insert into 'rides' table...");
+  const handleConfirmRide = async (overrideVehicle?: VehicleType) => {
+    const vehicleToBook = overrideVehicle || selectedVehicle;
+    if (overrideVehicle) {
+      setSelectedVehicle(overrideVehicle);
+    }
+    setStatus('searching');
+    setSearchingTimer(30);
+    setNoDriverFound(false);
+    setErrorMessage(null);
+    console.log("Confirm Ride clicked. Booking vehicle:", vehicleToBook);
     
     try {
       const generatedOtp = Math.floor(1000 + Math.random() * 9000).toString();
       setOtp(generatedOtp);
+
+      const basePrice = getPrice(vehicleToBook, distance);
+      const totalPrice = Number((basePrice + tipAmount).toFixed(2));
 
       const rideData = {
         riderid: user?.id,
@@ -804,8 +819,8 @@ function App() {
         destlat: destCoords?.[0],
         destlng: destCoords?.[1],
         status: 'pending',
-        vehicletype: selectedVehicle,
-        price: getPrice(selectedVehicle, distance),
+        vehicletype: vehicleToBook,
+        price: totalPrice,
         distance: distance,
         otp: generatedOtp
       };
@@ -822,6 +837,36 @@ function App() {
       setStatus('idle')
     }
   }
+
+  // 30-Second Searching Session Timeout & Vehicle Recommendation
+  useEffect(() => {
+    let timer: any;
+    if (status === 'searching') {
+      setSearchingTimer(30);
+      timer = setInterval(() => {
+        setSearchingTimer(prev => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            // Session Timeout reached - automatically cancel current unaccepted ride
+            if (currentRideId) {
+              supabase.from('rides').update({ status: 'cancelled' }).eq('id', currentRideId);
+            }
+            // Recommend alternative vehicle
+            const altVehicle: VehicleType = selectedVehicle === 'bike' ? 'auto' : selectedVehicle === 'auto' ? 'bike' : 'auto';
+            setSuggestedVehicle(altVehicle);
+            setNoDriverFound(true);
+            setStatus('idle');
+            setCurrentRideId(null);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } else {
+      setSearchingTimer(30);
+    }
+    return () => clearInterval(timer);
+  }, [status, currentRideId, selectedVehicle]);
 
   useEffect(() => {
     if (!currentRideId) return;
@@ -1213,8 +1258,12 @@ function App() {
              </div>
           ) : status === 'searching' ? (
             <div className="text-center py-8">
-               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
-               <p className="text-zinc-300 font-medium animate-pulse mb-6">Finding a nearby driver...</p>
+               <div className="relative w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+                 <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-emerald-400 absolute"></div>
+                 <span className="text-sm font-bold text-emerald-400">{searchingTimer}s</span>
+               </div>
+               <p className="text-zinc-200 font-medium animate-pulse mb-1">Finding a nearby driver...</p>
+               <p className="text-xs text-zinc-400 mb-6">Searching for {selectedVehicle.toUpperCase()} drivers around you ({searchingTimer}s remaining)</p>
                <button 
                  onClick={cancelRide}
                  className="w-full bg-red-900/40 text-red-400 border border-red-900/50 hover:bg-red-900/60 font-bold py-3 rounded-xl transition"
@@ -1231,7 +1280,7 @@ function App() {
                  </span>
                </div>
                
-               <div className="space-y-3 mb-6">
+               <div className="space-y-3 mb-4">
                  {/* Bike */}
                  <div 
                    onClick={() => setSelectedVehicle('bike')}
@@ -1278,11 +1327,40 @@ function App() {
                  </div>
                </div>
 
+               {/* Add Tip Section */}
+               <div className="mb-5 bg-zinc-800/60 p-3.5 rounded-xl border border-zinc-700/60">
+                 <div className="flex items-center justify-between mb-2">
+                   <span className="text-xs font-semibold text-zinc-300 flex items-center gap-1.5">
+                     <span>💚</span> Add a driver tip for faster pickup
+                   </span>
+                   {tipAmount > 0 && (
+                     <button onClick={() => setTipAmount(0)} className="text-[10px] text-zinc-400 hover:text-white underline">
+                       Clear Tip
+                     </button>
+                   )}
+                 </div>
+                 <div className="grid grid-cols-5 gap-2">
+                   {[0, 10, 20, 30, 50].map((amount) => (
+                     <button
+                       key={amount}
+                       onClick={() => setTipAmount(amount)}
+                       className={`py-1.5 px-2 text-xs font-bold rounded-lg border transition-all ${
+                         tipAmount === amount
+                           ? 'bg-emerald-500 text-black border-emerald-400 shadow-md scale-105'
+                           : 'bg-zinc-800 text-zinc-300 border-zinc-700 hover:border-zinc-500'
+                       }`}
+                     >
+                       {amount === 0 ? 'No Tip' : `+₹${amount}`}
+                     </button>
+                   ))}
+                 </div>
+               </div>
+
                <button 
-                  onClick={handleConfirmRide}
-                  className="w-full bg-white text-black font-bold py-4 rounded-xl hover:bg-zinc-200 transition-colors"
+                  onClick={() => handleConfirmRide()}
+                  className="w-full bg-white text-black font-bold py-4 rounded-xl hover:bg-zinc-200 transition-colors shadow-lg"
                 >
-                  Confirm {selectedVehicle.toUpperCase()} (Cash)
+                  Confirm {selectedVehicle.toUpperCase()} (₹{(getPrice(selectedVehicle, distance) + tipAmount).toFixed(2)})
                 </button>
                 <button 
                   onClick={() => { setStatus('idle'); setRouteGeometry(null) }}
@@ -2124,6 +2202,91 @@ function App() {
             </button>
           </div>
         </>
+      )}
+
+      {/* No Driver Found & Alternative Vehicle Recommendation Modal */}
+      {noDriverFound && (
+        <div className="fixed inset-0 z-[3000] bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-zinc-900 border border-zinc-700/80 rounded-3xl p-6 max-w-sm w-full shadow-2xl text-center space-y-4">
+            <div className="w-14 h-14 bg-amber-500/20 text-amber-400 rounded-full flex items-center justify-center mx-auto text-2xl border border-amber-500/30">
+              ⚠️
+            </div>
+            
+            <div>
+              <h3 className="text-lg font-extrabold text-white">No {selectedVehicle.toUpperCase()} Drivers Responded</h3>
+              <p className="text-xs text-zinc-400 mt-1">
+                Drivers for {selectedVehicle.toUpperCase()} were unavailable or busy in your area during the last 30 seconds.
+              </p>
+            </div>
+
+            {suggestedVehicle && (
+              <div className="bg-zinc-800/80 border border-emerald-500/40 rounded-2xl p-4 text-left space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-extrabold text-emerald-400 uppercase tracking-wider">
+                    Suggested Alternative
+                  </span>
+                  <span className="text-xs font-bold bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-500/30">
+                    Faster Pickup
+                  </span>
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="text-3xl">
+                      {suggestedVehicle === 'bike' ? '🛵' : suggestedVehicle === 'auto' ? '🛺' : '🚗'}
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-white text-sm">
+                        RYVO {suggestedVehicle.toUpperCase()}
+                      </h4>
+                      <p className="text-xs text-zinc-400">
+                        ⏱️ ~{getETAForVehicle(suggestedVehicle, estimatedDuration)} mins arrival
+                      </p>
+                    </div>
+                  </div>
+                  <span className="font-extrabold text-base text-white">
+                    ₹{(getPrice(suggestedVehicle, distance) + tipAmount).toFixed(2)}
+                  </span>
+                </div>
+
+                <button
+                  onClick={() => {
+                    const vehicle = suggestedVehicle;
+                    setNoDriverFound(false);
+                    setSuggestedVehicle(null);
+                    handleConfirmRide(vehicle);
+                  }}
+                  className="w-full bg-emerald-500 hover:bg-emerald-400 text-black font-extrabold py-3 rounded-xl transition text-sm shadow-lg shadow-emerald-500/20"
+                >
+                  Book {suggestedVehicle.toUpperCase()} Now ➔
+                </button>
+              </div>
+            )}
+
+            <div className="pt-1 flex gap-2">
+              <button
+                onClick={() => {
+                  setNoDriverFound(false);
+                  setSuggestedVehicle(null);
+                  handleConfirmRide(selectedVehicle);
+                }}
+                className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-white font-bold py-3 rounded-xl transition text-xs border border-zinc-700"
+              >
+                Retry {selectedVehicle.toUpperCase()}
+              </button>
+              <button
+                onClick={() => {
+                  setNoDriverFound(false);
+                  setSuggestedVehicle(null);
+                  setStatus('confirming');
+                }}
+                className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-bold py-3 rounded-xl transition text-xs border border-zinc-700"
+              >
+                Change Options
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
     </div>
