@@ -25,6 +25,7 @@ interface RideRequest {
   status: string;
   paymentMethod: string;
   price?: number;
+  distance?: number;
   vehicleType?: string;
   pickupCoords?: [number, number];
   destCoords?: [number, number];
@@ -920,8 +921,8 @@ function App() {
                   </div>
                   <div className="w-px h-8 bg-zinc-700"></div>
                   <div className="flex-1 text-center">
-                    <p className="text-zinc-400 text-xs uppercase font-bold tracking-wider mb-1">Trip Dist</p>
-                    <p className="text-white font-bold">{calculateDistance(incomingRequest.pickupCoords[0], incomingRequest.pickupCoords[1], incomingRequest.destCoords[0], incomingRequest.destCoords[1]).toFixed(1)} km</p>
+                    <p className="text-zinc-400 text-xs font-bold uppercase mb-1">Trip Distance</p>
+                    <p className="text-white font-bold">{incomingRequest.distance ? Number(incomingRequest.distance).toFixed(1) : calculateDistance(incomingRequest.pickupCoords[0], incomingRequest.pickupCoords[1], incomingRequest.destCoords[0], incomingRequest.destCoords[1]).toFixed(1)} km</p>
                   </div>
                </div>
              )}
