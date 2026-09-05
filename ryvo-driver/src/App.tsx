@@ -66,7 +66,6 @@ function App() {
   const [appState, setAppState] = useState<'idle' | 'online' | 'incoming' | 'accepted' | 'arrived' | 'in_transit' | 'completed'>('idle')
   const [incomingRequest, setIncomingRequest] = useState<RideRequest | null>(null)
   const [fetchError, setFetchError] = useState<string | null>(null)
-  const [fetchStatus, setFetchStatus] = useState<string>('idle')
   const [declinedRides, setDeclinedRides] = useState<string[]>(() => {
     try {
       return JSON.parse(sessionStorage.getItem('declinedRides') || '[]');
@@ -142,7 +141,6 @@ function App() {
   useEffect(() => {
     if (user && !driverProfile) {
       const fetchProfile = async () => {
-        setFetchStatus('fetching');
         try {
           const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 8000));
           const queryPromise = supabase.from('drivers').select('*').eq('id', user.id).single();
@@ -153,7 +151,6 @@ function App() {
           if (error) {
             console.error("Robust fetch error:", error);
             setFetchError(`Robust fetch Error: ${error.message} (Code: ${error.code})`);
-            setFetchStatus('error');
             if (error.code === 'PGRST116') {
                console.warn("Robust fetch: User is not a driver. Forcing logout.");
                await supabase.auth.signOut();
@@ -161,18 +158,15 @@ function App() {
             }
           }
           if (data) {
-            setFetchStatus('success');
             setDriverProfile(data);
             setAppState(data.isonline ? 'online' : 'idle');
             setIsOnline(data.isonline);
           } else if (!error) {
              setFetchError('Robust fetch: Data is null and Error is null');
-             setFetchStatus('null_data_no_error');
           }
         } catch (e: any) {
           console.error("Robust fetch exception:", e);
           setFetchError(`Robust fetch Exception: ${e.message || String(e)}`);
-          setFetchStatus('exception');
           
           // Raw fetch fallback
           try {
@@ -188,7 +182,6 @@ function App() {
                  const rawData = await rawRes.json();
                  if (Array.isArray(rawData) && rawData.length > 0) {
                      setDriverProfile(rawData[0]);
-                     setFetchStatus('raw_fetch_success');
                  } else {
                      setFetchError(`Raw fetch returned empty/error: ${JSON.stringify(rawData)}`);
                  }
@@ -1028,23 +1021,7 @@ function App() {
                        })()}
                     </div>
                      <div>
-                        <h3 className="font-bold text-white text-xs break-all max-w-[200px] whitespace-normal">
-                          {driverProfile ? `DEBUG PROFILE: ${JSON.stringify(driverProfile)}` : '🚨 DRIVER PROFILE IS NULL'}
-                        </h3>
-                        <div className="mt-2 text-xs text-zinc-400 break-all">
-                          USER: {user ? user.id : 'NULL'}
-                        </div>
-                        <div className="mt-2 text-xs text-blue-400 break-all">
-                          STATUS: {fetchStatus}
-                        </div>
-                        <div className="mt-2 text-xs text-red-400 break-all">
-                          ERROR: {fetchError ? fetchError : 'NULL'}
-                        </div>
-                        {!driverProfile && (
-                           <button onClick={() => window.location.reload()} className="mt-2 text-xs bg-red-600 px-3 py-1 rounded text-white font-bold">
-                             Tap to Retry
-                           </button>
-                        )}
+                        <h2 className="text-xl font-bold text-white">{driverProfile?.name || 'Driver'}</h2>
                         <p className="text-zinc-400 text-sm flex items-center mt-1">{avgRating} ★ Rating ({ratedRides.length} reviews)</p>
                      </div>
                  </div>
