@@ -176,7 +176,6 @@ function App() {
     return [
       { label: 'Home', address: 'Set Home Address', coords: [12.8753, 77.5958], icon: '🏠' },
       { label: 'Work / Office', address: 'Set Work Address', coords: [12.9716, 77.5946], icon: '💼' },
-      { label: 'Gym', address: 'Fitness Center', coords: [12.9250, 77.5890], icon: '🏋️' }
     ];
   });
 
@@ -184,6 +183,22 @@ function App() {
     const updated = [...savedPlaces.filter(p => p.label !== label), { label, address, coords, icon }];
     setSavedPlaces(updated);
     localStorage.setItem('ryvo_saved_places', JSON.stringify(updated));
+  };
+
+  // Recent searches (stored locally per user)
+  const [recentSearches, setRecentSearches] = useState<{ title: string; subtitle: string; lat: number; lon: number }[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem('ryvo_recent_searches') || '[]');
+    } catch {
+      return [];
+    }
+  });
+
+  const addRecentSearch = (item: { title: string; subtitle: string; lat: number; lon: number }) => {
+    const filtered = recentSearches.filter(s => s.title.toLowerCase() !== item.title.toLowerCase());
+    const updated = [item, ...filtered].slice(0, 5);
+    setRecentSearches(updated);
+    localStorage.setItem('ryvo_recent_searches', JSON.stringify(updated));
   };
 
   const [etaPickup, setEtaPickup] = useState<number | null>(null)
@@ -1156,7 +1171,34 @@ function App() {
                         </div>
                       </div>
 
-                      {/* Option 3: Search Suggestions */}
+                      {/* Option 3: Recent Searches */}
+                      {recentSearches.length > 0 && (
+                        <div className="p-3 bg-zinc-900/90 border-b border-zinc-800">
+                          <p className="text-[11px] uppercase font-black text-zinc-400 px-1 mb-2 tracking-wider">Recent Searches</p>
+                          <div className="space-y-1.5">
+                            {recentSearches.map((rs, idx) => (
+                              <div
+                                key={idx}
+                                onClick={() => {
+                                  setPickup(rs.title);
+                                  setPickupCoords([rs.lat, rs.lon]);
+                                  setCurrentPosition([rs.lat, rs.lon]);
+                                  setActiveInput('none');
+                                }}
+                                className="flex items-center space-x-3 p-2 hover:bg-zinc-800 rounded-xl cursor-pointer transition"
+                              >
+                                <div className="text-sm p-1.5 bg-zinc-800 rounded-lg text-zinc-400">🕒</div>
+                                <div className="overflow-hidden">
+                                  <p className="text-white text-xs font-bold truncate">{rs.title}</p>
+                                  <p className="text-zinc-400 text-[10px] truncate">{rs.subtitle}</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Option 4: Search Suggestions */}
                       {pickupSuggestions.map((s, i) => (
                         <div 
                           key={i} 
@@ -1165,6 +1207,7 @@ function App() {
                             setPickup(s.title); 
                             setPickupCoords([s.lat, s.lon]);
                             setCurrentPosition([s.lat, s.lon]);
+                            addRecentSearch(s);
                             setPickupSuggestions([]); 
                             setActiveInput('none');
                           }}
@@ -1306,7 +1349,34 @@ function App() {
                         </div>
                       </div>
 
-                      {/* Option 3: Search Suggestions */}
+                      {/* Option 3: Recent Searches */}
+                      {recentSearches.length > 0 && (
+                        <div className="p-3 bg-zinc-900/90 border-b border-zinc-800">
+                          <p className="text-[11px] uppercase font-black text-zinc-400 px-1 mb-2 tracking-wider">Recent Searches</p>
+                          <div className="space-y-1.5">
+                            {recentSearches.map((rs, idx) => (
+                              <div
+                                key={idx}
+                                onClick={() => {
+                                  setDestination(rs.title);
+                                  setDestCoords([rs.lat, rs.lon]);
+                                  setCurrentPosition([rs.lat, rs.lon]);
+                                  setActiveInput('none');
+                                }}
+                                className="flex items-center space-x-3 p-2 hover:bg-zinc-800 rounded-xl cursor-pointer transition"
+                              >
+                                <div className="text-sm p-1.5 bg-zinc-800 rounded-lg text-zinc-400">🕒</div>
+                                <div className="overflow-hidden">
+                                  <p className="text-white text-xs font-bold truncate">{rs.title}</p>
+                                  <p className="text-zinc-400 text-[10px] truncate">{rs.subtitle}</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Option 4: Search Suggestions */}
                       {destSuggestions.map((s, i) => (
                         <div 
                           key={i} 
@@ -1315,6 +1385,7 @@ function App() {
                             setDestination(s.title); 
                             setDestCoords([s.lat, s.lon]);
                             setCurrentPosition([s.lat, s.lon]);
+                            addRecentSearch(s);
                             setDestSuggestions([]); 
                             setActiveInput('none');
                           }}
