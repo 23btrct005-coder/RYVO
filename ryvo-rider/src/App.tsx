@@ -1151,29 +1151,36 @@ function App() {
                         </div>
                       ))}
 
-                      {/* Option 4: Previous Booked Locations */}
-                      {pastRides.length > 0 && (
-                        <div className="p-3 bg-zinc-900">
-                          <p className="text-xs uppercase font-extrabold text-zinc-500 px-2 mb-2 tracking-wider">Recent Booked Locations</p>
-                          {pastRides.slice(0, 3).map((r, idx) => (
-                             <div 
-                               key={idx}
-                               onClick={() => {
-                                 setPickup(r.pickup);
-                                 if (r.pickuplat && r.pickuplng) {
-                                   setPickupCoords([r.pickuplat, r.pickuplng]);
-                                   setCurrentPosition([r.pickuplat, r.pickuplng]);
-                                 }
-                                 setActiveInput('none');
-                               }}
-                               className="flex items-center space-x-3 p-2 hover:bg-zinc-800 rounded-xl cursor-pointer"
-                             >
-                                <span className="text-zinc-400">🕒</span>
-                                <p className="text-zinc-200 text-xs font-medium truncate">{r.pickup}</p>
-                             </div>
-                          ))}
-                        </div>
-                      )}
+                      {/* Option 4: Previous Booked Locations (Deduplicated) */}
+                      {pastRides.length > 0 && (() => {
+                        const uniquePickups = Array.from(new Set(pastRides.map(r => r.pickup).filter(Boolean))).slice(0, 3);
+                        if (uniquePickups.length === 0) return null;
+                        return (
+                          <div className="p-3 bg-zinc-900">
+                            <p className="text-xs uppercase font-extrabold text-zinc-500 px-2 mb-2 tracking-wider">Recent Booked Locations</p>
+                            {uniquePickups.map((pName, idx) => {
+                               const sampleRide = pastRides.find(r => r.pickup === pName);
+                               return (
+                                 <div 
+                                   key={idx}
+                                   onClick={() => {
+                                     setPickup(pName);
+                                     if (sampleRide?.pickuplat && sampleRide?.pickuplng) {
+                                       setPickupCoords([sampleRide.pickuplat, sampleRide.pickuplng]);
+                                       setCurrentPosition([sampleRide.pickuplat, sampleRide.pickuplng]);
+                                     }
+                                     setActiveInput('none');
+                                   }}
+                                   className="flex items-center space-x-3 p-2 hover:bg-zinc-800 rounded-xl cursor-pointer"
+                                 >
+                                    <span className="text-zinc-400">🕒</span>
+                                    <p className="text-zinc-200 text-xs font-medium truncate">{pName}</p>
+                                 </div>
+                               );
+                            })}
+                          </div>
+                        );
+                      })()}
 
                       <div className="p-2 text-center bg-zinc-950">
                          <button onClick={() => setActiveInput('none')} className="text-xs text-zinc-500 font-bold hover:text-white">Close Dropdown ✕</button>
@@ -1279,29 +1286,36 @@ function App() {
                         </div>
                       ))}
 
-                      {/* Option 4: Previous Booked Destinations */}
-                      {pastRides.length > 0 && (
-                        <div className="p-3 bg-zinc-900">
-                          <p className="text-xs uppercase font-extrabold text-zinc-500 px-2 mb-2 tracking-wider">Recent Destinations</p>
-                          {pastRides.slice(0, 3).map((r, idx) => (
-                             <div 
-                               key={idx}
-                               onClick={() => {
-                                 setDestination(r.destination);
-                                 if (r.destlat && r.destlng) {
-                                   setDestCoords([r.destlat, r.destlng]);
-                                   setCurrentPosition([r.destlat, r.destlng]);
-                                 }
-                                 setActiveInput('none');
-                               }}
-                               className="flex items-center space-x-3 p-2 hover:bg-zinc-800 rounded-xl cursor-pointer"
-                             >
-                                <span className="text-zinc-400">🕒</span>
-                                <p className="text-zinc-200 text-xs font-medium truncate">{r.destination}</p>
-                             </div>
-                          ))}
-                        </div>
-                      )}
+                      {/* Option 4: Previous Booked Destinations (Deduplicated) */}
+                      {pastRides.length > 0 && (() => {
+                        const uniqueDests = Array.from(new Set(pastRides.map(r => r.destination).filter(Boolean))).slice(0, 3);
+                        if (uniqueDests.length === 0) return null;
+                        return (
+                          <div className="p-3 bg-zinc-900">
+                            <p className="text-xs uppercase font-extrabold text-zinc-500 px-2 mb-2 tracking-wider">Recent Destinations</p>
+                            {uniqueDests.map((dName, idx) => {
+                               const sampleRide = pastRides.find(r => r.destination === dName);
+                               return (
+                                 <div 
+                                   key={idx}
+                                   onClick={() => {
+                                     setDestination(dName);
+                                     if (sampleRide?.destlat && sampleRide?.destlng) {
+                                       setDestCoords([sampleRide.destlat, sampleRide.destlng]);
+                                       setCurrentPosition([sampleRide.destlat, sampleRide.destlng]);
+                                     }
+                                     setActiveInput('none');
+                                   }}
+                                   className="flex items-center space-x-3 p-2 hover:bg-zinc-800 rounded-xl cursor-pointer"
+                                 >
+                                    <span className="text-zinc-400">🕒</span>
+                                    <p className="text-zinc-200 text-xs font-medium truncate">{dName}</p>
+                                 </div>
+                               );
+                            })}
+                          </div>
+                        );
+                      })()}
 
                       <div className="p-2 text-center bg-zinc-950">
                          <button onClick={() => setActiveInput('none')} className="text-xs text-zinc-500 font-bold hover:text-white">Close Dropdown ✕</button>
