@@ -65,6 +65,7 @@ function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [appState, setAppState] = useState<'idle' | 'online' | 'incoming' | 'accepted' | 'arrived' | 'in_transit' | 'completed'>('idle')
   const [incomingRequest, setIncomingRequest] = useState<RideRequest | null>(null)
+  const [fetchError, setFetchError] = useState<string | null>(null)
   const [declinedRides, setDeclinedRides] = useState<string[]>(() => {
     try {
       return JSON.parse(sessionStorage.getItem('declinedRides') || '[]');
@@ -137,6 +138,7 @@ function App() {
              
            if (error) {
              console.error("Failed to fetch driver profile:", error);
+             setFetchError(`onAuthStateChange Error: ${error.message} (Code: ${error.code})`);
              if (error.code === 'PGRST116') {
                 console.warn("User is not a driver. Forcing logout.");
                 await supabase.auth.signOut();
@@ -167,6 +169,7 @@ function App() {
       supabase.from('drivers').select('*').eq('id', user.id).single().then(({ data, error }) => {
         if (error) {
           console.error("Robust fetch error:", error);
+          setFetchError(`Robust fetch Error: ${error.message} (Code: ${error.code})`);
           if (error.code === 'PGRST116') {
              console.warn("Robust fetch: User is not a driver. Forcing logout.");
              supabase.auth.signOut().then(() => setUser(null));
@@ -755,6 +758,13 @@ function App() {
       <div className="absolute inset-0 z-0">
         <MapContainer center={driverPosition} zoom={16} style={{ height: '100%', width: '100%' }} zoomControl={false}>
           <ChangeView center={driverPosition} />
+          
+          {fetchError && (
+            <div className="absolute top-20 left-1/2 -translate-x-1/2 z-[3000] bg-red-600 text-white p-4 rounded-xl shadow-2xl font-bold max-w-md w-full">
+              🚨 DEBUG ERROR: {fetchError}
+            </div>
+          )}
+
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -1000,8 +1010,10 @@ function App() {
                        })()}
                     </div>
                      <div>
-                        <h2 className="text-xl font-bold text-white">{driverProfile?.name || 'Driver'}</h2>
-                        <p className="text-zinc-400 text-sm">{avgRating} ★ Rating ({ratedRides.length} reviews)</p>
+                        <h3 className="font-bold text-white text-xs break-all max-w-[200px] whitespace-normal">
+                          {driverProfile ? `DEBUG: ${JSON.stringify(driverProfile)}` : '🚨 DRIVER PROFILE IS NULL'}
+                        </h3>
+                        <p className="text-zinc-400 text-sm flex items-center mt-1">{avgRating} ★ Rating ({ratedRides.length} reviews)</p>
                      </div>
                  </div>
               </div>
@@ -1082,9 +1094,13 @@ function App() {
                   </div>
                   <div className="bg-zinc-900 p-6 rounded-2xl border border-zinc-800 flex justify-between items-center mt-4">
                      <div>
-                        <p className="text-zinc-400 text-sm font-medium mb-1">Driver Rating</p>
-                        <h2 className="text-3xl font-bold text-white">{avgRating} <span className="text-yellow-500">★</span></h2>
-                     </div>
+                         <h3 className="font-bold text-white text-xs break-all max-w-[200px] whitespace-normal">
+                           {driverProfile ? `DEBUG: ${JSON.stringify(driverProfile)}` : '🚨 DRIVER PROFILE IS NULL'}
+                         </h3>
+                         <p className="text-zinc-400 text-sm flex items-center mt-1">
+                            {driverProfile?.rating?.toFixed(1) || '5.0'} <span className="text-yellow-500 mx-1">★</span> Rating ({driverProfile?.totalreviews || 0} reviews)
+                         </p>
+                      </div>
                      <div className="w-16 h-16 bg-yellow-500/10 rounded-full flex items-center justify-center">
                         <span className="text-2xl text-yellow-500">★</span>
                      </div>
