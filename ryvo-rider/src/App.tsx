@@ -791,9 +791,25 @@ function App() {
         </div>
       </div>
 
-      <div className="absolute bottom-0 left-0 right-0 z-10 p-4 pb-8 bg-gradient-to-t from-black/90 to-transparent">
-        <div className="bg-zinc-900/95 backdrop-blur-xl border border-zinc-800 p-6 rounded-3xl shadow-2xl max-w-md mx-auto relative">
-          <h1 className="text-3xl font-bold tracking-tight text-white mb-1">RYVO</h1>
+      <div className={`absolute left-0 right-0 z-20 p-4 transition-all duration-500 ease-out ${
+        activeInput !== 'none' 
+          ? 'top-1/2 -translate-y-1/2 bg-black/60 backdrop-blur-sm' 
+          : 'bottom-0 pb-8 bg-gradient-to-t from-black/90 to-transparent'
+      }`}>
+        <div className={`bg-zinc-900/95 backdrop-blur-xl border border-zinc-800 p-6 rounded-3xl shadow-2xl max-w-md mx-auto relative transition-transform duration-500 ease-out ${
+          activeInput !== 'none' ? 'scale-105 ring-2 ring-emerald-500/50' : 'scale-100'
+        }`}>
+          <div className="flex justify-between items-center mb-1">
+             <h1 className="text-3xl font-bold tracking-tight text-white">RYVO</h1>
+             {activeInput !== 'none' && (
+                <button 
+                  onClick={() => setActiveInput('none')}
+                  className="bg-zinc-800 text-zinc-300 hover:text-white px-3 py-1.5 rounded-full text-xs font-bold border border-zinc-700 transition hover:bg-zinc-700"
+                >
+                  Done ✕
+                </button>
+             )}
+          </div>
           
           {['accepted', 'arrived', 'in_transit', 'completed'].includes(status) ? (
              <div className="py-2">
