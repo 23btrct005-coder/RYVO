@@ -52,6 +52,7 @@ function App() {
   const [phone, setPhone] = useState('')
   const [vehicleType, setVehicleType] = useState('MINI')
   const [vehicleColor, setVehicleColor] = useState('')
+  const [vehicleModel, setVehicleModel] = useState('')
   const [vehicleNumber, setVehicleNumber] = useState('')
   
   // Document State
@@ -346,6 +347,7 @@ function App() {
         phone,
         email,
         vehicletype: vehicleType,
+        vehiclemodel: vehicleModel,
         vehiclecolor: vehicleColor,
         vehiclenumber: vehicleNumber,
         licensenumber: licenseNumber,
@@ -731,7 +733,10 @@ function App() {
                       <option value="AUTO">Auto</option>
                       <option value="BIKE">Bike</option>
                     </select>
-                    <input type="text" placeholder="Color (e.g. White)" value={vehicleColor} onChange={e => setVehicleColor(e.target.value)} className="flex-1 bg-zinc-800 text-white rounded-xl px-4 py-3" />
+                  </div>
+                  <div className="flex gap-4">
+                    <input type="text" placeholder="Vehicle Model (e.g. Pulsar)" value={vehicleModel} onChange={e => setVehicleModel(e.target.value)} className="w-1/2 bg-zinc-800 text-white rounded-xl px-4 py-3" />
+                    <input type="text" placeholder="Vehicle Color" value={vehicleColor} onChange={e => setVehicleColor(e.target.value)} className="w-1/2 bg-zinc-800 text-white rounded-xl px-4 py-3" />
                   </div>
                   <input type="text" placeholder="License Plate (e.g. KA-01-AB-1234)" value={vehicleNumber} onChange={e => setVehicleNumber(e.target.value)} className="w-full bg-zinc-800 text-white rounded-xl px-4 py-3 uppercase" />
                   
