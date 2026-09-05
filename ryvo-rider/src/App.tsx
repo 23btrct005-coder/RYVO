@@ -352,29 +352,24 @@ function App() {
         return;
       }
 
-      const res = await fetch(`https://api.mapbox.com/directions/v5/mapbox/driving/${pCoords[1]},${pCoords[0]};${dCoords[1]},${dCoords[0]}?geometries=geojson&overview=full&access_token=${MAPBOX_TOKEN}`)
+      const res = await fetch(`https://api.mapbox.com/directions/v5/mapbox/driving-traffic/${pCoords[1]},${pCoords[0]};${dCoords[1]},${dCoords[0]}?alternatives=true&geometries=geojson&overview=full&access_token=${MAPBOX_TOKEN}`)
       const data = await res.json()
       
       if (data.routes && data.routes.length > 0) {
-        const route = data.routes[0]
-        let distanceKm = route.distance / 1000
+        // Select the shortest direct road route among all alternatives
+        const shortestRoute = data.routes.reduce((min: any, r: any) => r.distance < min.distance ? r : min, data.routes[0]);
+        const distanceKm = shortestRoute.distance / 1000;
         
-        // Real-world sanity check against Haversine straight line (cap long detours at Haversine x 1.30)
-        const haversineKm = getHaversineDistance(pCoords[0], pCoords[1], dCoords[0], dCoords[1]);
-        if (distanceKm < haversineKm || distanceKm > haversineKm * 1.30) {
-          distanceKm = haversineKm * 1.25; // Exact real-world road distance factor (~6.5 km)
-        }
-
-        setDistance(distanceKm)
+        setDistance(distanceKm);
         
-        const swappedGeometry = route.geometry.coordinates.map((coord: [number, number]) => [coord[1], coord[0]])
-        setRouteGeometry(swappedGeometry)
+        const swappedGeometry = shortestRoute.geometry.coordinates.map((coord: [number, number]) => [coord[1], coord[0]]);
+        setRouteGeometry(swappedGeometry);
         
-        setStatus('confirming')
+        setStatus('confirming');
       } else {
         // Fallback using Haversine calculation if directions API returns no route
         const haversineKm = getHaversineDistance(pCoords[0], pCoords[1], dCoords[0], dCoords[1]);
-        const distanceKm = haversineKm * 1.25;
+        const distanceKm = haversineKm * 1.20;
         setDistance(distanceKm);
         setRouteGeometry([[pCoords[0], pCoords[1]], [dCoords[0], dCoords[1]]]);
         setStatus('confirming');

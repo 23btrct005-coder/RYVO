@@ -599,10 +599,11 @@ function App() {
   // Route drawing function
   const fetchRoute = async (start: [number, number], end: [number, number]) => {
     try {
-      const res = await fetch(`https://api.mapbox.com/directions/v5/mapbox/driving/${start[1]},${start[0]};${end[1]},${end[0]}?geometries=geojson&overview=full&access_token=${MAPBOX_TOKEN}`)
+      const res = await fetch(`https://api.mapbox.com/directions/v5/mapbox/driving-traffic/${start[1]},${start[0]};${end[1]},${end[0]}?alternatives=true&geometries=geojson&overview=full&access_token=${MAPBOX_TOKEN}`)
       const data = await res.json()
       if (data.routes && data.routes.length > 0) {
-        const swappedGeometry = data.routes[0].geometry.coordinates.map((coord: [number, number]) => [coord[1], coord[0]])
+        const shortestRoute = data.routes.reduce((min: any, r: any) => r.distance < min.distance ? r : min, data.routes[0]);
+        const swappedGeometry = shortestRoute.geometry.coordinates.map((coord: [number, number]) => [coord[1], coord[0]])
         setRouteGeometry(swappedGeometry)
       } else {
         console.error('Could not fetch route')
