@@ -42,9 +42,6 @@ const DriverLocationMarker = ({ vehicleType }: { vehicleType: string }) => {
 
 const RiderPickupMarker = () => (
   <div className="relative flex flex-col items-center">
-    <div className="bg-emerald-600 text-white text-xs font-black px-2.5 py-1 rounded-full shadow-xl border border-emerald-400 mb-1 flex items-center space-x-1 whitespace-nowrap">
-       <span>🟢</span><span>RIDER PICKUP</span>
-    </div>
     <div className="w-7 h-7 bg-emerald-500 border-2 border-white rounded-full flex items-center justify-center shadow-lg">
       <div className="w-3 h-3 bg-white rounded-full" />
     </div>
@@ -54,9 +51,6 @@ const RiderPickupMarker = () => (
 
 const RiderDropoffMarker = () => (
   <div className="relative flex flex-col items-center">
-    <div className="bg-red-600 text-white text-xs font-black px-2.5 py-1 rounded-full shadow-xl border border-red-400 mb-1 flex items-center space-x-1 whitespace-nowrap">
-       <span>🏁</span><span>DROP LOCATION</span>
-    </div>
     <div className="w-7 h-7 bg-red-600 border-2 border-white rounded-full flex items-center justify-center shadow-lg">
       <span className="text-xs">🏁</span>
     </div>

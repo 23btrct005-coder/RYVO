@@ -43,22 +43,14 @@ const decodePolyline = (encoded: string): [number, number][] => {
 
 
 const CurrentLocationMarker = () => (
-  <div className="relative flex flex-col items-center group">
-    <div className="bg-black/90 text-blue-400 text-[10px] font-black px-2 py-0.5 rounded-full shadow-lg border border-blue-500/50 mb-1 whitespace-nowrap tracking-wider">
-       MY CURRENT LOCATION
-    </div>
-    <div className="relative flex items-center justify-center">
-      <div className="absolute w-8 h-8 bg-blue-500/40 rounded-full animate-ping" />
-      <div className="w-5 h-5 bg-blue-600 border-2 border-white rounded-full shadow-xl ring-4 ring-blue-500/40 z-10" />
-    </div>
+  <div className="relative flex items-center justify-center">
+    <div className="absolute w-8 h-8 bg-blue-500/40 rounded-full animate-ping" />
+    <div className="w-5 h-5 bg-blue-600 border-2 border-white rounded-full shadow-xl ring-4 ring-blue-500/40 z-10" />
   </div>
 );
 
 const PickupMarker = () => (
   <div className="relative flex flex-col items-center">
-    <div className="bg-emerald-600 text-white text-xs font-black px-2.5 py-1 rounded-full shadow-xl border border-emerald-400 mb-1 flex items-center space-x-1 whitespace-nowrap">
-       <span>🟢</span><span>PICKUP</span>
-    </div>
     <div className="w-7 h-7 bg-emerald-500 border-2 border-white rounded-full flex items-center justify-center shadow-lg">
       <div className="w-3 h-3 bg-white rounded-full" />
     </div>
@@ -68,9 +60,6 @@ const PickupMarker = () => (
 
 const DestinationMarker = () => (
   <div className="relative flex flex-col items-center">
-    <div className="bg-red-600 text-white text-xs font-black px-2.5 py-1 rounded-full shadow-xl border border-red-400 mb-1 flex items-center space-x-1 whitespace-nowrap">
-       <span>🏁</span><span>DESTINATION</span>
-    </div>
     <div className="w-7 h-7 bg-red-600 border-2 border-white rounded-full flex items-center justify-center shadow-lg">
       <span className="text-xs">🏁</span>
     </div>
@@ -81,12 +70,8 @@ const DestinationMarker = () => (
 const LiveDriverMarker = ({ type }: { type: string }) => {
   const emoji = type?.toUpperCase() === 'AUTO' ? '🛺' : type?.toUpperCase() === 'BIKE' ? '🛵' : '🚗';
   return (
-    <div className="relative flex flex-col items-center">
-      <div className="bg-zinc-950 text-green-400 border border-green-500/50 text-[10px] font-black px-2 py-0.5 rounded-full shadow-xl mb-1 flex items-center space-x-1 whitespace-nowrap">
-         <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
-         <span>DRIVER (LIVE)</span>
-      </div>
-      <div className="bg-white border-2 border-blue-600 rounded-full w-11 h-11 flex items-center justify-center text-2xl shadow-2xl transition-transform hover:scale-110">
+    <div className="relative flex items-center justify-center">
+      <div className="bg-white border-2 border-blue-600 rounded-full w-10 h-10 flex items-center justify-center text-xl shadow-2xl transition-transform hover:scale-110">
         {emoji}
       </div>
     </div>
