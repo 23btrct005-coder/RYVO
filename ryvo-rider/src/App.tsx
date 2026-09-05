@@ -61,6 +61,22 @@ function App() {
   const [onlineDrivers, setOnlineDrivers] = useState<any[]>([])
   
   const [selectedVehicle, setSelectedVehicle] = useState<VehicleType>('mini')
+  const [activeModal, setActiveModal] = useState<'none' | 'history' | 'payments' | 'settings' | 'help'>('none')
+  const [pastRides, setPastRides] = useState<any[]>([])
+
+  const fetchPastRides = async () => {
+    if (!user) return;
+    try {
+      const { data } = await supabase
+        .from('rides')
+        .select('*')
+        .eq('riderid', user.id)
+        .order('created_at', { ascending: false });
+      if (data) setPastRides(data);
+    } catch (e) {
+      console.error("Error fetching past rides:", e);
+    }
+  };
   
   const [currentPosition, setCurrentPosition] = useState<[number, number]>([12.8753, 77.5958])
   const mapRef = useRef<MapRef>(null)
@@ -917,16 +933,16 @@ function App() {
                  </div>
               </div>
               <div className="flex-1 overflow-y-auto py-4">
-                 <button className="w-full text-left px-6 py-4 hover:bg-zinc-800 text-white font-medium flex items-center space-x-4 transition">
+                 <button onClick={() => { setIsSidebarOpen(false); fetchPastRides(); setActiveModal('history'); }} className="w-full text-left px-6 py-4 hover:bg-zinc-800 text-white font-medium flex items-center space-x-4 transition">
                     <span className="text-xl">🕒</span><span>My Rides</span>
                  </button>
-                 <button className="w-full text-left px-6 py-4 hover:bg-zinc-800 text-white font-medium flex items-center space-x-4 transition">
+                 <button onClick={() => { setIsSidebarOpen(false); setActiveModal('payments'); }} className="w-full text-left px-6 py-4 hover:bg-zinc-800 text-white font-medium flex items-center space-x-4 transition">
                     <span className="text-xl">💳</span><span>Payment Methods</span>
                  </button>
-                 <button className="w-full text-left px-6 py-4 hover:bg-zinc-800 text-white font-medium flex items-center space-x-4 transition">
+                 <button onClick={() => { setIsSidebarOpen(false); setActiveModal('settings'); }} className="w-full text-left px-6 py-4 hover:bg-zinc-800 text-white font-medium flex items-center space-x-4 transition">
                     <span className="text-xl">⚙️</span><span>Settings</span>
                  </button>
-                 <button className="w-full text-left px-6 py-4 hover:bg-zinc-800 text-white font-medium flex items-center space-x-4 transition">
+                 <button onClick={() => { setIsSidebarOpen(false); setActiveModal('help'); }} className="w-full text-left px-6 py-4 hover:bg-zinc-800 text-white font-medium flex items-center space-x-4 transition">
                     <span className="text-xl">❓</span><span>Help & Support</span>
                  </button>
               </div>
@@ -935,6 +951,146 @@ function App() {
                     <span>🚪</span><span>Logout</span>
                  </button>
               </div>
+           </div>
+        </div>
+      )}
+
+      {/* Side Menu Modals */}
+      {activeModal !== 'none' && (
+        <div className="absolute inset-0 z-[3000] flex flex-col bg-zinc-950 text-white animate-slide-in">
+           <div className="p-5 border-b border-zinc-800 flex items-center bg-zinc-900">
+              <button onClick={() => setActiveModal('none')} className="p-2 mr-4 bg-zinc-800 rounded-full hover:bg-zinc-700 transition text-white">
+                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+              </button>
+              <h1 className="text-2xl font-bold text-white capitalize">
+                {activeModal === 'history' ? 'My Rides' :
+                 activeModal === 'payments' ? 'Payment Methods' :
+                 activeModal === 'settings' ? 'Settings' : 'Help & Support'}
+              </h1>
+           </div>
+           
+           <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              {/* My Rides */}
+              {activeModal === 'history' && (
+                <div className="space-y-4 max-w-lg mx-auto">
+                  {pastRides.length === 0 ? (
+                    <div className="text-center py-16 text-zinc-500 font-medium">No previous rides found.</div>
+                  ) : (
+                    pastRides.map(ride => (
+                      <div key={ride.id} className="bg-zinc-900 p-5 rounded-2xl border border-zinc-800 space-y-3">
+                        <div className="flex justify-between items-center border-b border-zinc-800 pb-3">
+                           <span className="text-xs font-mono uppercase bg-zinc-800 text-zinc-300 px-3 py-1 rounded-full">
+                             {ride.vehicletype || 'MINI'}
+                           </span>
+                           <span className="font-bold text-xl text-white">₹{ride.price ? ride.price.toFixed(2) : '0'}</span>
+                        </div>
+                        <div className="space-y-2">
+                           <div className="flex items-start space-x-3">
+                              <span className="w-2 h-2 bg-green-500 rounded-full mt-2 shrink-0" />
+                              <p className="text-sm text-zinc-300 font-medium">{ride.pickup}</p>
+                           </div>
+                           <div className="flex items-start space-x-3">
+                              <span className="w-2 h-2 bg-red-500 rounded-full mt-2 shrink-0" />
+                              <p className="text-sm text-zinc-300 font-medium">{ride.destination}</p>
+                           </div>
+                        </div>
+                        <div className="flex justify-between items-center text-xs text-zinc-500 pt-2 border-t border-zinc-800/60">
+                           <span>{ride.created_at ? new Date(ride.created_at).toLocaleString() : 'Recent'}</span>
+                           <span className={`capitalize font-bold ${ride.status === 'completed' ? 'text-green-400' : 'text-yellow-400'}`}>{ride.status}</span>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+
+              {/* Payment Methods */}
+              {activeModal === 'payments' && (
+                <div className="space-y-4 max-w-lg mx-auto">
+                  <div className="bg-zinc-900 p-5 rounded-2xl border border-zinc-800 flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                      <span className="text-3xl">💵</span>
+                      <div>
+                        <h3 className="font-bold text-white text-lg">Cash on Delivery</h3>
+                        <p className="text-xs text-zinc-400">Default payment method</p>
+                      </div>
+                    </div>
+                    <span className="text-xs font-bold bg-green-500/20 text-green-400 px-3 py-1.5 rounded-full border border-green-500/30">Active</span>
+                  </div>
+                  
+                  <div className="bg-zinc-900 p-5 rounded-2xl border border-zinc-800 flex items-center justify-between opacity-75 hover:opacity-100 transition cursor-pointer" onClick={() => alert("UPI / Card integration ready!")}>
+                    <div className="flex items-center space-x-4">
+                      <span className="text-3xl">💳</span>
+                      <div>
+                        <h3 className="font-bold text-white text-lg">UPI / Credit / Debit Card</h3>
+                        <p className="text-xs text-zinc-400">Add new payment method</p>
+                      </div>
+                    </div>
+                    <span className="text-xl font-bold text-zinc-400">+</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Settings */}
+              {activeModal === 'settings' && (
+                <div className="space-y-4 max-w-lg mx-auto">
+                  <div className="bg-zinc-900 p-5 rounded-2xl border border-zinc-800 space-y-4">
+                    <h3 className="text-sm font-bold text-zinc-400 uppercase tracking-wider">Profile Information</h3>
+                    <div>
+                      <label className="text-xs text-zinc-500">Full Name</label>
+                      <p className="text-white font-bold text-lg">{riderProfile?.name || 'Rider'}</p>
+                    </div>
+                    <div>
+                      <label className="text-xs text-zinc-500">Email Address</label>
+                      <p className="text-white font-bold text-sm">{user?.email}</p>
+                    </div>
+                    <div>
+                      <label className="text-xs text-zinc-500">Phone Number</label>
+                      <p className="text-white font-bold text-sm">{riderProfile?.phone || 'Not configured'}</p>
+                    </div>
+                  </div>
+
+                  <div className="bg-zinc-900 p-5 rounded-2xl border border-zinc-800 flex items-center justify-between">
+                    <div>
+                      <h3 className="font-bold text-white">Emergency Contacts</h3>
+                      <p className="text-xs text-zinc-400">Share ride progress with contacts</p>
+                    </div>
+                    <button className="text-xs bg-blue-600 text-white font-bold px-4 py-2 rounded-xl">Manage</button>
+                  </div>
+                </div>
+              )}
+
+              {/* Help & Support */}
+              {activeModal === 'help' && (
+                <div className="space-y-4 max-w-lg mx-auto">
+                  <div className="bg-zinc-900 p-5 rounded-2xl border border-zinc-800 space-y-3">
+                    <h3 className="font-bold text-white text-lg">24/7 Customer Support</h3>
+                    <p className="text-sm text-zinc-400">Need help with a recent ride or billing inquiry?</p>
+                    <div className="flex gap-3 pt-2">
+                      <a href="tel:18001234567" className="flex-1 bg-green-600 text-white text-center font-bold py-3 rounded-xl hover:bg-green-500 transition">
+                         📞 Call Support
+                      </a>
+                      <button onClick={() => alert("Support ticket opened! Our team will respond shortly.")} className="flex-1 bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-500 transition">
+                         💬 Live Chat
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="bg-zinc-900 p-5 rounded-2xl border border-zinc-800 space-y-3">
+                    <h3 className="font-bold text-white">Frequently Asked Questions</h3>
+                    <div className="divide-y divide-zinc-800 text-sm">
+                      <div className="py-3">
+                        <p className="font-bold text-zinc-200">How do I cancel a ride?</p>
+                        <p className="text-xs text-zinc-400 mt-1">Tap 'Cancel Ride' on your active ride card before driver arrival.</p>
+                      </div>
+                      <div className="py-3">
+                        <p className="font-bold text-zinc-200">Where do I find my OTP?</p>
+                        <p className="text-xs text-zinc-400 mt-1">The 4-digit PIN is displayed on your screen once a driver accepts your request.</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
            </div>
         </div>
       )}
