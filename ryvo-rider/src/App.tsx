@@ -136,8 +136,8 @@ function App() {
   const getETAForVehicle = (type: VehicleType, baseMins: number) => {
     if (baseMins <= 0) return 1;
     switch(type) {
-      case 'bike': return Math.max(2, Math.round(baseMins * 0.75));
-      case 'auto': return Math.max(3, Math.round(baseMins * 0.90));
+      case 'bike': return Math.max(2, Math.round(baseMins * 0.95));
+      case 'auto': return Math.max(3, Math.round(baseMins * 1.05));
       case 'mini': return Math.max(4, Math.round(baseMins * 1.15));
       default: return baseMins;
     }
