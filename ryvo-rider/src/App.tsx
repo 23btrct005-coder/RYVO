@@ -1,4 +1,4 @@
-// Vercel Production Trigger: 2026-09-05T23:26:00 - fix: UI overlapping search sheet dropdown z-index and container layout
+// Vercel Production Trigger: 2026-09-05T23:31:00 - feat: move live tip selector to searching screen with instant DB update
 import { useState, useEffect, useRef } from 'react'
 import Map, { Marker, Source, Layer } from 'react-map-gl/mapbox'
 import type { MapRef } from 'react-map-gl/mapbox'
@@ -1251,16 +1251,54 @@ function App() {
                </div>
              </div>
           ) : status === 'searching' ? (
-            <div className="text-center py-8">
-               <div className="relative w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+            <div className="text-center py-6">
+               <div className="relative w-16 h-16 mx-auto mb-3 flex items-center justify-center">
                  <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-emerald-400 absolute"></div>
                  <span className="text-sm font-bold text-emerald-400">{searchingTimer}s</span>
                </div>
-               <p className="text-zinc-200 font-medium animate-pulse mb-1">Finding a nearby driver...</p>
-               <p className="text-xs text-zinc-400 mb-6">Searching for {selectedVehicle.toUpperCase()} drivers around you ({searchingTimer}s remaining)</p>
+               <p className="text-zinc-200 font-bold animate-pulse mb-0.5">Finding a nearby driver...</p>
+               <p className="text-xs text-zinc-400 mb-4">Searching for {selectedVehicle.toUpperCase()} drivers around you ({searchingTimer}s remaining)</p>
+
+               {/* Live Tip Add Section During Searching */}
+               <div className="mb-5 bg-zinc-800/80 p-3.5 rounded-2xl border border-zinc-700/80 text-left">
+                 <div className="flex items-center justify-between mb-2">
+                   <span className="text-xs font-bold text-zinc-200 flex items-center gap-1.5">
+                     <span className="text-emerald-400">⚡</span> Add tip to speed up driver response
+                   </span>
+                   {tipAmount > 0 && (
+                     <span className="text-xs font-extrabold text-emerald-400 bg-emerald-500/20 px-2 py-0.5 rounded-md border border-emerald-500/30">
+                       +₹{tipAmount} Tip Active
+                     </span>
+                   )}
+                 </div>
+                 <div className="grid grid-cols-5 gap-1.5">
+                   {[0, 10, 20, 30, 50].map((amount) => (
+                     <button
+                       key={amount}
+                       onClick={async () => {
+                         setTipAmount(amount);
+                         if (currentRideId) {
+                           const basePrice = getPrice(selectedVehicle, distance);
+                           const newTotal = Number((basePrice + amount).toFixed(2));
+                           await supabase.from('rides').update({ price: newTotal }).eq('id', currentRideId);
+                           showToast(`Added +₹${amount} tip! Updated total fare.`);
+                         }
+                       }}
+                       className={`py-2 px-1 text-xs font-bold rounded-xl border transition-all ${
+                         tipAmount === amount
+                           ? 'bg-emerald-500 text-black border-emerald-400 shadow-md scale-105 font-extrabold'
+                           : 'bg-zinc-900 text-zinc-300 border-zinc-750 hover:border-zinc-500'
+                       }`}
+                     >
+                       {amount === 0 ? 'No Tip' : `+₹${amount}`}
+                     </button>
+                   ))}
+                 </div>
+               </div>
+
                <button 
                  onClick={cancelRide}
-                 className="w-full bg-red-900/40 text-red-400 border border-red-900/50 hover:bg-red-900/60 font-bold py-3 rounded-xl transition"
+                 className="w-full bg-red-900/40 text-red-400 border border-red-900/50 hover:bg-red-900/60 font-bold py-3.5 rounded-xl transition"
                >
                  Cancel Request
                </button>
@@ -1274,7 +1312,7 @@ function App() {
                  </span>
                </div>
                
-               <div className="space-y-3 mb-4">
+               <div className="space-y-3 mb-6">
                  {/* Bike */}
                  <div 
                    onClick={() => setSelectedVehicle('bike')}
@@ -1321,40 +1359,11 @@ function App() {
                  </div>
                </div>
 
-               {/* Add Tip Section */}
-               <div className="mb-5 bg-zinc-800/60 p-3.5 rounded-xl border border-zinc-700/60">
-                 <div className="flex items-center justify-between mb-2">
-                   <span className="text-xs font-semibold text-zinc-300 flex items-center gap-1.5">
-                     <span>💚</span> Add a driver tip for faster pickup
-                   </span>
-                   {tipAmount > 0 && (
-                     <button onClick={() => setTipAmount(0)} className="text-[10px] text-zinc-400 hover:text-white underline">
-                       Clear Tip
-                     </button>
-                   )}
-                 </div>
-                 <div className="grid grid-cols-5 gap-2">
-                   {[0, 10, 20, 30, 50].map((amount) => (
-                     <button
-                       key={amount}
-                       onClick={() => setTipAmount(amount)}
-                       className={`py-1.5 px-2 text-xs font-bold rounded-lg border transition-all ${
-                         tipAmount === amount
-                           ? 'bg-emerald-500 text-black border-emerald-400 shadow-md scale-105'
-                           : 'bg-zinc-800 text-zinc-300 border-zinc-700 hover:border-zinc-500'
-                       }`}
-                     >
-                       {amount === 0 ? 'No Tip' : `+₹${amount}`}
-                     </button>
-                   ))}
-                 </div>
-               </div>
-
                <button 
                   onClick={() => handleConfirmRide()}
                   className="w-full bg-white text-black font-bold py-4 rounded-xl hover:bg-zinc-200 transition-colors shadow-lg"
                 >
-                  Confirm {selectedVehicle.toUpperCase()} (₹{(getPrice(selectedVehicle, distance) + tipAmount).toFixed(2)})
+                  Confirm {selectedVehicle.toUpperCase()} (Cash)
                 </button>
                 <button 
                   onClick={() => { setStatus('idle'); setRouteGeometry(null) }}
