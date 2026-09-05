@@ -791,19 +791,9 @@ function App() {
         </div>
       </div>
 
-      <div className={`absolute bottom-0 left-0 right-0 z-20 transition-all duration-300 ${activeInput !== 'none' ? 'top-14 p-0 bg-black/80 backdrop-blur-md' : 'p-4 pb-8 bg-gradient-to-t from-black/90 to-transparent'}`}>
-        <div className={`bg-zinc-900/95 backdrop-blur-xl border border-zinc-800 shadow-2xl max-w-md mx-auto relative transition-all duration-300 ${activeInput !== 'none' ? 'h-full rounded-t-3xl p-6 overflow-y-auto' : 'p-6 rounded-3xl'}`}>
-          <div className="flex justify-between items-center mb-1">
-             <h1 className="text-3xl font-bold tracking-tight text-white">RYVO</h1>
-             {activeInput !== 'none' && (
-                <button 
-                  onClick={() => setActiveInput('none')}
-                  className="bg-zinc-800 text-zinc-300 hover:text-white px-3 py-1.5 rounded-full text-xs font-bold border border-zinc-700 transition"
-                >
-                  Done ✕
-                </button>
-             )}
-          </div>
+      <div className="absolute bottom-0 left-0 right-0 z-10 p-4 pb-8 bg-gradient-to-t from-black/90 to-transparent">
+        <div className="bg-zinc-900/95 backdrop-blur-xl border border-zinc-800 p-6 rounded-3xl shadow-2xl max-w-md mx-auto relative">
+          <h1 className="text-3xl font-bold tracking-tight text-white mb-1">RYVO</h1>
           
           {['accepted', 'arrived', 'in_transit', 'completed'].includes(status) ? (
              <div className="py-2">
@@ -1082,7 +1072,7 @@ function App() {
 
                   {/* Options Dropdown Box for Pickup */}
                   {activeInput === 'pickup' && (
-                    <div className="absolute z-50 w-full bg-zinc-900 border border-zinc-700/80 mt-2 rounded-2xl shadow-2xl overflow-hidden divide-y divide-zinc-800 animate-slide-in">
+                    <div className="absolute z-50 w-full bg-zinc-900 border border-zinc-700/80 mt-2 rounded-2xl shadow-2xl overflow-y-auto max-h-60 divide-y divide-zinc-800 animate-slide-in">
                       {/* Option 1: Locate Current GPS */}
                       <div 
                         onClick={() => handleLocateCurrentPosition('pickup')}
@@ -1210,7 +1200,7 @@ function App() {
 
                   {/* Options Dropdown Box for Destination */}
                   {activeInput === 'destination' && (
-                    <div className="absolute z-50 w-full bg-zinc-900 border border-zinc-700/80 mt-2 rounded-2xl shadow-2xl overflow-hidden divide-y divide-zinc-800 animate-slide-in">
+                    <div className="absolute z-50 w-full bg-zinc-900 border border-zinc-700/80 mt-2 rounded-2xl shadow-2xl overflow-y-auto max-h-60 divide-y divide-zinc-800 animate-slide-in">
                       {/* Option 1: Locate Current GPS */}
                       <div 
                         onClick={() => handleLocateCurrentPosition('destination')}
