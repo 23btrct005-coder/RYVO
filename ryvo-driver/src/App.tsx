@@ -577,19 +577,17 @@ function App() {
   const handleAccept = async () => {
     if (!incomingRequest) return;
     try {
-      await supabase.from('rides').update({
+      const { error: updateError } = await supabase.from('rides').update({
         status: 'accepted',
         driverid: user?.id,
         driverlat: driverPosition[0],
-        driverlng: driverPosition[1],
-        driverName: driverProfileRef.current?.name || 'Your Driver',
-        driverVehicleColor: driverProfileRef.current?.vehiclecolor || 'White',
-        driverVehicleNumber: driverProfileRef.current?.vehiclenumber || 'XX-00-0000',
-        driverVehicleType: driverProfileRef.current?.vehicletype || 'MINI',
-        driverPhone: driverProfileRef.current?.phone || '',
-        driverEmail: user?.email || email || '',
-        driverRating: avgRating
+        driverlng: driverPosition[1]
       }).eq('id', incomingRequest.id);
+      
+      if (updateError) {
+        alert(`Failed to accept ride: ${updateError.message}`);
+        return;
+      }
       
       // Fetch rider phone and name for display
       let fetchedPhone = '';
