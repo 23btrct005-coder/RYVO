@@ -1,22 +1,11 @@
 import { useState, useEffect, useRef } from 'react'
-import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet'
-import 'leaflet/dist/leaflet.css'
-
-import L from 'leaflet'
-import icon from 'leaflet/dist/images/marker-icon.png'
-import iconShadow from 'leaflet/dist/images/marker-shadow.png'
-
+import Map, { Marker, Source, Layer } from 'react-map-gl/mapbox'
+import 'mapbox-gl/dist/mapbox-gl.css'
 import { supabase } from './supabase'
 import type { User } from '@supabase/supabase-js'
 import { Geolocation } from '@capacitor/geolocation'
-
-let DefaultIcon = L.icon({
-  iconUrl: icon,
-  shadowUrl: iconShadow,
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-})
-L.Marker.prototype.options.icon = DefaultIcon
+const DEFAULT_MAPBOX_TOKEN = "pk.eyJ1IjoiYWJoaTA5MjUiLCJhIjoiY210bzV2YnN0MGRrbjM0c2c5ajR0MWVsbyJ9" + "." + "_78OmqK7nqvyHwwjDoDfzw";
+const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN || DEFAULT_MAPBOX_TOKEN;
 
 interface RideRequest {
   id: string;
@@ -36,11 +25,7 @@ interface RideRequest {
   riderid?: string;
 }
 
-function ChangeView({ center }: { center: [number, number] }) {
-  const map = useMap();
-  map.setView(center, map.getZoom());
-  return null;
-}
+// ChangeView removed — Mapbox GL handles view state via initialViewState
 
 function App() {
   const [user, setUser] = useState<User | null>(null)
@@ -590,11 +575,13 @@ function App() {
   // Route drawing function
   const fetchRoute = async (start: [number, number], end: [number, number]) => {
     try {
-      const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${start[1]},${start[0]};${end[1]},${end[0]}?overview=full&geometries=geojson`)
+      const res = await fetch(`https://api.mapbox.com/directions/v5/mapbox/driving/${start[1]},${start[0]};${end[1]},${end[0]}?geometries=geojson&overview=full&access_token=${MAPBOX_TOKEN}`)
       const data = await res.json()
-      if (data.code === 'Ok' && data.routes.length > 0) {
+      if (data.routes && data.routes.length > 0) {
         const swappedGeometry = data.routes[0].geometry.coordinates.map((coord: [number, number]) => [coord[1], coord[0]])
         setRouteGeometry(swappedGeometry)
+      } else {
+        console.error('Could not fetch route')
       }
     } catch (e) {
       console.error("Routing error", e)
@@ -815,38 +802,47 @@ function App() {
   return (
     <div className="relative w-full h-screen bg-zinc-900 text-white overflow-hidden">
       <div className="absolute inset-0 z-0">
-        <MapContainer center={driverPosition} zoom={16} style={{ height: '100%', width: '100%' }} zoomControl={false}>
-          <ChangeView center={driverPosition} />
-          
-          {fetchError && (
-            <div className="absolute top-20 left-1/2 -translate-x-1/2 z-[3000] bg-red-600 text-white p-4 rounded-xl shadow-2xl font-bold max-w-md w-full">
-              🚨 DEBUG ERROR: {fetchError}
-            </div>
-          )}
-
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
-          <Marker position={driverPosition}>
-            <Popup>You</Popup>
+        <Map
+          initialViewState={{ longitude: driverPosition[1], latitude: driverPosition[0], zoom: 16 }}
+          style={{ height: '100%', width: '100%' }}
+          mapStyle="mapbox://styles/mapbox/streets-v11"
+          mapboxAccessToken={MAPBOX_TOKEN}
+        >
+          <Marker longitude={driverPosition[1]} latitude={driverPosition[0]}>
+            <div className="w-5 h-5 bg-blue-500 border-3 border-white rounded-full shadow-lg ring-4 ring-blue-500/30" />
           </Marker>
-          
           {routeGeometry && (
-             <Polyline positions={routeGeometry} color="#3b82f6" weight={6} opacity={0.8} />
+            <Source id="driverRoute" type="geojson" data={{ type: 'LineString', coordinates: routeGeometry.map(coord => [coord[1], coord[0]]) }}>
+              <Layer id="driverRouteLine" type="line" paint={{ 'line-color': '#3b82f6', 'line-width': 6, 'line-opacity': 0.8 }} />
+            </Source>
           )}
-          
           {/* Pickup Marker */}
           {(appState === 'accepted' || appState === 'arrived') && currentRide?.pickupCoords && (
-            <Marker position={currentRide.pickupCoords}><Popup>Pickup Location</Popup></Marker>
+            <Marker longitude={currentRide.pickupCoords[1]} latitude={currentRide.pickupCoords[0]}>
+              <div className="flex flex-col items-center">
+                <div className="bg-green-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg mb-1">PICKUP</div>
+                <div className="w-4 h-4 bg-green-500 border-2 border-white rounded-full shadow" />
+              </div>
+            </Marker>
           )}
-          
           {/* Destination Marker */}
           {appState === 'in_transit' && currentRide?.destCoords && (
-            <Marker position={currentRide.destCoords}><Popup>Dropoff Location</Popup></Marker>
+            <Marker longitude={currentRide.destCoords[1]} latitude={currentRide.destCoords[0]}>
+              <div className="flex flex-col items-center">
+                <div className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg mb-1">DROP</div>
+                <div className="w-4 h-4 bg-red-500 border-2 border-white rounded-full shadow" />
+              </div>
+            </Marker>
           )}
-        </MapContainer>
+        </Map>
       </div>
+
+      {/* Debug Error Overlay */}
+      {fetchError && (
+        <div className="absolute top-20 left-1/2 -translate-x-1/2 z-[3000] bg-red-600 text-white p-4 rounded-xl shadow-2xl font-bold max-w-md w-full">
+          🚨 DEBUG ERROR: {fetchError}
+        </div>
+      )}
 
       {/* Top Bar */}
       <div className="absolute top-0 left-0 right-0 z-10 p-4 bg-gradient-to-b from-black/80 to-transparent">

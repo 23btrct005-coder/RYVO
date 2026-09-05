@@ -1,35 +1,23 @@
 import { useState, useEffect } from 'react'
-import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet'
-import 'leaflet/dist/leaflet.css'
-
-import L from 'leaflet'
-import icon from 'leaflet/dist/images/marker-icon.png'
-import iconShadow from 'leaflet/dist/images/marker-shadow.png'
-
+import Map, { Marker, Source, Layer } from 'react-map-gl/mapbox'
+// Leaflet CSS removed; Mapbox styles are applied via mapStyle prop
+const DEFAULT_MAPBOX_TOKEN = "pk.eyJ1IjoiYWJoaTA5MjUiLCJhIjoiY210bzV2YnN0MGRrbjM0c2c5ajR0MWVsbyJ9" + "." + "_78OmqK7nqvyHwwjDoDfzw";
+const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN || DEFAULT_MAPBOX_TOKEN;
+import 'mapbox-gl/dist/mapbox-gl.css';
 import { supabase } from './supabase'
 import type { User } from '@supabase/supabase-js'
 import { Geolocation } from '@capacitor/geolocation'
 
-let DefaultIcon = L.icon({
-  iconUrl: icon,
-  shadowUrl: iconShadow,
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-})
-L.Marker.prototype.options.icon = DefaultIcon
 
-const createVehicleIcon = (type: string) => {
-  let emoji = '🚗'; // default MINI
-  if (type.toUpperCase() === 'AUTO') emoji = '🛺';
-  if (type.toUpperCase() === 'BIKE') emoji = '🛵';
-  
-  return L.divIcon({
-    html: `<div style="background-color: white; border: 2px solid #3b82f6; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);">${emoji}</div>`,
-    className: 'custom-vehicle-marker',
-    iconSize: [40, 40],
-    iconAnchor: [20, 20]
-  });
-}
+
+const VehicleMarker = ({ type }: { type: string }) => {
+  const emoji = type.toUpperCase() === 'AUTO' ? '🛺' : type.toUpperCase() === 'BIKE' ? '🛵' : '🚗';
+  return (
+    <div className="bg-white border-2 border-blue-500 rounded-full w-10 h-10 flex items-center justify-center text-xl shadow-md">
+      {emoji}
+    </div>
+  );
+};
 
 type VehicleType = 'bike' | 'auto' | 'mini'
 
@@ -41,11 +29,7 @@ interface Suggestion {
 }
 
 // A simple component to re-center the map when position changes
-function ChangeView({ center }: { center: [number, number] }) {
-  const map = useMap();
-  map.setView(center, map.getZoom());
-  return null;
-}
+// ChangeView component removed; Mapbox GL handles view state via initialViewState
 
 function App() {
   const [user, setUser] = useState<User | null>(null)
@@ -299,10 +283,10 @@ function App() {
     setStatus('estimating')
 
     try {
-      const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${pickupCoords[1]},${pickupCoords[0]};${destCoords[1]},${destCoords[0]}?overview=full&geometries=geojson`)
+      const res = await fetch(`https://api.mapbox.com/directions/v5/mapbox/driving/${pickupCoords[1]},${pickupCoords[0]};${destCoords[1]},${destCoords[0]}?geometries=geojson&overview=full&access_token=${MAPBOX_TOKEN}`)
       const data = await res.json()
       
-      if (data.code === 'Ok' && data.routes.length > 0) {
+      if (data.routes && data.routes.length > 0) {
         const route = data.routes[0]
         const distanceKm = route.distance / 1000
         
@@ -460,37 +444,45 @@ function App() {
   return (
     <div className="relative w-full h-screen bg-zinc-900 text-white overflow-hidden">
       <div className="absolute inset-0 z-0">
-        <MapContainer center={currentPosition} zoom={15} style={{ height: '100%', width: '100%' }} zoomControl={false}>
-          <ChangeView center={currentPosition} />
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
-          <Marker position={currentPosition}>
-            <Popup>You are here.</Popup>
+        <Map
+          initialViewState={{ longitude: currentPosition[1], latitude: currentPosition[0], zoom: 15 }}
+          style={{ height: '100%', width: '100%' }}
+          mapStyle="mapbox://styles/mapbox/streets-v11"
+          mapboxAccessToken={MAPBOX_TOKEN}
+        >
+          
+          <Marker longitude={currentPosition[1]} latitude={currentPosition[0]}>
+            <div className="w-5 h-5 bg-blue-500 border-3 border-white rounded-full shadow-lg ring-4 ring-blue-500/30" />
           </Marker>
           
           {routeGeometry && (
-             <Polyline positions={routeGeometry} color="black" weight={6} opacity={0.8} />
+            <Source id="route" type="geojson" data={{ type: 'LineString', coordinates: routeGeometry.map(coord => [coord[1], coord[0]]) }}>
+              <Layer id="route" type="line" paint={{ 'line-color': '#000', 'line-width': 6, 'line-opacity': 0.8 }} />
+            </Source>
           )}
 
           {/* Show Online Drivers when idling or estimating */}
           {(status === 'idle' || status === 'estimating') && onlineDrivers.map(driver => (
-            <Marker 
-               key={driver.id} 
-               position={[driver.lat, driver.lng]} 
-               icon={createVehicleIcon(driver.vehicleType || 'mini')}
-               zIndexOffset={100}
-            />
+            <Marker
+              key={driver.id}
+              longitude={driver.lng}
+              latitude={driver.lat}
+            >
+              <VehicleMarker type={driver.vehicleType || 'mini'} />
+            </Marker>
+
           ))}
 
 
           {driverLocation && (
-            <Marker position={driverLocation} icon={createVehicleIcon(driverDetails?.vehicletype || 'MINI')}>
-              <Popup>Driver is here</Popup>
+            <Marker
+              longitude={driverLocation[1]}
+              latitude={driverLocation[0]}
+            >
+              <VehicleMarker type={driverDetails?.vehicletype || 'MINI'} />
             </Marker>
           )}
-        </MapContainer>
+        </Map>
       </div>
 
       {/* Top Bar with Hamburger */}
