@@ -128,34 +128,7 @@ function App() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       const currentUser = session?.user ?? null
       setUser(currentUser)
-      if (currentUser) {
-        // Fetch driver profile
-        try {
-           const { data, error } = await supabase
-             .from('drivers')
-             .select('*')
-             .eq('id', currentUser.id)
-             .single()
-             
-           if (error) {
-             console.error("Failed to fetch driver profile:", error);
-             setFetchError(`onAuthStateChange Error: ${error.message} (Code: ${error.code})`);
-             if (error.code === 'PGRST116') {
-                console.warn("User is not a driver. Forcing logout.");
-                await supabase.auth.signOut();
-                setUser(null);
-             }
-           }
-           if (data) {
-             setDriverProfile(data)
-             setAppState(data.isonline ? 'online' : 'idle')
-             setIsOnline(data.isonline)
-           }
-        } catch(e: any) {
-             console.error("Exception fetching driver profile:", e);
-             setFetchError(`onAuthStateChange Exception: ${e.message || String(e)}`);
-        }
-      } else {
+      if (!currentUser) {
         setDriverProfile(null)
       }
     })
@@ -227,7 +200,7 @@ function App() {
       };
       fetchProfile();
     }
-  }, [user]);
+  }, [user?.id]);
   
   useEffect(() => {
     if (!user) return
