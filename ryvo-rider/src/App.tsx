@@ -292,7 +292,8 @@ function App() {
   const [pickupCoords, setPickupCoords] = useState<[number, number] | null>(null)
   const [destCoords, setDestCoords] = useState<[number, number] | null>(null)
 
-  const [activeInput, setActiveInput] = useState<'none' | 'pickup' | 'destination'>('none')
+  const [activeInput, setActiveInput] = useState<'none' | 'pickup' | 'destination' | string>('none')
+  const [stopSuggestionsMap, setStopSuggestionsMap] = useState<{ [stopId: string]: Suggestion[] }>({})
 
   // Saved locations (stored locally per user - starts empty until saved via Heart)
   const [savedPlaces, setSavedPlaces] = useState<{ label: string; address: string; coords: [number, number]; icon: string }[]>(() => {
@@ -1500,7 +1501,13 @@ function App() {
                     <input 
                       type="text" 
                       value={stop.address}
-                      onChange={(e) => updateStop(stop.id, e.target.value, null)}
+                      onFocus={() => setActiveInput(stop.id)}
+                      onChange={(e) => {
+                        updateStop(stop.id, e.target.value, null);
+                        fetchSuggestions(e.target.value, (suggs) => {
+                          setStopSuggestionsMap(prev => ({ ...prev, [stop.id]: suggs }));
+                        });
+                      }}
                       placeholder={`Stop ${index + 1} location`} 
                       className="w-full bg-zinc-800/90 text-white placeholder-zinc-500 rounded-2xl pl-10 pr-20 py-3.5 focus:outline-none focus:ring-2 focus:ring-amber-500 border border-zinc-700/50 transition-all font-medium text-sm shadow-inner"
                     />
@@ -1522,6 +1529,55 @@ function App() {
                         ✕
                       </button>
                     </div>
+
+                    {/* Options Dropdown Box for Intermediate Stop */}
+                    {activeInput === stop.id && (
+                      <div className="absolute z-50 w-full bg-zinc-950 border border-zinc-800 mt-2 rounded-2xl shadow-2xl overflow-y-auto max-h-72 divide-y divide-zinc-900 animate-slide-in">
+                        {/* Set on Map */}
+                        <div 
+                          onClick={() => startMapSelection(stop.id)}
+                          className="px-4 py-3.5 hover:bg-zinc-900 cursor-pointer flex items-center space-x-3 text-cyan-400 font-bold transition-colors bg-cyan-500/10 border-b border-zinc-900"
+                        >
+                           <div className="p-2 bg-cyan-500/20 rounded-full">
+                             📌
+                           </div>
+                           <div>
+                              <p className="text-sm font-extrabold">Choose Location on Map</p>
+                              <p className="text-zinc-400 text-xs font-normal">Drag and set precise map pin</p>
+                           </div>
+                        </div>
+
+                        {/* Live Search Suggestions */}
+                        {(stopSuggestionsMap[stop.id] || []).length > 0 && (
+                          <div className="bg-zinc-900 border-b border-zinc-700/60 divide-y divide-zinc-800">
+                            <p className="text-[11px] uppercase font-black text-amber-400 px-4 py-2 bg-amber-950/30 tracking-wider">Search Results</p>
+                            {(stopSuggestionsMap[stop.id] || []).map((s, i) => (
+                              <div 
+                                key={i} 
+                                className="px-5 py-3.5 hover:bg-zinc-800 cursor-pointer flex items-center space-x-3 transition-colors"
+                                onClick={() => { 
+                                  const fullAddr = s.subtitle ? (s.subtitle.startsWith(s.title) ? s.subtitle : `${s.title}, ${s.subtitle}`) : s.title;
+                                  updateStop(stop.id, fullAddr, [s.lat, s.lon]);
+                                  addRecentSearch(s);
+                                  setStopSuggestionsMap(prev => ({ ...prev, [stop.id]: [] })); 
+                                  setActiveInput('none');
+                                }}
+                              >
+                                <div className="flex-shrink-0 bg-amber-500/20 text-amber-400 p-2 rounded-full">📍</div>
+                                <div className="overflow-hidden">
+                                  <p className="text-white font-bold truncate text-sm">{s.title}</p>
+                                  <p className="text-zinc-400 text-xs truncate">{s.subtitle}</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        <div className="p-2 text-center bg-zinc-950">
+                           <button onClick={() => setActiveInput('none')} className="text-xs text-zinc-500 font-bold hover:text-white">Close Dropdown ✕</button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
 
