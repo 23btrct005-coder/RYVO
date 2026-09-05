@@ -1,4 +1,9 @@
 {
+  "name": "ryvo-monorepo",
+  "private": true,
+  "scripts": {
+    "build": "cd ryvo-rider && npm run build"
+  },
   "dependencies": {
     "@supabase/supabase-js": "^2.115.0",
     "pg": "^8.22.0"
