@@ -77,11 +77,13 @@ function App() {
     }
   })
   const declinedRidesRef = useRef(declinedRides)
+  const incomingRequestRef = useRef(incomingRequest)
   
   useEffect(() => {
     declinedRidesRef.current = declinedRides
+    incomingRequestRef.current = incomingRequest
     sessionStorage.setItem('declinedRides', JSON.stringify(declinedRides))
-  }, [declinedRides])
+  }, [declinedRides, incomingRequest])
 
   const [currentRide, setCurrentRide] = useState<RideRequest | null>(null)
   const [otpInput, setOtpInput] = useState('')
@@ -457,6 +459,9 @@ function App() {
       .subscribe()
       
     const checkRequests = (requests: any[]) => {
+      // If the driver is already evaluating an incoming request, ignore any new requests.
+      if (incomingRequestRef.current) return;
+      
       let foundRequest = false;
       requests.forEach((data) => {
         // Map postgres flat columns to the expected React state interface
@@ -492,11 +497,9 @@ function App() {
           foundRequest = true;
         }
       });
+      
       if (foundRequest) {
         setAppState('incoming')
-      } else {
-        setAppState('online')
-        setIncomingRequest(null);
       }
     }
 
