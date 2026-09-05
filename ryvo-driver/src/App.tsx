@@ -85,6 +85,8 @@ function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [appState, setAppState] = useState<'idle' | 'online' | 'incoming' | 'accepted' | 'arrived' | 'in_transit' | 'completed'>('idle')
   const [incomingRequest, setIncomingRequest] = useState<RideRequest | null>(null)
+  const [availableRequests, setAvailableRequests] = useState<RideRequest[]>([])
+  const [requestCountdown, setRequestCountdown] = useState<number>(15)
   const [fetchError, setFetchError] = useState<string | null>(null)
   const [declinedRides, setDeclinedRides] = useState<string[]>(() => {
     try {
@@ -95,6 +97,23 @@ function App() {
   })
   const declinedRidesRef = useRef(declinedRides)
   const incomingRequestRef = useRef(incomingRequest)
+  
+  useEffect(() => {
+    let timer: any;
+    if (appState === 'incoming') {
+      setRequestCountdown(15);
+      timer = setInterval(() => {
+        setRequestCountdown((prev) => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [appState, incomingRequest?.id]);
   
   useEffect(() => {
     declinedRidesRef.current = declinedRides
@@ -504,13 +523,10 @@ function App() {
       .subscribe()
       
     const checkRequests = (requests: any[]) => {
-      // If the driver is already evaluating an incoming request, ignore any new requests.
-      if (incomingRequestRef.current) return;
-      
-      let foundRequest = false;
+      const validRequests: RideRequest[] = [];
       requests.forEach((data) => {
         // Map postgres flat columns to the expected React state interface
-        const mappedData = {
+        const mappedData: RideRequest = {
           ...data,
           pickupCoords: (data.pickuplat && data.pickuplng) ? [data.pickuplat, data.pickuplng] : undefined,
           destCoords: (data.destlat && data.destlng) ? [data.destlat, data.destlng] : undefined,
@@ -519,7 +535,7 @@ function App() {
         
         // 1. Vehicle Type Match
         const driverType = (driverProfileRef.current?.vehicletype || 'mini').toLowerCase();
-        const requestType = (mappedData.vehicletype || 'mini').toLowerCase();
+        const requestType = ((data.vehicleType || data.vehicletype || 'mini') as string).toLowerCase();
         const isTypeMatch = driverType === requestType;
 
         // 2. Distance check (<= 5km)
@@ -537,14 +553,26 @@ function App() {
         }
         const isNotDeclined = !declinedRidesRef.current.includes(mappedData.id);
         
-        if (!foundRequest && !currentRide && isTypeMatch && isNear && isNotDeclined) {
-          setIncomingRequest(mappedData);
-          foundRequest = true;
+        if (!currentRide && isTypeMatch && isNear && isNotDeclined) {
+          validRequests.push(mappedData);
         }
       });
       
-      if (foundRequest) {
-        setAppState('incoming')
+      if (validRequests.length > 0) {
+        setAvailableRequests(prev => {
+          const merged = [...prev];
+          validRequests.forEach(req => {
+            if (!merged.some(r => r.id === req.id)) {
+              merged.push(req);
+            }
+          });
+          return merged;
+        });
+
+        if (!incomingRequestRef.current) {
+          setIncomingRequest(validRequests[0]);
+          setAppState('incoming');
+        }
       }
     }
 
@@ -959,55 +987,181 @@ function App() {
         </div>
       )}
 
-      {/* Incoming Request */}
-      {appState === 'incoming' && incomingRequest && (
-        <div className="absolute bottom-0 left-0 right-0 z-10 p-4 pb-8">
-          <div className="bg-zinc-900 border border-zinc-700 p-6 rounded-3xl shadow-2xl max-w-md mx-auto animate-bounce shadow-blue-900/50">
-             <div className="flex justify-between items-start mb-6">
-               <div>
-                 <p className="text-blue-400 text-xs font-bold uppercase tracking-wider mb-2 flex items-center">
-                    <span className="w-2 h-2 bg-blue-400 rounded-full animate-ping mr-2"></span>
-                    New Ride Request
-                 </p>
-                 <h2 className="text-2xl font-bold text-white mb-1 truncate">{incomingRequest.pickup}</h2>
-                 <p className="text-zinc-400 text-sm">Dropoff: {incomingRequest.destination}</p>
-               </div>
-                 <div className="text-right flex flex-col items-end shrink-0 ml-4">
-                 <p className="text-white text-2xl font-black mb-1">₹{incomingRequest.price?.toFixed(0)}</p>
-                 <span className="bg-zinc-800 text-zinc-300 border border-zinc-700 text-xs font-bold px-2 py-1 rounded">CASH</span>
-               </div>
-             </div>
-             
-             {incomingRequest.pickupCoords && incomingRequest.destCoords && (
-               <div className="flex items-center space-x-4 mb-6 bg-zinc-800/50 p-3 rounded-xl border border-zinc-700">
-                  <div className="flex-1 text-center">
-                    <p className="text-zinc-400 text-xs uppercase font-bold tracking-wider mb-1">To Pickup</p>
-                    <p className="text-white font-bold">{calculateDistance(driverPosition[0], driverPosition[1], incomingRequest.pickupCoords[0], incomingRequest.pickupCoords[1]).toFixed(1)} km</p>
+      {/* Incoming Request Overlay matching Namma Yatri / Rapido redesign screenshot */}
+      {appState === 'incoming' && (availableRequests.length > 0 || incomingRequest) && (() => {
+        const activeReq = incomingRequest || availableRequests[0];
+        if (!activeReq) return null;
+        
+        const pickupDist = activeReq.pickupCoords 
+          ? calculateDistance(driverPosition[0], driverPosition[1], activeReq.pickupCoords[0], activeReq.pickupCoords[1]).toFixed(1)
+          : '1.8';
+        const dropDist = activeReq.distance 
+          ? Number(activeReq.distance).toFixed(1)
+          : (activeReq.pickupCoords && activeReq.destCoords 
+              ? calculateDistance(activeReq.pickupCoords[0], activeReq.pickupCoords[1], activeReq.destCoords[0], activeReq.destCoords[1]).toFixed(1)
+              : '9.6');
+
+        const baseFare = activeReq.price ? Math.max(0, Math.floor(activeReq.price * 0.9)) : 360;
+        const extraFare = activeReq.price ? Math.max(0, Math.round(activeReq.price * 0.1)) : 39;
+        const paymentType = (activeReq.paymentMethod || 'Offline').toUpperCase();
+
+        return (
+          <div className="absolute inset-x-0 bottom-0 z-20 p-2 sm:p-4 pb-6 bg-gradient-to-t from-black/80 via-black/40 to-transparent pointer-events-auto">
+            <div className="max-w-md mx-auto flex gap-2 items-end">
+              {/* Left Order Selection Queue Strip (if multiple orders exist) */}
+              {availableRequests.length > 1 && (
+                <div className="flex flex-col gap-2 max-h-[380px] overflow-y-auto pr-1 select-none">
+                  {availableRequests.map((req) => {
+                    const isSelected = req.id === activeReq.id;
+                    const reqBase = req.price ? Math.floor(req.price * 0.9) : 210;
+                    const reqTip = req.price ? Math.round(req.price * 0.1) : 45;
+                    return (
+                      <div
+                        key={req.id}
+                        onClick={() => {
+                          setIncomingRequest(req);
+                          if (req.pickupCoords) {
+                            fetchRoute(driverPosition, req.pickupCoords);
+                          }
+                        }}
+                        className={`cursor-pointer rounded-2xl p-2.5 flex flex-col items-center justify-center min-w-[70px] transition-all border ${
+                          isSelected
+                            ? 'bg-white text-black border-emerald-500 shadow-xl ring-2 ring-emerald-500'
+                            : 'bg-white/95 text-zinc-800 border-zinc-200 opacity-80 hover:opacity-100'
+                        }`}
+                      >
+                        <div className="relative mb-1">
+                          <div className="w-8 h-8 rounded-full bg-zinc-100 border border-zinc-300 flex items-center justify-center text-sm shadow-inner">
+                            {req.vehicleType?.toUpperCase() === 'AUTO' ? '🛺' : req.vehicleType?.toUpperCase() === 'BIKE' ? '🛵' : '🚗'}
+                          </div>
+                          {isSelected && (
+                            <svg className="w-4 h-4 text-emerald-600 absolute -right-1 -bottom-1" viewBox="0 0 24 24" fill="currentColor">
+                              <path d="M12 2a10 10 0 100 20 10 10 0 000-20zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                            </svg>
+                          )}
+                        </div>
+                        <span className="font-extrabold text-sm text-black tracking-tight">₹{req.price || reqBase + reqTip}</span>
+                        {reqTip > 0 && (
+                          <span className="font-bold text-[11px] text-emerald-600">₹{reqTip}</span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Main Order Card */}
+              <div className="flex-1 bg-white text-zinc-900 rounded-3xl p-5 shadow-2xl border border-zinc-200 transition-all transform animate-in slide-in-from-bottom duration-300">
+                {/* Header: Vehicle Icon + Fare Breakdown + Payment Tag */}
+                <div className="flex items-center justify-between pb-3 border-b border-zinc-100 mb-4">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center text-xl text-white shadow-md">
+                      {activeReq.vehicleType?.toUpperCase() === 'AUTO' ? '🛺' : activeReq.vehicleType?.toUpperCase() === 'BIKE' ? '🛵' : '🚗'}
+                    </div>
+                    <div>
+                      <div className="flex items-baseline gap-1.5">
+                        <span className="text-2xl font-black text-slate-900 tracking-tight">₹{baseFare}</span>
+                        {extraFare > 0 && (
+                          <span className="text-lg font-extrabold text-emerald-600">+ ₹{extraFare}</span>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                  <div className="w-px h-8 bg-zinc-700"></div>
-                  <div className="flex-1 text-center">
-                    <p className="text-zinc-400 text-xs font-bold uppercase mb-1">Trip Distance</p>
-                    <p className="text-white font-bold">{incomingRequest.distance ? Number(incomingRequest.distance).toFixed(1) : calculateDistance(incomingRequest.pickupCoords[0], incomingRequest.pickupCoords[1], incomingRequest.destCoords[0], incomingRequest.destCoords[1]).toFixed(1)} km</p>
+                  <div className="text-right">
+                    <span className="text-xs font-semibold text-zinc-500 bg-zinc-100 border border-zinc-200 px-2.5 py-1 rounded-full">
+                      ({paymentType === 'CASH' || paymentType === 'OFFLINE' ? 'Offline' : 'Online'})
+                    </span>
                   </div>
-               </div>
-             )}
-             
-             <div className="flex space-x-3">
-                <button onClick={() => {
-                  if (incomingRequest) {
-                    setDeclinedRides(prev => [...prev, incomingRequest.id])
-                  }
-                  setIncomingRequest(null)
-                }} className="flex-1 bg-zinc-800 text-white font-bold py-4 rounded-xl hover:bg-zinc-700 transition-colors">
-                  Decline
-                </button>
-                <button onClick={handleAccept} className="flex-[2] bg-blue-600 text-white font-bold py-4 rounded-xl hover:bg-blue-500 transition-colors text-lg shadow-lg shadow-blue-900/50">
-                  Accept Ride
-                </button>
-             </div>
+                </div>
+
+                {/* Vertical Timeline Addresses (Pickup -> Dropoff) */}
+                <div className="relative pl-6 space-y-4 mb-5">
+                  {/* Vertical Connecting Line */}
+                  <div className="absolute left-[7px] top-[14px] bottom-[14px] w-[2px] bg-zinc-300 rounded-full" />
+
+                  {/* Pickup Location */}
+                  <div className="relative flex flex-col">
+                    <div className="absolute -left-[24px] top-1 w-3.5 h-3.5 rounded-full border-2 border-emerald-500 bg-white flex items-center justify-center shadow-sm">
+                      <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
+                    </div>
+                    <h3 className="font-bold text-slate-900 text-base leading-tight truncate">
+                      {activeReq.pickup.split(',')[0]}
+                    </h3>
+                    <p className="text-xs text-zinc-500 truncate mt-0.5 font-normal">
+                      {activeReq.pickup.split(',').slice(1).join(',').trim() || activeReq.pickup}
+                    </p>
+                  </div>
+
+                  {/* Dropoff Location */}
+                  <div className="relative flex flex-col pt-1">
+                    <div className="absolute -left-[24px] top-2 w-3.5 h-3.5 rounded-full border-2 border-rose-500 bg-white flex items-center justify-center shadow-sm">
+                      <div className="w-1.5 h-1.5 bg-rose-500 rounded-full" />
+                    </div>
+                    <h3 className="font-bold text-slate-900 text-base leading-tight truncate">
+                      {activeReq.destination.split(',')[0]}
+                    </h3>
+                    <p className="text-xs text-zinc-500 truncate mt-0.5 font-normal">
+                      {activeReq.destination.split(',').slice(1).join(',').trim() || activeReq.destination}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Metrics Bar (Pickup Distance & Drop Distance) */}
+                <div className="grid grid-cols-2 gap-4 py-3 px-4 bg-zinc-50 rounded-2xl border border-zinc-100 mb-5">
+                  <div>
+                    <span className="text-xs font-semibold text-zinc-400 block mb-0.5">Pickup</span>
+                    <span className="text-base font-extrabold text-slate-900">{pickupDist} Km</span>
+                  </div>
+                  <div className="border-l border-zinc-200 pl-4">
+                    <span className="text-xs font-semibold text-zinc-400 block mb-0.5">Drop</span>
+                    <span className="text-base font-extrabold text-slate-900">{dropDist} Km</span>
+                  </div>
+                </div>
+
+                {/* Action Buttons: Decline (X) & Yellow Accept with Countdown Circle */}
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => {
+                      if (activeReq) {
+                        setDeclinedRides(prev => [...prev, activeReq.id]);
+                        setAvailableRequests(prev => prev.filter(r => r.id !== activeReq.id));
+                        if (incomingRequest?.id === activeReq.id) {
+                          const remaining = availableRequests.filter(r => r.id !== activeReq.id);
+                          if (remaining.length > 0) {
+                            setIncomingRequest(remaining[0]);
+                          } else {
+                            setIncomingRequest(null);
+                            setAppState('online');
+                          }
+                        }
+                      }
+                    }}
+                    className="w-14 h-14 rounded-2xl border border-zinc-200 bg-white hover:bg-zinc-100 flex items-center justify-center text-zinc-600 transition-colors shadow-sm shrink-0"
+                    title="Decline Request"
+                  >
+                    <svg className="w-6 h-6 stroke-[2.5]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setIncomingRequest(activeReq);
+                      handleAccept();
+                    }}
+                    className="flex-1 h-14 bg-amber-400 hover:bg-amber-500 text-slate-950 font-black text-xl rounded-2xl flex items-center justify-center gap-3 transition-colors shadow-lg shadow-amber-400/30 active:scale-[0.99]"
+                  >
+                    <span>Accept</span>
+                    <div className="w-9 h-9 rounded-full bg-white/90 text-slate-900 font-black text-sm flex items-center justify-center shadow-inner border border-amber-500/30">
+                      {requestCountdown}
+                    </div>
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Accepted (Navigating to Pickup) */}
       {appState === 'accepted' && currentRide && (
