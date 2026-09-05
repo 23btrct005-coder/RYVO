@@ -1,4 +1,4 @@
-// Vercel Production Trigger: 2026-09-05T23:07:00 - feat: add tip, 30s session timeout and alternative vehicle suggestion
+// Vercel Production Trigger: 2026-09-05T23:26:00 - fix: UI overlapping search sheet dropdown z-index and container layout
 import { useState, useEffect, useRef } from 'react'
 import Map, { Marker, Source, Layer } from 'react-map-gl/mapbox'
 import type { MapRef } from 'react-map-gl/mapbox'
@@ -1083,14 +1083,8 @@ function App() {
       </div>
 
       {!isSelectingOnMap && (
-        <div className={`absolute left-0 right-0 z-20 p-4 transition-all duration-500 ease-out pointer-events-none ${
-          activeInput !== 'none' 
-            ? 'top-1/2 -translate-y-1/2' 
-            : 'bottom-0 pb-8 bg-gradient-to-t from-black/90 to-transparent'
-        }`}>
-        <div className={`bg-zinc-900/95 backdrop-blur-xl border border-zinc-800 p-6 rounded-3xl shadow-2xl max-w-md mx-auto relative transition-transform duration-500 ease-out pointer-events-auto ${
-          activeInput !== 'none' ? 'scale-105 ring-2 ring-emerald-500/50' : 'scale-100'
-        }`}>
+        <div className="absolute bottom-0 left-0 right-0 z-20 p-4 pb-8 bg-gradient-to-t from-black/90 to-transparent pointer-events-none">
+        <div className="bg-zinc-900/95 backdrop-blur-xl border border-zinc-800 p-6 rounded-3xl shadow-2xl max-w-md mx-auto relative pointer-events-auto max-h-[85vh] overflow-y-auto">
           <div className="flex justify-between items-center mb-1">
              <h1 className="text-3xl font-bold tracking-tight text-white">RYVO</h1>
              {activeInput !== 'none' && (
@@ -1380,7 +1374,7 @@ function App() {
               <div className="space-y-4 relative">
                 
                 {/* Pickup Field */}
-                <div className="relative z-20">
+                <div className={`relative ${activeInput === 'pickup' ? 'z-30' : 'z-10'}`}>
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                      <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 ring-4 ring-emerald-500/20"></div>
                   </div>
@@ -1676,7 +1670,7 @@ function App() {
                 </div>
 
                 {/* Destination Field */}
-                <div className="relative z-20">
+                <div className={`relative ${activeInput === 'destination' ? 'z-30' : 'z-10'}`}>
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                      <div className="w-2.5 h-2.5 rounded-full bg-red-500 ring-4 ring-red-500/20"></div>
                   </div>
