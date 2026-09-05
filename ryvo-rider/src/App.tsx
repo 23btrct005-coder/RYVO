@@ -757,16 +757,21 @@ function App() {
             </Source>
           )}
 
-          {/* Show Online Drivers when idling or estimating */}
-          {(status === 'idle' || status === 'estimating') && onlineDrivers.map(driver => (
-            <Marker
-              key={driver.id}
-              longitude={driver.lng}
-              latitude={driver.lat}
-            >
-              <VehicleMarker type={driver.vehicleType || 'mini'} />
-            </Marker>
-          ))}
+          {/* Show Online Drivers ONLY during confirming state, filtered by selected vehicle type */}
+          {(status === 'confirming' || status === 'searching') && onlineDrivers
+            .filter(driver => {
+              const dType = (driver.vehicletype || driver.vehicleType || 'mini').toLowerCase();
+              return dType === selectedVehicle.toLowerCase();
+            })
+            .map(driver => (
+              <Marker
+                key={driver.id}
+                longitude={driver.lng}
+                latitude={driver.lat}
+              >
+                <VehicleMarker type={driver.vehicletype || driver.vehicleType || selectedVehicle} />
+              </Marker>
+            ))}
 
           {/* Assigned Driver Live Location Marker */}
           {driverLocation && (
