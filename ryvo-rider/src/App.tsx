@@ -165,13 +165,19 @@ function App() {
   // Saved locations (stored locally per user)
   const [savedPlaces, setSavedPlaces] = useState<{ label: string; address: string; coords: [number, number]; icon: string }[]>(() => {
     try {
-      return JSON.parse(localStorage.getItem('ryvo_saved_places') || '[]');
-    } catch {
-      return [
-        { label: 'Home', address: 'Home Location', coords: [12.8753, 77.5958], icon: '🏠' },
-        { label: 'Work', address: 'Work Office', coords: [12.9716, 77.5946], icon: '💼' }
-      ];
+      const stored = localStorage.getItem('ryvo_saved_places');
+      if (stored) {
+         const parsed = JSON.parse(stored);
+         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {
+      console.warn("Error reading saved places", e);
     }
+    return [
+      { label: 'Home', address: 'Set Home Address', coords: [12.8753, 77.5958], icon: '🏠' },
+      { label: 'Work / Office', address: 'Set Work Address', coords: [12.9716, 77.5946], icon: '💼' },
+      { label: 'Gym', address: 'Fitness Center', coords: [12.9250, 77.5890], icon: '🏋️' }
+    ];
   });
 
   const savePlace = (label: string, address: string, coords: [number, number], icon: string = '⭐') => {
@@ -1108,32 +1114,47 @@ function App() {
                          </div>
                       </div>
 
-                      {/* Option 2: Saved Places */}
-                      {savedPlaces.length > 0 && (
-                        <div className="p-3 bg-zinc-950/60">
-                          <p className="text-xs uppercase font-extrabold text-zinc-500 px-2 mb-2 tracking-wider">Saved Places</p>
-                          <div className="grid grid-cols-2 gap-2">
-                             {savedPlaces.map((sp, idx) => (
-                               <div 
-                                 key={idx}
-                                 onClick={() => {
-                                   setPickup(sp.address);
-                                   setPickupCoords(sp.coords);
-                                   setCurrentPosition(sp.coords);
-                                   setActiveInput('none');
-                                 }}
-                                 className="flex items-center space-x-2 bg-zinc-800 hover:bg-zinc-700 p-2.5 rounded-xl cursor-pointer border border-zinc-700/50"
-                               >
-                                  <span className="text-lg">{sp.icon}</span>
-                                  <div className="overflow-hidden">
-                                     <p className="text-white text-xs font-bold truncate">{sp.label}</p>
-                                     <p className="text-zinc-400 text-[10px] truncate">{sp.address}</p>
-                                  </div>
-                               </div>
-                             ))}
-                          </div>
+                      {/* Option 2: Saved Places (Home, Work, Gym, Custom) */}
+                      <div className="p-3 bg-zinc-950/80">
+                        <div className="flex justify-between items-center px-1 mb-2">
+                          <p className="text-[11px] uppercase font-black text-zinc-400 tracking-wider">Saved Places</p>
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const label = prompt("Enter place label (e.g. Home, Work, Gym, Friend):");
+                              if (label && pickup) {
+                                savePlace(label, pickup, pickupCoords || currentPosition, '🏷️');
+                                alert(`Saved "${label}"!`);
+                              } else {
+                                alert("Please type an address first before saving.");
+                              }
+                            }}
+                            className="text-[10px] text-emerald-400 font-bold hover:underline"
+                          >
+                            + Add New
+                          </button>
                         </div>
-                      )}
+                        <div className="grid grid-cols-2 gap-2">
+                           {savedPlaces.map((sp, idx) => (
+                             <div 
+                               key={idx}
+                               onClick={() => {
+                                 setPickup(sp.address);
+                                 setPickupCoords(sp.coords);
+                                 setCurrentPosition(sp.coords);
+                                 setActiveInput('none');
+                               }}
+                               className="flex items-center space-x-2.5 bg-zinc-800/90 hover:bg-zinc-700 p-2.5 rounded-xl cursor-pointer border border-zinc-700/60 transition group"
+                             >
+                                <div className="text-xl p-1 bg-zinc-900 rounded-lg group-hover:scale-110 transition-transform">{sp.icon}</div>
+                                <div className="overflow-hidden">
+                                   <p className="text-white text-xs font-bold truncate">{sp.label}</p>
+                                   <p className="text-zinc-400 text-[10px] truncate">{sp.address}</p>
+                                </div>
+                             </div>
+                           ))}
+                        </div>
+                      </div>
 
                       {/* Option 3: Search Suggestions */}
                       {pickupSuggestions.map((s, i) => (
@@ -1243,32 +1264,47 @@ function App() {
                          </div>
                       </div>
 
-                      {/* Option 2: Saved Places */}
-                      {savedPlaces.length > 0 && (
-                        <div className="p-3 bg-zinc-950/60">
-                          <p className="text-xs uppercase font-extrabold text-zinc-500 px-2 mb-2 tracking-wider">Saved Places</p>
-                          <div className="grid grid-cols-2 gap-2">
-                             {savedPlaces.map((sp, idx) => (
-                               <div 
-                                 key={idx}
-                                 onClick={() => {
-                                   setDestination(sp.address);
-                                   setDestCoords(sp.coords);
-                                   setCurrentPosition(sp.coords);
-                                   setActiveInput('none');
-                                 }}
-                                 className="flex items-center space-x-2 bg-zinc-800 hover:bg-zinc-700 p-2.5 rounded-xl cursor-pointer border border-zinc-700/50"
-                               >
-                                  <span className="text-lg">{sp.icon}</span>
-                                  <div className="overflow-hidden">
-                                     <p className="text-white text-xs font-bold truncate">{sp.label}</p>
-                                     <p className="text-zinc-400 text-[10px] truncate">{sp.address}</p>
-                                  </div>
-                               </div>
-                             ))}
-                          </div>
+                      {/* Option 2: Saved Places (Home, Work, Gym, Custom) */}
+                      <div className="p-3 bg-zinc-950/80">
+                        <div className="flex justify-between items-center px-1 mb-2">
+                          <p className="text-[11px] uppercase font-black text-zinc-400 tracking-wider">Saved Places</p>
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const label = prompt("Enter place label (e.g. Home, Work, Gym, Friend):");
+                              if (label && destination) {
+                                savePlace(label, destination, destCoords || currentPosition, '🏷️');
+                                alert(`Saved "${label}"!`);
+                              } else {
+                                alert("Please type an address first before saving.");
+                              }
+                            }}
+                            className="text-[10px] text-red-400 font-bold hover:underline"
+                          >
+                            + Add New
+                          </button>
                         </div>
-                      )}
+                        <div className="grid grid-cols-2 gap-2">
+                           {savedPlaces.map((sp, idx) => (
+                             <div 
+                               key={idx}
+                               onClick={() => {
+                                 setDestination(sp.address);
+                                 setDestCoords(sp.coords);
+                                 setCurrentPosition(sp.coords);
+                                 setActiveInput('none');
+                               }}
+                               className="flex items-center space-x-2.5 bg-zinc-800/90 hover:bg-zinc-700 p-2.5 rounded-xl cursor-pointer border border-zinc-700/60 transition group"
+                             >
+                                <div className="text-xl p-1 bg-zinc-900 rounded-lg group-hover:scale-110 transition-transform">{sp.icon}</div>
+                                <div className="overflow-hidden">
+                                   <p className="text-white text-xs font-bold truncate">{sp.label}</p>
+                                   <p className="text-zinc-400 text-[10px] truncate">{sp.address}</p>
+                                </div>
+                             </div>
+                           ))}
+                        </div>
+                      </div>
 
                       {/* Option 3: Search Suggestions */}
                       {destSuggestions.map((s, i) => (
