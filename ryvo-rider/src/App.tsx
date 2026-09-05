@@ -116,6 +116,26 @@ function App() {
           }
           if (data) {
             setRiderProfile(data);
+            
+            // Check for active ride
+            const { data: rideData, error: rideError } = await supabase
+               .from('rides')
+               .select('*')
+               .eq('riderid', user.id)
+               .in('status', ['pending', 'accepted', 'arrived', 'in_transit'])
+               .order('created_at', { ascending: false })
+               .limit(1)
+               .maybeSingle();
+               
+            if (rideData && !rideError) {
+               setCurrentRideId(rideData.id);
+               if (['accepted', 'arrived', 'in_transit'].includes(rideData.status)) {
+                  setStatus(rideData.status);
+                  if (rideData.otp) setOtp(rideData.otp);
+               } else if (rideData.status === 'pending') {
+                  setStatus('searching');
+               }
+            }
           }
         } catch (e: any) {
           console.error("Robust fetch exception:", e);

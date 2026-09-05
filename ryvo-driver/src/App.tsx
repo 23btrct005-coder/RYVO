@@ -167,6 +167,26 @@ function App() {
             setDriverProfile(data);
             setAppState(data.isonline ? 'online' : 'idle');
             setIsOnline(data.isonline);
+            
+            // Check for active ride
+            const { data: rideData, error: rideError } = await supabase
+               .from('rides')
+               .select('*')
+               .eq('driverid', user.id)
+               .in('status', ['accepted', 'arrived', 'in_transit'])
+               .order('created_at', { ascending: false })
+               .limit(1)
+               .maybeSingle();
+               
+            if (rideData && !rideError) {
+               setCurrentRide({
+                  ...rideData,
+                  pickupCoords: (rideData.pickuplat && rideData.pickuplng) ? [rideData.pickuplat, rideData.pickuplng] : undefined,
+                  destCoords: (rideData.destlat && rideData.destlng) ? [rideData.destlat, rideData.destlng] : undefined,
+                  price: typeof rideData.price === 'string' ? parseFloat(rideData.price) : rideData.price
+               });
+               setAppState(rideData.status);
+            }
           } else if (!error) {
              setFetchError('Robust fetch: Data is null and Error is null');
           }
