@@ -1,3 +1,4 @@
+// Vercel Production Trigger: 2026-09-05T23:07:00 - sync driver app with tip and session timeout
 import { useState, useEffect, useRef } from 'react'
 import Map, { Marker, Source, Layer } from 'react-map-gl/mapbox'
 import type { MapRef } from 'react-map-gl/mapbox'
