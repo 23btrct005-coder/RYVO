@@ -1475,12 +1475,7 @@ function App() {
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         if (sampleRide?.destlat && sampleRide?.destlng) {
-                                          const tag = prompt("Save as Favorite:\n1 = Home 🏠\n2 = Work 💼\nOr type custom name (e.g. Gym, Friend):", "Home");
-                                          if (tag) {
-                                            const icon = tag.toLowerCase().includes('home') ? '🏠' : tag.toLowerCase().includes('work') ? '💼' : '❤️';
-                                            savePlace(tag, dName, [sampleRide.destlat, sampleRide.destlng], icon);
-                                            alert(`Saved "${dName}" as ${tag}!`);
-                                          }
+                                          triggerSaveModal(dName, [sampleRide.destlat, sampleRide.destlng], 'Work', '💼');
                                         }
                                       }}
                                       title="Save to favorites (Home / Work / Custom)"
