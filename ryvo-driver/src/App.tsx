@@ -520,6 +520,24 @@ function App() {
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'rides', filter: 'status=eq.pending' }, payload => {
         checkRequests([payload.new])
       })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'rides' }, payload => {
+        const updated = payload.new as any;
+        if (updated && (updated.status === 'cancelled' || updated.status === 'accepted')) {
+          setAvailableRequests(prev => prev.filter(r => r.id !== updated.id));
+          if (incomingRequestRef.current?.id === updated.id) {
+            setAvailableRequests(prev => {
+              const remaining = prev.filter(r => r.id !== updated.id);
+              if (remaining.length > 0) {
+                setIncomingRequest(remaining[0]);
+              } else {
+                setIncomingRequest(null);
+                setAppState('online');
+              }
+              return remaining;
+            });
+          }
+        }
+      })
       .subscribe()
       
     const checkRequests = (requests: any[]) => {
@@ -1001,9 +1019,9 @@ function App() {
               ? calculateDistance(activeReq.pickupCoords[0], activeReq.pickupCoords[1], activeReq.destCoords[0], activeReq.destCoords[1]).toFixed(1)
               : '9.6');
 
-        const baseFare = activeReq.price ? Math.max(0, Math.floor(activeReq.price * 0.9)) : 360;
-        const extraFare = activeReq.price ? Math.max(0, Math.round(activeReq.price * 0.1)) : 39;
-        const paymentType = (activeReq.paymentMethod || 'Offline').toUpperCase();
+        const totalFareFormatted = activeReq.price ? activeReq.price.toFixed(0) : '399';
+        const activeVehicleType = (driverProfile?.vehicletype || activeReq.vehicleType || 'mini').toUpperCase();
+        const activeEmoji = activeVehicleType === 'AUTO' ? '🛺' : activeVehicleType === 'BIKE' ? '🛵' : '🚗';
 
         return (
           <div className="absolute inset-x-0 bottom-0 z-20 p-2 sm:p-4 pb-6 bg-gradient-to-t from-black/80 via-black/40 to-transparent pointer-events-auto">
@@ -1013,8 +1031,8 @@ function App() {
                 <div className="flex flex-col gap-2 max-h-[380px] overflow-y-auto pr-1 select-none">
                   {availableRequests.map((req) => {
                     const isSelected = req.id === activeReq.id;
-                    const reqBase = req.price ? Math.floor(req.price * 0.9) : 210;
-                    const reqTip = req.price ? Math.round(req.price * 0.1) : 45;
+                    const reqVehicleType = (driverProfile?.vehicletype || req.vehicleType || 'mini').toUpperCase();
+                    const reqEmoji = reqVehicleType === 'AUTO' ? '🛺' : reqVehicleType === 'BIKE' ? '🛵' : '🚗';
                     return (
                       <div
                         key={req.id}
@@ -1032,7 +1050,7 @@ function App() {
                       >
                         <div className="relative mb-1">
                           <div className="w-8 h-8 rounded-full bg-zinc-100 border border-zinc-300 flex items-center justify-center text-sm shadow-inner">
-                            {req.vehicleType?.toUpperCase() === 'AUTO' ? '🛺' : req.vehicleType?.toUpperCase() === 'BIKE' ? '🛵' : '🚗'}
+                            {reqEmoji}
                           </div>
                           {isSelected && (
                             <svg className="w-4 h-4 text-emerald-600 absolute -right-1 -bottom-1" viewBox="0 0 24 24" fill="currentColor">
@@ -1040,10 +1058,7 @@ function App() {
                             </svg>
                           )}
                         </div>
-                        <span className="font-extrabold text-sm text-black tracking-tight">₹{req.price || reqBase + reqTip}</span>
-                        {reqTip > 0 && (
-                          <span className="font-bold text-[11px] text-emerald-600">₹{reqTip}</span>
-                        )}
+                        <span className="font-extrabold text-sm text-black tracking-tight">₹{req.price?.toFixed(0) || '210'}</span>
                       </div>
                     );
                   })}
@@ -1052,25 +1067,15 @@ function App() {
 
               {/* Main Order Card */}
               <div className="flex-1 bg-white text-zinc-900 rounded-3xl p-5 shadow-2xl border border-zinc-200 transition-all transform animate-in slide-in-from-bottom duration-300">
-                {/* Header: Vehicle Icon + Fare Breakdown + Payment Tag */}
+                {/* Header: Driver Vehicle Icon + Total Fare */}
                 <div className="flex items-center justify-between pb-3 border-b border-zinc-100 mb-4">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center text-xl text-white shadow-md">
-                      {activeReq.vehicleType?.toUpperCase() === 'AUTO' ? '🛺' : activeReq.vehicleType?.toUpperCase() === 'BIKE' ? '🛵' : '🚗'}
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-full bg-slate-900 flex items-center justify-center text-2xl text-white shadow-md border border-slate-700">
+                      {activeEmoji}
                     </div>
                     <div>
-                      <div className="flex items-baseline gap-1.5">
-                        <span className="text-2xl font-black text-slate-900 tracking-tight">₹{baseFare}</span>
-                        {extraFare > 0 && (
-                          <span className="text-lg font-extrabold text-emerald-600">+ ₹{extraFare}</span>
-                        )}
-                      </div>
+                      <span className="text-3xl font-black text-slate-900 tracking-tight">₹{totalFareFormatted}</span>
                     </div>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-xs font-semibold text-zinc-500 bg-zinc-100 border border-zinc-200 px-2.5 py-1 rounded-full">
-                      ({paymentType === 'CASH' || paymentType === 'OFFLINE' ? 'Offline' : 'Online'})
-                    </span>
                   </div>
                 </div>
 
