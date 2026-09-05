@@ -1268,13 +1268,15 @@ function App() {
                                    className="flex items-center justify-between px-4 py-3.5 hover:bg-zinc-900 cursor-pointer transition group"
                                  >
                                     <div className="flex items-center space-x-3.5 min-w-0 pr-2">
-                                       <div className="flex flex-col items-center justify-center shrink-0 w-8">
-                                          <span className="text-zinc-400 text-lg">🕒</span>
-                                          {distStr && <span className="text-[9px] text-zinc-500 font-mono mt-0.5">{distStr}</span>}
+                                       <div className="w-9 h-9 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center shrink-0 text-zinc-400 text-base group-hover:bg-zinc-800 group-hover:border-zinc-700 transition-colors">
+                                          🕒
                                        </div>
-                                       <div className="overflow-hidden">
+                                       <div className="overflow-hidden min-w-0">
                                           <p className="text-white text-sm font-bold truncate group-hover:text-emerald-400 transition-colors">{pName}</p>
-                                          <p className="text-zinc-500 text-xs truncate">Bengaluru, Karnataka, India</p>
+                                          <p className="text-zinc-500 text-xs truncate flex items-center gap-1.5 mt-0.5">
+                                             {distStr && <span className="text-emerald-400 font-semibold bg-emerald-500/10 px-1.5 py-0.5 rounded text-[10px] whitespace-nowrap">{distStr}</span>}
+                                             <span className="truncate">Bengaluru, Karnataka, India</span>
+                                          </p>
                                        </div>
                                     </div>
                                     <button 
@@ -1459,13 +1461,15 @@ function App() {
                                    className="flex items-center justify-between px-4 py-3.5 hover:bg-zinc-900 cursor-pointer transition group"
                                  >
                                     <div className="flex items-center space-x-3.5 min-w-0 pr-2">
-                                       <div className="flex flex-col items-center justify-center shrink-0 w-8">
-                                          <span className="text-zinc-400 text-lg">🕒</span>
-                                          {distStr && <span className="text-[9px] text-zinc-500 font-mono mt-0.5">{distStr}</span>}
+                                       <div className="w-9 h-9 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center shrink-0 text-zinc-400 text-base group-hover:bg-zinc-800 group-hover:border-zinc-700 transition-colors">
+                                          🕒
                                        </div>
-                                       <div className="overflow-hidden">
+                                       <div className="overflow-hidden min-w-0">
                                           <p className="text-white text-sm font-bold truncate group-hover:text-emerald-400 transition-colors">{dName}</p>
-                                          <p className="text-zinc-500 text-xs truncate">Bengaluru, Karnataka, India</p>
+                                          <p className="text-zinc-500 text-xs truncate flex items-center gap-1.5 mt-0.5">
+                                             {distStr && <span className="text-emerald-400 font-semibold bg-emerald-500/10 px-1.5 py-0.5 rounded text-[10px] whitespace-nowrap">{distStr}</span>}
+                                             <span className="truncate">Bengaluru, Karnataka, India</span>
+                                          </p>
                                        </div>
                                     </div>
                                     <button 
