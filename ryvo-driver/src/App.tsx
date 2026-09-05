@@ -83,6 +83,7 @@ function App() {
 
   const [currentRide, setCurrentRide] = useState<RideRequest | null>(null)
   const [otpInput, setOtpInput] = useState('')
+  const [otpError, setOtpError] = useState('')
   
   const [activeModal, setActiveModal] = useState<'none' | 'history' | 'earnings' | 'settings' | 'help'>('none')
   const [completedRides, setCompletedRides] = useState<any[]>([])
@@ -626,7 +627,7 @@ function App() {
   const handleStartRide = async () => {
     if (!currentRide) return;
     if (otpInput !== currentRide.otp) {
-      alert("Invalid OTP! Please ask the rider for the correct 4-digit code.");
+      setOtpError("Invalid OTP! Please ask the rider for the correct 4-digit code.");
       return;
     }
     
@@ -949,10 +950,15 @@ function App() {
                  </a>
                )}
                
+               {otpError && <p className="text-red-600 font-bold text-sm mt-3 animate-pulse">{otpError}</p>}
+               
                <input 
                  type="text" 
                  value={otpInput} 
-                 onChange={(e) => setOtpInput(e.target.value)} 
+                 onChange={(e) => {
+                   setOtpInput(e.target.value);
+                   setOtpError('');
+                 }} 
                  maxLength={4}
                  placeholder="0000"
                  className="w-full text-center mt-4 text-4xl font-bold tracking-[0.3em] py-4 bg-zinc-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500" 

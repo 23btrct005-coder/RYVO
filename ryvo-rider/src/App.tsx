@@ -387,9 +387,13 @@ function App() {
         setStatus(data.status)
       }
       
-      // Let's assume if it is accepted, we have driver ID and can fetch driver details if needed
-      // but if the driver updated their own name, it is not on the rides table. 
-      // The driver app code updates rides with driverName, so it should still be there for now.
+      // The driver app code updates rides with driverId, so we can fetch the full profile here
+      const did = data.driverid || data.driverId;
+      if (did && !driverDetails) {
+         supabase.from('drivers').select('*').eq('id', did).single().then(res => {
+            if (res.data) setDriverDetails(res.data);
+         });
+      }
       
       if (data.otp) {
         setOtp(data.otp)
@@ -599,6 +603,8 @@ function App() {
                       setRating(0);
                       setReview('');
                       setHasRated(false);
+                      setDriverDetails(null);
+                      setDriverLocation(null);
                     }} className="mt-4 w-full bg-white text-black font-bold py-3 rounded-xl hover:bg-zinc-200">
                       Request Another Ride
                     </button>
