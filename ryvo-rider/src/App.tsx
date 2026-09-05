@@ -129,6 +129,19 @@ function App() {
   const [driverDetails, setDriverDetails] = useState<any>(null)
   const [routeGeometry, setRouteGeometry] = useState<[number, number][] | null>(null)
   const [distance, setDistance] = useState<number>(0)
+
+  const [estimatedDuration, setEstimatedDuration] = useState<number>(0);
+
+  const getETAForVehicle = (type: VehicleType, baseMins: number) => {
+    if (baseMins <= 0) return 1;
+    switch(type) {
+      case 'bike': return Math.max(2, Math.round(baseMins * 0.75));
+      case 'auto': return Math.max(3, Math.round(baseMins * 0.90));
+      case 'mini': return Math.max(4, Math.round(baseMins * 1.15));
+      default: return baseMins;
+    }
+  };
+
   const [otp, setOtp] = useState<string | null>(null)
   
   const [rating, setRating] = useState<number>(0)
@@ -681,6 +694,8 @@ function App() {
             const gRoute = gData.routes[0];
             const gDistKm = gRoute.legs[0].distance.value / 1000;
             const gPoints = decodePolyline(gRoute.overview_polyline.points);
+            const gDurationMins = Math.max(1, Math.ceil((gRoute.legs[0].duration_in_traffic?.value || gRoute.legs[0].duration?.value || 0) / 60));
+            setEstimatedDuration(gDurationMins);
             setDistance(gDistKm);
             setRouteGeometry(gPoints);
             setStatus('confirming');
@@ -698,6 +713,8 @@ function App() {
         if (osrmData.routes && osrmData.routes.length > 0) {
           const osrmRoute = osrmData.routes[0];
           const osrmDistKm = osrmRoute.distance / 1000;
+          const osrmDurationMins = Math.max(1, Math.ceil((osrmRoute.duration || 0) / 60));
+          setEstimatedDuration(osrmDurationMins);
           setDistance(osrmDistKm);
           const swappedGeometry = osrmRoute.geometry.coordinates.map((coord: [number, number]) => [coord[1], coord[0]]);
           setRouteGeometry(swappedGeometry);
@@ -715,6 +732,8 @@ function App() {
       if (data.routes && data.routes.length > 0) {
         const shortestRoute = data.routes.reduce((min: any, r: any) => r.distance < min.distance ? r : min, data.routes[0]);
         const distanceKm = shortestRoute.distance / 1000;
+        const durationMins = Math.max(1, Math.ceil((shortestRoute.duration || 0) / 60));
+        setEstimatedDuration(durationMins);
         setDistance(distanceKm);
         const swappedGeometry = shortestRoute.geometry.coordinates.map((coord: [number, number]) => [coord[1], coord[0]]);
         setRouteGeometry(swappedGeometry);
@@ -722,6 +741,8 @@ function App() {
       } else {
         const haversineKm = getHaversineDistance(pCoords[0], pCoords[1], dCoords[0], dCoords[1]);
         const distanceKm = haversineKm * 1.20;
+        const durationMins = Math.max(2, Math.ceil((distanceKm / 25) * 60));
+        setEstimatedDuration(durationMins);
         setDistance(distanceKm);
         setRouteGeometry([[pCoords[0], pCoords[1]], [dCoords[0], dCoords[1]]]);
         setStatus('confirming');
@@ -1200,7 +1221,7 @@ function App() {
                <div className="flex justify-between items-center mb-3">
                  <p className="text-zinc-400 text-sm font-medium">Select a ride</p>
                  <span className="bg-zinc-800 text-zinc-200 text-xs font-bold px-3 py-1 rounded-full border border-zinc-700">
-                   📍 {distance > 0 ? `${distance.toFixed(1)} km` : ''}
+                   📍 {distance > 0 ? `${distance.toFixed(1)} km` : ''} {estimatedDuration > 0 ? `• ⏱️ ${estimatedDuration} min traffic` : ''}
                  </span>
                </div>
                
@@ -1214,7 +1235,7 @@ function App() {
                        <div className="text-2xl">🛵</div>
                        <div>
                          <h3 className="font-bold text-white">RYVO Bike</h3>
-                         <p className="text-xs text-zinc-400">Beat the traffic</p>
+                         <p className="text-xs text-zinc-400">Beat the traffic • <span className="text-emerald-400 font-bold">⏱️ {getETAForVehicle('bike', estimatedDuration)} min</span></p>
                        </div>
                     </div>
                     <span className="font-bold text-xl">₹{getPrice('bike', distance).toFixed(2)}</span>
@@ -1229,7 +1250,7 @@ function App() {
                        <div className="text-2xl">🛺</div>
                        <div>
                          <h3 className="font-bold text-white">RYVO Auto</h3>
-                         <p className="text-xs text-zinc-400">Affordable rides</p>
+                         <p className="text-xs text-zinc-400">Affordable rides • <span className="text-emerald-400 font-bold">⏱️ {getETAForVehicle('auto', estimatedDuration)} min</span></p>
                        </div>
                     </div>
                     <span className="font-bold text-xl">₹{getPrice('auto', distance).toFixed(2)}</span>
@@ -1244,7 +1265,7 @@ function App() {
                        <div className="text-2xl">🚗</div>
                        <div>
                          <h3 className="font-bold text-white">RYVO Mini</h3>
-                         <p className="text-xs text-zinc-400">Comfortable AC rides</p>
+                         <p className="text-xs text-zinc-400">Comfortable AC rides • <span className="text-emerald-400 font-bold">⏱️ {getETAForVehicle('mini', estimatedDuration)} min</span></p>
                        </div>
                     </div>
                     <span className="font-bold text-xl">₹{getPrice('mini', distance).toFixed(2)}</span>
@@ -1290,15 +1311,7 @@ function App() {
                     placeholder="Enter pickup location" 
                     className="w-full bg-zinc-800/90 text-white placeholder-zinc-500 rounded-2xl pl-10 pr-12 py-4 focus:outline-none focus:ring-2 focus:ring-emerald-500 border border-zinc-700/50 transition-all font-medium text-base shadow-inner"
                   />
-                  {pickup && pickupCoords && (
-                    <button 
-                      onClick={() => triggerSaveModal(pickup, pickupCoords, 'Home', '🏠')}
-                      title="Save this location"
-                      className="absolute right-3 top-3.5 p-1 text-zinc-400 hover:text-yellow-400 transition hover:scale-110"
-                    >
-                      ⭐
-                    </button>
-                  )}
+
 
                   {/* Options Dropdown Box for Pickup */}
                   {activeInput === 'pickup' && (
@@ -1538,15 +1551,7 @@ function App() {
                     placeholder="Where to?" 
                     className="w-full bg-zinc-800/90 text-white placeholder-zinc-500 rounded-2xl pl-10 pr-12 py-4 focus:outline-none focus:ring-2 focus:ring-red-500 border border-zinc-700/50 transition-all font-medium text-base shadow-inner"
                   />
-                  {destination && destCoords && (
-                    <button 
-                      onClick={() => triggerSaveModal(destination, destCoords, 'Work', '💼')}
-                      title="Save this location"
-                      className="absolute right-3 top-3.5 p-1 text-zinc-400 hover:text-yellow-400 transition hover:scale-110"
-                    >
-                      ⭐
-                    </button>
-                  )}
+
 
                   {/* Options Dropdown Box for Destination */}
                   {activeInput === 'destination' && (
