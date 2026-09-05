@@ -6,10 +6,8 @@ import L from 'leaflet'
 import icon from 'leaflet/dist/images/marker-icon.png'
 import iconShadow from 'leaflet/dist/images/marker-shadow.png'
 
-import { db, auth } from './firebase'
-import { collection, addDoc, onSnapshot, updateDoc, doc, setDoc, getDoc } from 'firebase/firestore'
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged } from 'firebase/auth'
-import type { User } from 'firebase/auth'
+import { supabase } from './supabase'
+import type { User } from '@supabase/supabase-js'
 import { Geolocation } from '@capacitor/geolocation'
 
 let DefaultIcon = L.icon({
@@ -88,21 +86,26 @@ function App() {
   const [destCoords, setDestCoords] = useState<[number, number] | null>(null)
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async (currentUser) => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null)
+    })
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      const currentUser = session?.user ?? null
       setUser(currentUser)
       if (currentUser) {
         // Fetch rider profile
         try {
-           const docSnap = await getDoc(doc(db, "riders", currentUser.uid))
-           if (docSnap.exists()) {
-             setRiderProfile(docSnap.data())
+           const { data } = await supabase.from('riders').select('*').eq('id', currentUser.id).single()
+           if (data) {
+             setRiderProfile(data)
            }
         } catch(e) {}
       } else {
         setRiderProfile(null)
       }
     })
-    return () => unsub()
+    return () => subscription.unsubscribe()
   }, [])
 
   // Fetch current location on load
@@ -135,20 +138,19 @@ function App() {
   useEffect(() => {
     if (!user || (status !== 'idle' && status !== 'estimating')) return;
     
-    const unsub = onSnapshot(
-      collection(db, "drivers"), 
-      (snapshot) => {
-        const drivers: any[] = []
-        snapshot.forEach(doc => {
-          const data = doc.data()
-          if (data.isOnline && data.lat && data.lng) {
-            drivers.push({ id: doc.id, ...data })
-          }
-        })
-        setOnlineDrivers(drivers)
-      }
-    )
-    return () => unsub()
+    const fetchDrivers = async () => {
+      const { data } = await supabase.from('drivers').select('*').eq('isOnline', true)
+      if (data) setOnlineDrivers(data)
+    }
+    fetchDrivers()
+    
+    const channel = supabase.channel('public:drivers')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'drivers' }, () => {
+        fetchDrivers()
+      })
+      .subscribe()
+      
+    return () => { supabase.removeChannel(channel) }
   }, [user, status])
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -158,13 +160,21 @@ function App() {
       return
     }
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password)
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+      if (error) throw error;
       
-      // Verify this user is actually a rider by checking the riders collection
-      const riderDoc = await getDoc(doc(db, "riders", userCredential.user.uid))
-      if (!riderDoc.exists()) {
-        await auth.signOut()
-        alert("Access Denied: You do not have a Rider profile. If you are a Driver, please use a different email to register as a Rider.")
+      if (data.user) {
+        // Verify this user is actually a rider
+        const { data: riderData } = await supabase
+          .from('riders')
+          .select('id')
+          .eq('id', data.user.id)
+          .single()
+          
+        if (!riderData) {
+          await supabase.auth.signOut()
+          alert("Access Denied: You do not have a Rider profile. If you are a Driver, please use a different email to register as a Rider.")
+        }
       }
     } catch (error: any) {
       alert("Login Failed: " + error.message)
@@ -173,7 +183,7 @@ function App() {
 
   const handleLogout = async () => {
     try {
-      await auth.signOut()
+      await supabase.auth.signOut()
       setIsSidebarOpen(false)
     } catch (e) {
       console.error(e)
@@ -195,15 +205,21 @@ function App() {
       return
     }
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password)
+      const { data, error } = await supabase.auth.signUp({ email, password })
+      if (error) throw error;
+      
+      const uid = data.user?.id
+      if (!uid) throw new Error("No UID returned")
       
       // Save rider profile
-      await setDoc(doc(db, "riders", userCredential.user.uid), {
+      const { error: dbError } = await supabase.from('riders').insert([{
+        id: uid,
         name,
         phone,
-        email,
-        createdAt: new Date()
-      })
+        email
+      }])
+      
+      if (dbError) throw dbError;
     } catch (error: any) {
       alert("Sign Up Failed: " + error.message)
     }
@@ -281,9 +297,9 @@ function App() {
   const cancelRide = async () => {
     if (!currentRideId) return;
     try {
-      await updateDoc(doc(db, "rides", currentRideId), {
+      await supabase.from('rides').update({
         status: 'cancelled'
-      });
+      }).eq('id', currentRideId);
       setStatus('idle');
       setCurrentRideId(null);
       setDriverDetails(null);
@@ -297,88 +313,74 @@ function App() {
   const handleConfirmRide = async () => {
     setStatus('searching')
     setErrorMessage(null)
-    console.log("Confirm Ride clicked. Attempting to addDoc to 'rides' collection...");
-    console.log("Data:", {
-        riderId: user?.uid,
-        pickup: pickup,
-        destination: destination,
-        pickupCoords: pickupCoords,
-        destCoords: destCoords,
-        status: 'pending',
-        paymentMethod: 'CASH',
-        price: getPrice(selectedVehicle, distance),
-        vehicleType: selectedVehicle
-    });
+    console.log("Confirm Ride clicked. Attempting to insert into 'rides' table...");
     
     try {
-      // Create a timeout promise that rejects after 10 seconds
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error("Firestore write timed out after 10 seconds. Check your internet connection or adblocker.")), 10000)
-      );
-
       const generatedOtp = Math.floor(1000 + Math.random() * 9000).toString();
       setOtp(generatedOtp);
 
-      // Race the addDoc against the timeout
-      const docRef = await Promise.race([
-        addDoc(collection(db, "rides"), {
-          riderId: user?.uid,
-          riderName: riderProfile?.name || name || 'Rider',
-          riderPhone: riderProfile?.phone || phone || '',
-          riderEmail: user?.email || email || '',
-          pickup: pickup,
-          destination: destination,
-          pickupCoords: pickupCoords,
-          destCoords: destCoords,
-          status: 'pending',
-          timestamp: new Date(),
-          paymentMethod: 'CASH',
-          price: getPrice(selectedVehicle, distance),
-          vehicleType: selectedVehicle,
-          otp: generatedOtp
-        }),
-        timeoutPromise
-      ]) as any;
+      const rideData = {
+        riderid: user?.id,
+        pickup: pickup,
+        destination: destination,
+        pickuplat: pickupCoords?.[0],
+        pickuplng: pickupCoords?.[1],
+        destlat: destCoords?.[0],
+        destlng: destCoords?.[1],
+        status: 'pending',
+        vehicletype: selectedVehicle,
+        price: getPrice(selectedVehicle, distance),
+        distance: distance,
+        otp: generatedOtp
+      };
 
-      console.log("Successfully wrote to Firestore with ID:", docRef.id);
-      setCurrentRideId(docRef.id)
+      const { data, error } = await supabase.from('rides').insert([rideData]).select().single();
+      
+      if (error) throw error;
+
+      console.log("Successfully wrote to Supabase with ID:", data.id);
+      setCurrentRideId(data.id)
     } catch (e: any) {
       console.error("Error adding document: ", e);
-      setErrorMessage("Network error: Could not reach Firebase. Please turn off your adblocker (uBlock/Brave Shields).")
+      setErrorMessage("Network error: Could not reach Supabase.")
       setStatus('idle')
     }
   }
 
   useEffect(() => {
     if (!currentRideId) return;
-    const unsub = onSnapshot(doc(db, "rides", currentRideId), (docSnap) => {
-      const data = docSnap.data();
-      if (data) {
-        if (['accepted', 'arrived', 'in_transit', 'completed'].includes(data.status)) {
-          setStatus(data.status)
-        }
-        
-        if (data.driverName) {
-          setDriverDetails({
-            name: data.driverName,
-            vehicleColor: data.driverVehicleColor,
-            vehicleNumber: data.driverVehicleNumber,
-            vehicleType: data.driverVehicleType || data.vehicleType || 'MINI',
-            phone: data.driverPhone,
-            rating: data.driverRating || '5.0'
-          })
-        }
-        
-        if (data.otp) {
-          setOtp(data.otp)
-        }
-        
-        if (data.driverLat && data.driverLng) {
-           setDriverLocation([data.driverLat, data.driverLng])
-        }
+    
+    const fetchRide = async () => {
+      const { data } = await supabase.from('rides').select('*').eq('id', currentRideId).single()
+      if (data) updateRideState(data)
+    }
+    fetchRide()
+
+    const channel = supabase.channel(`public:rides:id=eq.${currentRideId}`)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'rides', filter: `id=eq.${currentRideId}` }, payload => {
+        updateRideState(payload.new)
+      })
+      .subscribe()
+      
+    const updateRideState = (data: any) => {
+      if (['accepted', 'arrived', 'in_transit', 'completed'].includes(data.status)) {
+        setStatus(data.status)
       }
-    });
-    return () => unsub();
+      
+      // Let's assume if it is accepted, we have driver ID and can fetch driver details if needed
+      // but if the driver updated their own name, it is not on the rides table. 
+      // The driver app code updates rides with driverName, so it should still be there for now.
+      
+      if (data.otp) {
+        setOtp(data.otp)
+      }
+      
+      if (data.driverlat && data.driverlng) {
+         setDriverLocation([data.driverlat, data.driverlng])
+      }
+    }
+
+    return () => { supabase.removeChannel(channel) };
   }, [currentRideId]);
 
   if (!user) {
@@ -547,11 +549,10 @@ function App() {
                           <button 
                             onClick={async () => {
                               if (currentRideId) {
-                                await updateDoc(doc(db, "rides", currentRideId), {
+                                await supabase.from('rides').update({
                                   rating,
                                   review,
-                                  ratedAt: new Date()
-                                })
+                                }).eq('id', currentRideId)
                               }
                               setHasRated(true)
                             }}

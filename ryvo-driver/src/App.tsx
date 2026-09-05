@@ -6,11 +6,8 @@ import L from 'leaflet'
 import icon from 'leaflet/dist/images/marker-icon.png'
 import iconShadow from 'leaflet/dist/images/marker-shadow.png'
 
-import { db, auth, storage } from './firebase'
-import { collection, query, where, onSnapshot, doc, updateDoc, setDoc, getDoc } from 'firebase/firestore'
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from 'firebase/auth'
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
-import type { User } from 'firebase/auth'
+import { supabase } from './supabase'
+import type { User } from '@supabase/supabase-js'
 import { Geolocation } from '@capacitor/geolocation'
 
 let DefaultIcon = L.icon({
@@ -108,45 +105,56 @@ function App() {
   }, [driverProfile])
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async (currentUser) => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null)
+    })
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      const currentUser = session?.user ?? null
+      setUser(currentUser)
       if (currentUser) {
-        const docSnap = await getDoc(doc(db, "drivers", currentUser.uid))
-        if (docSnap.exists()) {
-          setDriverProfile(docSnap.data())
-          setUser(currentUser)
-        }
+        // Fetch driver profile
+        try {
+           const { data } = await supabase
+             .from('drivers')
+             .select('*')
+             .eq('id', currentUser.id)
+             .single()
+             
+           if (data) {
+             setDriverProfile(data)
+             setAppState(data.isOnline ? 'online' : 'idle')
+             setIsOnline(data.isOnline)
+           }
+        } catch(e) {}
       } else {
-        setUser(null)
         setDriverProfile(null)
       }
     })
-    return () => unsub()
+    return () => subscription.unsubscribe()
   }, [])
   
   useEffect(() => {
     if (!user) return
-    const q = query(
-      collection(db, "rides"),
-      where("driverId", "==", user.uid),
-      where("status", "==", "completed")
-    )
-    const unsub = onSnapshot(q, (snapshot) => {
-      const rides = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
-      // Sort descending by timestamp manually to avoid requiring a composite index immediately
-      rides.sort((a: any, b: any) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0))
-      setCompletedRides(rides)
-    }, (error) => {
-      console.error("Error fetching completed rides:", error)
-    })
-    return () => unsub()
+    const fetchCompletedRides = async () => {
+      const { data } = await supabase
+        .from('rides')
+        .select('*')
+        .eq('driverId', user.id)
+        .eq('status', 'completed')
+        .order('created_at', { ascending: false })
+      
+      if (data) setCompletedRides(data)
+    }
+    fetchCompletedRides()
   }, [user])
 
   useEffect(() => {
     if (user && avgRating !== '5.0') {
-      updateDoc(doc(db, "drivers", user.uid), {
+      supabase.from('drivers').update({
         rating: avgRating,
         totalReviews: ratedRides.length
-      }).catch(console.error);
+      }).eq('id', user.id).then()
     }
   }, [avgRating, user]);
 
@@ -157,13 +165,21 @@ function App() {
       return
     }
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password)
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+      if (error) throw error;
       
-      // Verify this user is actually a driver by checking the drivers collection
-      const driverDoc = await getDoc(doc(db, "drivers", userCredential.user.uid))
-      if (!driverDoc.exists()) {
-        await signOut(auth)
-        alert("Access Denied: You do not have a Driver profile. If you are a Rider, please use a different email to register as a Driver.")
+      if (data.user) {
+        // Verify this user is actually a driver
+        const { data: driverData } = await supabase
+          .from('drivers')
+          .select('id')
+          .eq('id', data.user.id)
+          .single()
+          
+        if (!driverData) {
+          await supabase.auth.signOut()
+          alert("Access Denied: You do not have a Driver profile. If you are a Rider, please use a different email to register as a Driver.")
+        }
       }
     } catch (error: any) {
       alert("Login Failed: " + error.message)
@@ -172,7 +188,7 @@ function App() {
 
   const handleLogout = async () => {
     try {
-      await signOut(auth)
+      await supabase.auth.signOut()
       setIsSidebarOpen(false)
     } catch (e) {
       console.error(e)
@@ -181,9 +197,17 @@ function App() {
 
   const uploadImage = async (file: File | null, path: string) => {
     if (!file) return null;
-    const storageRef = ref(storage, path);
-    await uploadBytes(storageRef, file);
-    return await getDownloadURL(storageRef);
+    const { error } = await supabase.storage
+      .from('documents')
+      .upload(path, file, { upsert: true })
+      
+    if (error) throw error;
+    
+    const { data: { publicUrl } } = supabase.storage
+      .from('documents')
+      .getPublicUrl(path)
+      
+    return publicUrl;
   }
 
   const handleNextStep = (e: React.FormEvent) => {
@@ -212,8 +236,12 @@ function App() {
     
     setIsUploading(true)
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password)
-      const uid = userCredential.user.uid
+      const { data: authData, error: authError } = await supabase.auth.signUp({ email, password })
+      if (authError) throw authError;
+      
+      const uid = authData.user?.id
+      if (!uid) throw new Error("No UID returned")
+      
       const safeUpload = async (file: File | null, path: string) => {
         try {
           // Add a 10-second timeout to prevent infinite hanging
@@ -238,24 +266,27 @@ function App() {
       ])
 
       const profileData = {
+        id: uid,
         name,
         phone,
         email,
-        vehicleType,
-        vehicleColor,
-        vehicleNumber,
-        licenseNumber,
+        vehicletype: vehicleType,
+        vehiclecolor: vehicleColor,
+        vehiclenumber: vehicleNumber,
+        licensenumber: licenseNumber,
         documents: {
           driverPhotoUrl,
           licensePhotoUrl,
           vehicleFrontUrl,
           vehicleBackUrl
         },
-        createdAt: new Date()
+        isOnline: false
       }
-      await setDoc(doc(db, "drivers", uid), profileData)
+      
+      const { error: dbError } = await supabase.from('drivers').insert([profileData])
+      if (dbError) throw dbError;
+      
       setDriverProfile(profileData)
-      setUser(userCredential.user)
     } catch (error: any) {
       alert("Sign Up Failed: " + error.message)
     } finally {
@@ -288,15 +319,15 @@ function App() {
               setDriverPosition(newPos)
               
               if (currentRide) {
-                updateDoc(doc(db, "rides", currentRide.id), {
+                supabase.from('rides').update({
                   driverLat: position.coords.latitude,
                   driverLng: position.coords.longitude
-                })
+                }).eq('id', currentRide.id).then()
               } else if (isOnline && user) {
-                updateDoc(doc(db, "drivers", user.uid), {
+                supabase.from('drivers').update({
                   lat: position.coords.latitude,
                   lng: position.coords.longitude
-                })
+                }).eq('id', user.id).then()
               }
             }
           });
@@ -326,13 +357,25 @@ function App() {
       setIncomingRequest(null)
       return
     }
+    
+    // First, check if there are any existing pending requests
+    const fetchPending = async () => {
+      const { data } = await supabase.from('rides').select('*').eq('status', 'pending')
+      if (data && data.length > 0) {
+        checkRequests(data)
+      }
+    }
+    fetchPending()
 
-    const q = query(collection(db, "rides"), where("status", "==", "pending"));
-    const unsub = onSnapshot(q, (querySnapshot) => {
+    const channel = supabase.channel('public:rides')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'rides', filter: 'status=eq.pending' }, payload => {
+        checkRequests([payload.new])
+      })
+      .subscribe()
+      
+    const checkRequests = (requests: any[]) => {
       let foundRequest = false;
-      querySnapshot.forEach((doc) => {
-        const data = doc.data() as RideRequest;
-        
+      requests.forEach((data) => {
         // 1. Vehicle Type Match
         const driverType = (driverProfileRef.current?.vehicleType || 'mini').toLowerCase();
         const requestType = (data.vehicleType || 'mini').toLowerCase();
@@ -340,12 +383,12 @@ function App() {
 
         // 2. Distance check (<= 5km)
         let isNear = false;
-        if (data.pickupCoords) {
+        if (data.pickuplat && data.pickuplng) {
            const dist = calculateDistance(
              driverPositionRef.current[0], 
              driverPositionRef.current[1], 
-             data.pickupCoords[0], 
-             data.pickupCoords[1]
+             data.pickuplat, 
+             data.pickuplng
            );
            if (dist <= 5.0) {
              isNear = true;
@@ -353,7 +396,7 @@ function App() {
         }
         
         if (!foundRequest && !currentRide && isTypeMatch && isNear) {
-          setIncomingRequest({ ...data, id: doc.id });
+          setIncomingRequest(data);
           foundRequest = true;
         }
       });
@@ -363,24 +406,28 @@ function App() {
         setAppState('online')
         setIncomingRequest(null);
       }
-    });
+    }
 
-    return () => unsub();
+    return () => {
+      supabase.removeChannel(channel)
+    }
   }, [isOnline, currentRide]);
 
   // Listen for current ride status changes (like rider cancellation)
   useEffect(() => {
     if (!currentRide) return;
-    const unsub = onSnapshot(doc(db, "rides", currentRide.id), (docSnap) => {
-      const data = docSnap.data();
-      if (data && data.status === 'cancelled') {
-        alert("The rider has cancelled the ride request.");
-        setCurrentRide(null);
-        setAppState('online');
-        setRouteGeometry(null);
-      }
-    });
-    return () => unsub();
+    const channel = supabase.channel(`public:rides:id=eq.${currentRide.id}`)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'rides', filter: `id=eq.${currentRide.id}` }, payload => {
+        const data = payload.new;
+        if (data && data.status === 'cancelled') {
+          alert("The rider has cancelled the ride request.");
+          setCurrentRide(null);
+          setAppState('online');
+          setRouteGeometry(null);
+        }
+      })
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
   }, [currentRide]);
 
   const playNotificationSound = () => {
@@ -440,19 +487,20 @@ function App() {
   const handleAccept = async () => {
     if (!incomingRequest) return;
     try {
-      await updateDoc(doc(db, "rides", incomingRequest.id), {
+      await supabase.from('rides').update({
         status: 'accepted',
-        driverId: user?.uid,
+        driverId: user?.id,
         driverLat: driverPosition[0],
         driverLng: driverPosition[1],
         driverName: driverProfileRef.current?.name || 'Your Driver',
-        driverVehicleColor: driverProfileRef.current?.vehicleColor || 'White',
-        driverVehicleNumber: driverProfileRef.current?.vehicleNumber || 'XX-00-0000',
-        driverVehicleType: driverProfileRef.current?.vehicleType || 'MINI',
+        driverVehicleColor: driverProfileRef.current?.vehiclecolor || 'White',
+        driverVehicleNumber: driverProfileRef.current?.vehiclenumber || 'XX-00-0000',
+        driverVehicleType: driverProfileRef.current?.vehicletype || 'MINI',
         driverPhone: driverProfileRef.current?.phone || '',
         driverEmail: user?.email || email || '',
         driverRating: avgRating
-      });
+      }).eq('id', incomingRequest.id);
+      
       setCurrentRide(incomingRequest)
       setIncomingRequest(null)
       setAppState('accepted')
@@ -469,7 +517,7 @@ function App() {
   const handleArrived = async () => {
     if (!currentRide) return;
     try {
-      await updateDoc(doc(db, "rides", currentRide.id), { status: 'arrived' });
+      await supabase.from('rides').update({ status: 'arrived' }).eq('id', currentRide.id);
       setAppState('arrived')
       setRouteGeometry(null) // Clear route to pickup
     } catch(e) {}
@@ -483,7 +531,7 @@ function App() {
     }
     
     try {
-      await updateDoc(doc(db, "rides", currentRide.id), { status: 'in_transit' });
+      await supabase.from('rides').update({ status: 'in_transit' }).eq('id', currentRide.id);
       setAppState('in_transit')
       
       // Draw route to destination
@@ -496,7 +544,7 @@ function App() {
   const handleCompleteRide = async () => {
     if (!currentRide) return;
     try {
-      await updateDoc(doc(db, "rides", currentRide.id), { status: 'completed' });
+      await supabase.from('rides').update({ status: 'completed' }).eq('id', currentRide.id);
       setAppState('completed')
       setRouteGeometry(null)
     } catch(e) {}
@@ -518,14 +566,14 @@ function App() {
     
     // Update online status in Firestore
     try {
-      await updateDoc(doc(db, "drivers", user.uid), {
+      await supabase.from('drivers').update({
         isOnline: newState,
         // Also update initial location if going online
         ...(newState && driverPosition ? {
           lat: driverPosition[0],
           lng: driverPosition[1]
         } : {})
-      })
+      }).eq('id', user.id)
     } catch (e) {
       console.error("Error updating online status:", e)
     }
