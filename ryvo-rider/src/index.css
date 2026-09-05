@@ -5,3 +5,7 @@
     width: 100%;
     height: 100vh;
 }
+
+.custom-vehicle-marker {
+    transition: transform 1.5s linear;
+}
