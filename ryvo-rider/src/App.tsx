@@ -4,10 +4,41 @@ import type { MapRef } from 'react-map-gl/mapbox'
 // Leaflet CSS removed; Mapbox styles are applied via mapStyle prop
 const DEFAULT_MAPBOX_TOKEN = "pk.eyJ1IjoiYWJoaTA5MjUiLCJhIjoiY210bzV2YnN0MGRrbjM0c2c5ajR0MWVsbyJ9" + "." + "_78OmqK7nqvyHwwjDoDfzw";
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN || DEFAULT_MAPBOX_TOKEN;
+const GOOGLE_MAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { supabase } from './supabase'
 import type { User } from '@supabase/supabase-js'
 import { Geolocation } from '@capacitor/geolocation'
+
+const decodePolyline = (encoded: string): [number, number][] => {
+  let index = 0, len = encoded.length;
+  let lat = 0, lng = 0;
+  const coordinates: [number, number][] = [];
+
+  while (index < len) {
+    let b, shift = 0, result = 0;
+    do {
+      b = encoded.charCodeAt(index++) - 63;
+      result |= (b & 0x1f) << shift;
+      shift += 5;
+    } while (b >= 0x20);
+    const dlat = ((result & 1) ? ~(result >> 1) : (result >> 1));
+    lat += dlat;
+
+    shift = 0;
+    result = 0;
+    do {
+      b = encoded.charCodeAt(index++) - 63;
+      result |= (b & 0x1f) << shift;
+      shift += 5;
+    } while (b >= 0x20);
+    const dlng = ((result & 1) ? ~(result >> 1) : (result >> 1));
+    lng += dlng;
+
+    coordinates.push([lat / 1e5, lng / 1e5]);
+  }
+  return coordinates;
+};
 
 
 
@@ -352,22 +383,54 @@ function App() {
         return;
       }
 
+      // 1. Try Google Maps Directions & Distance Matrix API if key is present
+      if (GOOGLE_MAPS_KEY) {
+        try {
+          const gRes = await fetch(`https://maps.googleapis.com/maps/api/directions/json?origin=${pCoords[0]},${pCoords[1]}&destination=${dCoords[0]},${dCoords[1]}&key=${GOOGLE_MAPS_KEY}`);
+          const gData = await gRes.json();
+          if (gData.routes && gData.routes.length > 0) {
+            const gRoute = gData.routes[0];
+            const gDistKm = gRoute.legs[0].distance.value / 1000;
+            const gPoints = decodePolyline(gRoute.overview_polyline.points);
+            setDistance(gDistKm);
+            setRouteGeometry(gPoints);
+            setStatus('confirming');
+            return;
+          }
+        } catch (e) {
+          console.warn("Google Maps Directions API error, falling back to OSRM:", e);
+        }
+      }
+
+      // 2. OSRM (Open Source Routing Machine) Engine calculation (100% accurate, local road paths)
+      try {
+        const osrmRes = await fetch(`https://router.project-osrm.org/route/v1/driving/${pCoords[1]},${pCoords[0]};${dCoords[1]},${dCoords[0]}?overview=full&geometries=geojson`);
+        const osrmData = await osrmRes.json();
+        if (osrmData.routes && osrmData.routes.length > 0) {
+          const osrmRoute = osrmData.routes[0];
+          const osrmDistKm = osrmRoute.distance / 1000;
+          setDistance(osrmDistKm);
+          const swappedGeometry = osrmRoute.geometry.coordinates.map((coord: [number, number]) => [coord[1], coord[0]]);
+          setRouteGeometry(swappedGeometry);
+          setStatus('confirming');
+          return;
+        }
+      } catch (e) {
+        console.warn("OSRM Routing error, falling back to Mapbox:", e);
+      }
+
+      // 3. Mapbox Directions API fallback
       const res = await fetch(`https://api.mapbox.com/directions/v5/mapbox/driving-traffic/${pCoords[1]},${pCoords[0]};${dCoords[1]},${dCoords[0]}?alternatives=true&geometries=geojson&overview=full&access_token=${MAPBOX_TOKEN}`)
       const data = await res.json()
       
       if (data.routes && data.routes.length > 0) {
-        // Select the shortest direct road route among all alternatives
         const shortestRoute = data.routes.reduce((min: any, r: any) => r.distance < min.distance ? r : min, data.routes[0]);
         const distanceKm = shortestRoute.distance / 1000;
-        
         setDistance(distanceKm);
-        
         const swappedGeometry = shortestRoute.geometry.coordinates.map((coord: [number, number]) => [coord[1], coord[0]]);
         setRouteGeometry(swappedGeometry);
-        
         setStatus('confirming');
       } else {
-        // Fallback using Haversine calculation if directions API returns no route
         const haversineKm = getHaversineDistance(pCoords[0], pCoords[1], dCoords[0], dCoords[1]);
         const distanceKm = haversineKm * 1.20;
         setDistance(distanceKm);
