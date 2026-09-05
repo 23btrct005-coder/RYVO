@@ -212,30 +212,49 @@ function App() {
     }
   }, [user]);
 
-  // Fetch current device GPS location on demand
+  // Fetch current device GPS location on demand with robust fallbacks
   const handleLocateCurrentPosition = async (forField: 'pickup' | 'destination') => {
+    let coords: [number, number] = currentPosition;
     try {
-      const position = await Geolocation.getCurrentPosition({ enableHighAccuracy: true });
-      const lat = position.coords.latitude;
-      const lon = position.coords.longitude;
-      const coords: [number, number] = [lat, lon];
-      setCurrentPosition(coords);
-
-      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
-      const data = await res.json();
-      const addressName = data?.address ? (data.address.road || data.address.suburb || data.address.neighbourhood || data.name || "Current Location") : "Current Location";
-
-      if (forField === 'pickup') {
-        setPickup(addressName);
-        setPickupCoords(coords);
-      } else {
-        setDestination(addressName);
-        setDestCoords(coords);
-      }
-      setActiveInput('none');
+      // 1. Try Capacitor Geolocation API
+      const position = await Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 5000 });
+      coords = [position.coords.latitude, position.coords.longitude];
     } catch (e) {
-      alert("Could not fetch current GPS location.");
+      console.warn("Capacitor Geolocation error, trying navigator.geolocation fallback:", e);
+      // 2. Try native Browser Geolocation API
+      if ("geolocation" in navigator) {
+        try {
+          const browserPos: any = await new Promise((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000, enableHighAccuracy: true });
+          });
+          coords = [browserPos.coords.latitude, browserPos.coords.longitude];
+        } catch (bErr) {
+          console.warn("Browser Geolocation error, using active currentPosition state:", bErr);
+        }
+      }
     }
+
+    setCurrentPosition(coords);
+
+    let addressName = "Current Location";
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${coords[0]}&lon=${coords[1]}`);
+      const data = await res.json();
+      if (data?.address) {
+        addressName = data.address.road || data.address.suburb || data.address.neighbourhood || data.name || "Current Location";
+      }
+    } catch (e) {
+      console.warn("Reverse geocode warning:", e);
+    }
+
+    if (forField === 'pickup') {
+      setPickup(addressName);
+      setPickupCoords(coords);
+    } else {
+      setDestination(addressName);
+      setDestCoords(coords);
+    }
+    setActiveInput('none');
   };
 
   useEffect(() => {
