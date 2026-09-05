@@ -150,8 +150,24 @@ function App() {
         setDriverProfile(null)
       }
     })
-    return () => subscription.unsubscribe()
+
+    return () => {
+      subscription.unsubscribe()
+    }
   }, [])
+
+  // Robust fetch: If we have a user from getSession but driverProfile is still null, fetch it
+  useEffect(() => {
+    if (user && !driverProfile) {
+      supabase.from('drivers').select('*').eq('id', user.id).single().then(({ data }) => {
+        if (data) {
+          setDriverProfile(data);
+          setAppState(data.isonline ? 'online' : 'idle');
+          setIsOnline(data.isonline);
+        }
+      });
+    }
+  }, [user]);
   
   useEffect(() => {
     if (!user) return
