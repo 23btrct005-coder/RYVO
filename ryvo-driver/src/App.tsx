@@ -65,11 +65,18 @@ function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [appState, setAppState] = useState<'idle' | 'online' | 'incoming' | 'accepted' | 'arrived' | 'in_transit' | 'completed'>('idle')
   const [incomingRequest, setIncomingRequest] = useState<RideRequest | null>(null)
-  const [declinedRides, setDeclinedRides] = useState<string[]>([])
+  const [declinedRides, setDeclinedRides] = useState<string[]>(() => {
+    try {
+      return JSON.parse(sessionStorage.getItem('declinedRides') || '[]');
+    } catch {
+      return [];
+    }
+  })
   const declinedRidesRef = useRef(declinedRides)
   
   useEffect(() => {
     declinedRidesRef.current = declinedRides
+    sessionStorage.setItem('declinedRides', JSON.stringify(declinedRides))
   }, [declinedRides])
 
   const [currentRide, setCurrentRide] = useState<RideRequest | null>(null)
@@ -381,12 +388,13 @@ function App() {
     
     // First, check if there are any existing pending requests from the last 15 minutes
     const fetchPending = async () => {
-      const fifteenMinsAgo = new Date(Date.now() - 15 * 60000).toISOString();
+      // Reduced from 15 mins to 3 mins to avoid showing old stale requests
+      const threeMinsAgo = new Date(Date.now() - 3 * 60000).toISOString();
       const { data } = await supabase
         .from('rides')
         .select('*')
         .eq('status', 'pending')
-        .gte('created_at', fifteenMinsAgo);
+        .gte('created_at', threeMinsAgo);
       if (data && data.length > 0) {
         checkRequests(data)
       }
@@ -606,8 +614,8 @@ function App() {
       }
     }
 
-    if (!currentProfile || !user) {
-      alert("Error: Driver profile not found. Please log out and sign up again.");
+    if (!user) {
+      alert("Error: User not found. Please log out and log in again.");
       return;
     }
     const newState = !isOnline
@@ -946,11 +954,20 @@ function App() {
               <div className="p-6 bg-zinc-900 border-b border-zinc-800">
                  <div className="flex items-center space-x-4 mb-4">
                     <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center text-2xl font-bold border-2 border-blue-400 overflow-hidden">
-                       {driverProfile?.documents?.driverPhotoUrl ? (
-                         <img src={driverProfile.documents.driverPhotoUrl.replace('/object/public/', '/render/image/public/') + '?width=200&height=200&format=webp'} alt="Profile" className="w-full h-full object-cover" />
-                       ) : (
-                         driverProfile?.name?.charAt(0) || user?.email?.charAt(0)?.toUpperCase() || 'D'
-                       )}
+                       {(() => {
+                         let photoUrl = '';
+                         if (driverProfile?.documents) {
+                           if (typeof driverProfile.documents === 'string') {
+                             try { photoUrl = JSON.parse(driverProfile.documents).driverPhotoUrl; } catch(e){}
+                           } else {
+                             photoUrl = driverProfile.documents.driverPhotoUrl;
+                           }
+                         }
+                         if (photoUrl) {
+                           return <img src={photoUrl.replace('/object/public/', '/render/image/public/') + '?width=200&height=200&format=webp'} alt="Profile" className="w-full h-full object-cover" />;
+                         }
+                         return driverProfile?.name?.charAt(0) || user?.email?.charAt(0)?.toUpperCase() || 'D';
+                       })()}
                     </div>
                      <div>
                         <h2 className="text-xl font-bold text-white">{driverProfile?.name || 'Driver'}</h2>
