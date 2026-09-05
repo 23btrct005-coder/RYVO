@@ -492,8 +492,12 @@ function App() {
              <div className="py-2">
                <div className="flex items-center justify-between bg-zinc-800 p-4 rounded-2xl mb-4 border border-zinc-700">
                   <div className="flex items-center space-x-4">
-                     <div className="w-14 h-14 bg-blue-600 rounded-full flex items-center justify-center text-xl font-bold border-2 border-blue-400">
-                        {driverDetails?.name?.charAt(0) || 'D'}
+                     <div className="w-14 h-14 bg-blue-600 rounded-full flex items-center justify-center text-xl font-bold border-2 border-blue-400 overflow-hidden relative shrink-0">
+                        {driverDetails?.documents?.driverPhotoUrl ? (
+                           <img src={driverDetails.documents.driverPhotoUrl} className="w-full h-full object-cover" alt="Driver" />
+                        ) : (
+                           <span>{driverDetails?.name?.charAt(0) || 'D'}</span>
+                        )}
                      </div>
                      <div>
                         <h2 className="text-xl font-bold text-white">{driverDetails?.name || 'Driver'}</h2>
