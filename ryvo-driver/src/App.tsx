@@ -150,8 +150,9 @@ function App() {
              setAppState(data.isonline ? 'online' : 'idle')
              setIsOnline(data.isonline)
            }
-        } catch(e) {
+        } catch(e: any) {
              console.error("Exception fetching driver profile:", e);
+             setFetchError(`onAuthStateChange Exception: ${e.message || String(e)}`);
         }
       } else {
         setDriverProfile(null)
@@ -166,21 +167,29 @@ function App() {
   // Robust fetch: If we have a user from getSession but driverProfile is still null, fetch it
   useEffect(() => {
     if (user && !driverProfile) {
-      supabase.from('drivers').select('*').eq('id', user.id).single().then(({ data, error }) => {
-        if (error) {
-          console.error("Robust fetch error:", error);
-          setFetchError(`Robust fetch Error: ${error.message} (Code: ${error.code})`);
-          if (error.code === 'PGRST116') {
-             console.warn("Robust fetch: User is not a driver. Forcing logout.");
-             supabase.auth.signOut().then(() => setUser(null));
+      const fetchProfile = async () => {
+        try {
+          const { data, error } = await supabase.from('drivers').select('*').eq('id', user.id).single();
+          if (error) {
+            console.error("Robust fetch error:", error);
+            setFetchError(`Robust fetch Error: ${error.message} (Code: ${error.code})`);
+            if (error.code === 'PGRST116') {
+               console.warn("Robust fetch: User is not a driver. Forcing logout.");
+               await supabase.auth.signOut();
+               setUser(null);
+            }
           }
+          if (data) {
+            setDriverProfile(data);
+            setAppState(data.isonline ? 'online' : 'idle');
+            setIsOnline(data.isonline);
+          }
+        } catch (e: any) {
+          console.error("Robust fetch exception:", e);
+          setFetchError(`Robust fetch Exception: ${e.message || String(e)}`);
         }
-        if (data) {
-          setDriverProfile(data);
-          setAppState(data.isonline ? 'online' : 'idle');
-          setIsOnline(data.isonline);
-        }
-      });
+      };
+      fetchProfile();
     }
   }, [user]);
   
@@ -1013,6 +1022,11 @@ function App() {
                         <h3 className="font-bold text-white text-xs break-all max-w-[200px] whitespace-normal">
                           {driverProfile ? `DEBUG: ${JSON.stringify(driverProfile)}` : '🚨 DRIVER PROFILE IS NULL'}
                         </h3>
+                        {!driverProfile && (
+                           <button onClick={() => window.location.reload()} className="mt-2 text-xs bg-red-600 px-3 py-1 rounded text-white font-bold">
+                             Tap to Retry
+                           </button>
+                        )}
                         <p className="text-zinc-400 text-sm flex items-center mt-1">{avgRating} ★ Rating ({ratedRides.length} reviews)</p>
                      </div>
                  </div>
