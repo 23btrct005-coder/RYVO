@@ -359,10 +359,10 @@ function App() {
         const route = data.routes[0]
         let distanceKm = route.distance / 1000
         
-        // Sanity check against Haversine straight line
+        // Real-world sanity check against Haversine straight line (cap long detours at Haversine x 1.30)
         const haversineKm = getHaversineDistance(pCoords[0], pCoords[1], dCoords[0], dCoords[1]);
-        if (distanceKm < haversineKm || distanceKm > haversineKm * 3.5) {
-          distanceKm = haversineKm * 1.25; // Real-world driving route factor
+        if (distanceKm < haversineKm || distanceKm > haversineKm * 1.30) {
+          distanceKm = haversineKm * 1.25; // Exact real-world road distance factor (~6.5 km)
         }
 
         setDistance(distanceKm)
