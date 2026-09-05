@@ -990,7 +990,7 @@ function App() {
                  }} 
                  maxLength={4}
                  placeholder="0000"
-                 className="w-full text-center mt-4 text-4xl font-bold tracking-[0.3em] py-4 bg-zinc-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                 className="w-full text-center mt-4 text-black text-4xl font-bold tracking-[0.3em] py-4 bg-zinc-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500" 
                />
              </div>
              <button onClick={handleStartRide} disabled={otpInput.length !== 4} className="w-full bg-blue-600 text-white font-bold py-4 rounded-xl hover:bg-blue-700 transition-colors text-lg shadow-lg shadow-blue-900/30 disabled:opacity-50">
