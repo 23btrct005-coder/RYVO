@@ -1246,15 +1246,15 @@ function App() {
                         </div>
                       )}
 
-                      {/* Option 4: Previous Booked Locations (Deduplicated) */}
+                      {/* Vertical Recent Pickups List (Rapido / Uber / Ola style) */}
                       {pastRides.length > 0 && (() => {
-                        const uniquePickups = Array.from(new Set(pastRides.map(r => r.pickup).filter(Boolean))).slice(0, 3);
+                        const uniquePickups = Array.from(new Set(pastRides.map(r => r.pickup).filter(Boolean))).slice(0, 5);
                         if (uniquePickups.length === 0) return null;
                         return (
-                          <div className="p-3 bg-zinc-900">
-                            <p className="text-xs uppercase font-extrabold text-zinc-500 px-2 mb-2 tracking-wider">Recent Booked Locations</p>
+                          <div className="bg-zinc-950 divide-y divide-zinc-900 border-t border-zinc-800">
                             {uniquePickups.map((pName, idx) => {
                                const sampleRide = pastRides.find(r => r.pickup === pName);
+                               const distStr = sampleRide?.distance ? `${sampleRide.distance.toFixed(1)} km` : '';
                                return (
                                  <div 
                                    key={idx}
@@ -1266,10 +1266,31 @@ function App() {
                                      }
                                      setActiveInput('none');
                                    }}
-                                   className="flex items-center space-x-3 p-2 hover:bg-zinc-800 rounded-xl cursor-pointer"
+                                   className="flex items-center justify-between px-4 py-3.5 hover:bg-zinc-900 cursor-pointer transition group"
                                  >
-                                    <span className="text-zinc-400">🕒</span>
-                                    <p className="text-zinc-200 text-xs font-medium truncate">{pName}</p>
+                                    <div className="flex items-center space-x-3.5 min-w-0 pr-2">
+                                       <div className="flex flex-col items-center justify-center shrink-0 w-8">
+                                          <span className="text-zinc-400 text-lg">🕒</span>
+                                          {distStr && <span className="text-[9px] text-zinc-500 font-mono mt-0.5">{distStr}</span>}
+                                       </div>
+                                       <div className="overflow-hidden">
+                                          <p className="text-white text-sm font-bold truncate group-hover:text-emerald-400 transition-colors">{pName}</p>
+                                          <p className="text-zinc-500 text-xs truncate">Bengaluru, Karnataka, India</p>
+                                       </div>
+                                    </div>
+                                    <button 
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (sampleRide?.pickuplat && sampleRide?.pickuplng) {
+                                          savePlace(pName.split(',')[0], pName, [sampleRide.pickuplat, sampleRide.pickuplng], '❤️');
+                                          alert(`Saved "${pName}" to favorites!`);
+                                        }
+                                      }}
+                                      title="Save to favorites"
+                                      className="text-zinc-600 hover:text-red-500 p-2 transition shrink-0"
+                                    >
+                                      🤍
+                                    </button>
                                  </div>
                                );
                             })}
@@ -1429,15 +1450,15 @@ function App() {
                         </div>
                       )}
 
-                      {/* Option 4: Previous Booked Destinations (Deduplicated) */}
+                      {/* Vertical Recent Destinations List (Rapido / Uber / Ola style) */}
                       {pastRides.length > 0 && (() => {
-                        const uniqueDests = Array.from(new Set(pastRides.map(r => r.destination).filter(Boolean))).slice(0, 3);
+                        const uniqueDests = Array.from(new Set(pastRides.map(r => r.destination).filter(Boolean))).slice(0, 5);
                         if (uniqueDests.length === 0) return null;
                         return (
-                          <div className="p-3 bg-zinc-900">
-                            <p className="text-xs uppercase font-extrabold text-zinc-500 px-2 mb-2 tracking-wider">Recent Destinations</p>
+                          <div className="bg-zinc-950 divide-y divide-zinc-900 border-t border-zinc-800">
                             {uniqueDests.map((dName, idx) => {
                                const sampleRide = pastRides.find(r => r.destination === dName);
+                               const distStr = sampleRide?.distance ? `${sampleRide.distance.toFixed(1)} km` : '';
                                return (
                                  <div 
                                    key={idx}
@@ -1449,10 +1470,31 @@ function App() {
                                      }
                                      setActiveInput('none');
                                    }}
-                                   className="flex items-center space-x-3 p-2 hover:bg-zinc-800 rounded-xl cursor-pointer"
+                                   className="flex items-center justify-between px-4 py-3.5 hover:bg-zinc-900 cursor-pointer transition group"
                                  >
-                                    <span className="text-zinc-400">🕒</span>
-                                    <p className="text-zinc-200 text-xs font-medium truncate">{dName}</p>
+                                    <div className="flex items-center space-x-3.5 min-w-0 pr-2">
+                                       <div className="flex flex-col items-center justify-center shrink-0 w-8">
+                                          <span className="text-zinc-400 text-lg">🕒</span>
+                                          {distStr && <span className="text-[9px] text-zinc-500 font-mono mt-0.5">{distStr}</span>}
+                                       </div>
+                                       <div className="overflow-hidden">
+                                          <p className="text-white text-sm font-bold truncate group-hover:text-emerald-400 transition-colors">{dName}</p>
+                                          <p className="text-zinc-500 text-xs truncate">Bengaluru, Karnataka, India</p>
+                                       </div>
+                                    </div>
+                                    <button 
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (sampleRide?.destlat && sampleRide?.destlng) {
+                                          savePlace(dName.split(',')[0], dName, [sampleRide.destlat, sampleRide.destlng], '❤️');
+                                          alert(`Saved "${dName}" to favorites!`);
+                                        }
+                                      }}
+                                      title="Save to favorites"
+                                      className="text-zinc-600 hover:text-red-500 p-2 transition shrink-0"
+                                    >
+                                      🤍
+                                    </button>
                                  </div>
                                );
                             })}
