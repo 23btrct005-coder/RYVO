@@ -26,7 +26,43 @@ interface RideRequest {
   riderid?: string;
 }
 
-// ChangeView removed — Mapbox GL handles view state via initialViewState
+const DriverLocationMarker = ({ vehicleType }: { vehicleType: string }) => {
+  const emoji = vehicleType?.toUpperCase() === 'AUTO' ? '🛺' : vehicleType?.toUpperCase() === 'BIKE' ? '🛵' : '🚗';
+  return (
+    <div className="relative flex flex-col items-center">
+      <div className="bg-black/90 text-blue-400 text-[10px] font-black px-2 py-0.5 rounded-full shadow-lg border border-blue-500/50 mb-1 whitespace-nowrap tracking-wider">
+         YOUR LIVE LOCATION
+      </div>
+      <div className="bg-white border-2 border-blue-600 rounded-full w-11 h-11 flex items-center justify-center text-2xl shadow-2xl">
+        {emoji}
+      </div>
+    </div>
+  );
+};
+
+const RiderPickupMarker = () => (
+  <div className="relative flex flex-col items-center">
+    <div className="bg-emerald-600 text-white text-xs font-black px-2.5 py-1 rounded-full shadow-xl border border-emerald-400 mb-1 flex items-center space-x-1 whitespace-nowrap">
+       <span>🟢</span><span>RIDER PICKUP</span>
+    </div>
+    <div className="w-7 h-7 bg-emerald-500 border-2 border-white rounded-full flex items-center justify-center shadow-lg">
+      <div className="w-3 h-3 bg-white rounded-full" />
+    </div>
+    <div className="w-1 h-3 bg-emerald-600 rounded-b-full shadow-md" />
+  </div>
+);
+
+const RiderDropoffMarker = () => (
+  <div className="relative flex flex-col items-center">
+    <div className="bg-red-600 text-white text-xs font-black px-2.5 py-1 rounded-full shadow-xl border border-red-400 mb-1 flex items-center space-x-1 whitespace-nowrap">
+       <span>🏁</span><span>DROP LOCATION</span>
+    </div>
+    <div className="w-7 h-7 bg-red-600 border-2 border-white rounded-full flex items-center justify-center shadow-lg">
+      <span className="text-xs">🏁</span>
+    </div>
+    <div className="w-1 h-3 bg-red-600 rounded-b-full shadow-md" />
+  </div>
+);
 
 function App() {
   const [user, setUser] = useState<User | null>(null)
@@ -847,30 +883,29 @@ function App() {
           mapStyle="mapbox://styles/mapbox/streets-v11"
           mapboxAccessToken={MAPBOX_TOKEN}
         >
+          {/* Driver Live Location Marker */}
           <Marker longitude={driverPosition[1]} latitude={driverPosition[0]}>
-            <div className="w-5 h-5 bg-blue-500 border-3 border-white rounded-full shadow-lg ring-4 ring-blue-500/30" />
+            <DriverLocationMarker vehicleType={driverProfile?.vehicletype || vehicleType} />
           </Marker>
+
+          {/* Route Line */}
           {routeGeometry && (
             <Source id="driverRoute" type="geojson" data={{ type: 'LineString', coordinates: routeGeometry.map(coord => [coord[1], coord[0]]) }}>
-              <Layer id="driverRouteLine" type="line" paint={{ 'line-color': '#3b82f6', 'line-width': 6, 'line-opacity': 0.8 }} />
+              <Layer id="driverRouteLine" type="line" paint={{ 'line-color': '#3b82f6', 'line-width': 6, 'line-opacity': 0.85 }} />
             </Source>
           )}
-          {/* Pickup Marker */}
+
+          {/* Rider Pickup Marker */}
           {(appState === 'accepted' || appState === 'arrived') && currentRide?.pickupCoords && (
-            <Marker longitude={currentRide.pickupCoords[1]} latitude={currentRide.pickupCoords[0]}>
-              <div className="flex flex-col items-center">
-                <div className="bg-green-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg mb-1">PICKUP</div>
-                <div className="w-4 h-4 bg-green-500 border-2 border-white rounded-full shadow" />
-              </div>
+            <Marker longitude={currentRide.pickupCoords[1]} latitude={currentRide.pickupCoords[0]} anchor="bottom">
+              <RiderPickupMarker />
             </Marker>
           )}
-          {/* Destination Marker */}
+
+          {/* Rider Dropoff Destination Marker */}
           {appState === 'in_transit' && currentRide?.destCoords && (
-            <Marker longitude={currentRide.destCoords[1]} latitude={currentRide.destCoords[0]}>
-              <div className="flex flex-col items-center">
-                <div className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg mb-1">DROP</div>
-                <div className="w-4 h-4 bg-red-500 border-2 border-white rounded-full shadow" />
-              </div>
+            <Marker longitude={currentRide.destCoords[1]} latitude={currentRide.destCoords[0]} anchor="bottom">
+              <RiderDropoffMarker />
             </Marker>
           )}
         </Map>
