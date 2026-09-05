@@ -157,11 +157,12 @@ function App() {
           
           if (error) {
             console.error("Robust fetch error:", error);
-            setFetchError(`Robust fetch Error: ${error.message} (Code: ${error.code})`);
             if (error.code === 'PGRST116') {
                console.warn("Robust fetch: User is not a driver. Forcing logout.");
                await supabase.auth.signOut();
                setUser(null);
+            } else {
+               setFetchError(`Robust fetch Error: ${error.message} (Code: ${error.code})`);
             }
           }
           if (data) {
