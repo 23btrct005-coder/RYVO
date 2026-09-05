@@ -907,8 +907,12 @@ function App() {
            <div className="relative w-80 bg-zinc-950 h-full shadow-2xl flex flex-col border-r border-zinc-800 animate-slide-in">
               <div className="p-6 bg-zinc-900 border-b border-zinc-800">
                  <div className="flex items-center space-x-4 mb-4">
-                    <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center text-2xl font-bold border-2 border-blue-400">
-                       {driverProfile?.name?.charAt(0) || user?.email?.charAt(0)?.toUpperCase() || 'D'}
+                    <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center text-2xl font-bold border-2 border-blue-400 overflow-hidden">
+                       {driverProfile?.documents?.driverPhotoUrl ? (
+                         <img src={driverProfile.documents.driverPhotoUrl} alt="Profile" className="w-full h-full object-cover" />
+                       ) : (
+                         driverProfile?.name?.charAt(0) || user?.email?.charAt(0)?.toUpperCase() || 'D'
+                       )}
                     </div>
                      <div>
                         <h2 className="text-xl font-bold text-white">{driverProfile?.name || 'Driver'}</h2>
