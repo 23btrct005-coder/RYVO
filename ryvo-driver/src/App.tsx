@@ -31,6 +31,7 @@ interface RideRequest {
   timestamp?: any;
   otp?: string;
   riderPhone?: string;
+  riderid?: string;
 }
 
 function ChangeView({ center }: { center: [number, number] }) {
@@ -588,7 +589,19 @@ function App() {
         driverRating: avgRating
       }).eq('id', incomingRequest.id);
       
-      setCurrentRide(incomingRequest)
+      // Fetch rider phone number for display
+      let fetchedPhone = '';
+      try {
+        const { data: riderData } = await supabase.from('riders').select('phone').eq('id', incomingRequest.riderid).single();
+        if (riderData) fetchedPhone = riderData.phone;
+      } catch (err) {
+        console.error("Failed to fetch rider phone", err);
+      }
+      
+      setCurrentRide({
+        ...incomingRequest,
+        riderPhone: fetchedPhone || 'Unknown'
+      });
       setIncomingRequest(null)
       setAppState('accepted')
       
