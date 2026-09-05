@@ -1020,8 +1020,14 @@ function App() {
                     </div>
                      <div>
                         <h3 className="font-bold text-white text-xs break-all max-w-[200px] whitespace-normal">
-                          {driverProfile ? `DEBUG: ${JSON.stringify(driverProfile)}` : '🚨 DRIVER PROFILE IS NULL'}
+                          {driverProfile ? `DEBUG PROFILE: ${JSON.stringify(driverProfile)}` : '🚨 DRIVER PROFILE IS NULL'}
                         </h3>
+                        <div className="mt-2 text-xs text-zinc-400 break-all">
+                          USER: {user ? user.id : 'NULL'}
+                        </div>
+                        <div className="mt-2 text-xs text-red-400 break-all">
+                          ERROR: {fetchError ? fetchError : 'NULL'}
+                        </div>
                         {!driverProfile && (
                            <button onClick={() => window.location.reload()} className="mt-2 text-xs bg-red-600 px-3 py-1 rounded text-white font-bold">
                              Tap to Retry
