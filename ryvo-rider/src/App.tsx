@@ -466,7 +466,7 @@ function App() {
 
 
           {driverLocation && (
-            <Marker position={driverLocation} icon={createVehicleIcon(driverDetails?.vehicleType || 'MINI')}>
+            <Marker position={driverLocation} icon={createVehicleIcon(driverDetails?.vehicletype || 'MINI')}>
               <Popup>Driver is here</Popup>
             </Marker>
           )}
@@ -502,9 +502,9 @@ function App() {
                   </div>
                   <div className="text-right">
                      <p className="bg-zinc-900 border border-zinc-600 px-3 py-1 rounded-md font-mono font-bold text-white tracking-widest text-lg shadow-sm">
-                        {driverDetails?.vehicleNumber || 'XX00XX'}
+                        {driverDetails?.vehiclenumber || 'XX00XX'}
                      </p>
-                     <p className="text-zinc-400 text-xs mt-1 font-bold uppercase">{driverDetails?.vehicleColor || ''} {selectedVehicle}</p>
+                     <p className="text-zinc-400 text-xs mt-1 font-bold uppercase">{driverDetails?.vehiclecolor || ''} {selectedVehicle}</p>
                      {driverDetails?.phone && (
                         <a href={`tel:${driverDetails.phone}`} className="inline-block mt-2 text-sm font-bold text-green-400 bg-green-500/10 px-2 py-1 rounded hover:bg-green-500/20">
                           📞 {driverDetails.phone}
