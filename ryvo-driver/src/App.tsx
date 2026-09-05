@@ -526,10 +526,20 @@ function App() {
   // Listen for current ride status changes (like rider cancellation)
   useEffect(() => {
     if (!currentRide) return;
-    const channel = supabase.channel(`public:rides:id=eq.${currentRide.id}`)
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'rides', filter: `id=eq.${currentRide.id}` }, payload => {
-        const data = payload.new;
-        if (data && data.status === 'cancelled') {
+    
+    const checkRide = async () => {
+      const { data } = await supabase.from('rides').select('*').eq('id', currentRide.id).single();
+      if (data && data.status === 'cancelled') {
+        alert("The rider has cancelled the ride request.");
+        setCurrentRide(null);
+        setAppState('online');
+        setRouteGeometry(null);
+      }
+    };
+    
+    const channel = supabase.channel(`driver-ride-${currentRide.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'rides' }, payload => {
+        if (payload.new && (payload.new as any).id === currentRide.id && (payload.new as any).status === 'cancelled') {
           alert("The rider has cancelled the ride request.");
           setCurrentRide(null);
           setAppState('online');
@@ -537,7 +547,13 @@ function App() {
         }
       })
       .subscribe()
-    return () => { supabase.removeChannel(channel) }
+
+    const interval = setInterval(checkRide, 2500);
+
+    return () => { 
+      supabase.removeChannel(channel);
+      clearInterval(interval);
+    }
   }, [currentRide]);
 
   const playNotificationSound = () => {

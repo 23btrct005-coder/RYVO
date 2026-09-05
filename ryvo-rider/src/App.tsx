@@ -443,20 +443,31 @@ function App() {
     }
     fetchRide()
 
-    const channel = supabase.channel(`public:rides:id=eq.${currentRideId}`)
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'rides', filter: `id=eq.${currentRideId}` }, payload => {
-        updateRideState(payload.new)
+    const channel = supabase.channel(`rider-ride-${currentRideId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'rides' }, payload => {
+        if (payload.new && (payload.new as any).id === currentRideId) {
+          updateRideState(payload.new)
+        }
       })
       .subscribe()
+      
+    // Polling fallback every 2.5 seconds to guarantee instant status sync even if websocket drops
+    const interval = setInterval(fetchRide, 2500);
       
     const updateRideState = (data: any) => {
       if (['accepted', 'arrived', 'in_transit', 'completed'].includes(data.status)) {
         setStatus(data.status)
+      } else if (data.status === 'cancelled') {
+        alert("This ride was cancelled.")
+        setStatus('idle')
+        setCurrentRideId(null)
+        setDriverDetails(null)
+        setDriverLocation(null)
+        setRouteGeometry(null)
       }
       
-      // The driver app code updates rides with driverId, so we can fetch the full profile here
       const did = data.driverid || data.driverId;
-      if (did && !driverDetails) {
+      if (did) {
          supabase.from('drivers').select('*').eq('id', did).single().then(res => {
             if (res.data) setDriverDetails(res.data);
          });
@@ -471,7 +482,10 @@ function App() {
       }
     }
 
-    return () => { supabase.removeChannel(channel) };
+    return () => { 
+      supabase.removeChannel(channel);
+      clearInterval(interval);
+    };
   }, [currentRideId]);
 
   if (!user) {
