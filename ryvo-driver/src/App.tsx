@@ -65,6 +65,13 @@ function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [appState, setAppState] = useState<'idle' | 'online' | 'incoming' | 'accepted' | 'arrived' | 'in_transit' | 'completed'>('idle')
   const [incomingRequest, setIncomingRequest] = useState<RideRequest | null>(null)
+  const [declinedRides, setDeclinedRides] = useState<string[]>([])
+  const declinedRidesRef = useRef(declinedRides)
+  
+  useEffect(() => {
+    declinedRidesRef.current = declinedRides
+  }, [declinedRides])
+
   const [currentRide, setCurrentRide] = useState<RideRequest | null>(null)
   const [otpInput, setOtpInput] = useState('')
   
@@ -372,9 +379,14 @@ function App() {
       return
     }
     
-    // First, check if there are any existing pending requests
+    // First, check if there are any existing pending requests from the last 15 minutes
     const fetchPending = async () => {
-      const { data } = await supabase.from('rides').select('*').eq('status', 'pending')
+      const fifteenMinsAgo = new Date(Date.now() - 15 * 60000).toISOString();
+      const { data } = await supabase
+        .from('rides')
+        .select('*')
+        .eq('status', 'pending')
+        .gte('created_at', fifteenMinsAgo);
       if (data && data.length > 0) {
         checkRequests(data)
       }
@@ -416,8 +428,9 @@ function App() {
              isNear = true;
            }
         }
+        const isNotDeclined = !declinedRidesRef.current.includes(mappedData.id);
         
-        if (!foundRequest && !currentRide && isTypeMatch && isNear) {
+        if (!foundRequest && !currentRide && isTypeMatch && isNear && isNotDeclined) {
           setIncomingRequest(mappedData);
           foundRequest = true;
         }
@@ -809,7 +822,12 @@ function App() {
              )}
              
              <div className="flex space-x-3">
-                <button onClick={() => setIncomingRequest(null)} className="flex-1 bg-zinc-800 text-white font-bold py-4 rounded-xl hover:bg-zinc-700 transition-colors">
+                <button onClick={() => {
+                  if (incomingRequest) {
+                    setDeclinedRides(prev => [...prev, incomingRequest.id])
+                  }
+                  setIncomingRequest(null)
+                }} className="flex-1 bg-zinc-800 text-white font-bold py-4 rounded-xl hover:bg-zinc-700 transition-colors">
                   Decline
                 </button>
                 <button onClick={handleAccept} className="flex-[2] bg-blue-600 text-white font-bold py-4 rounded-xl hover:bg-blue-500 transition-colors text-lg shadow-lg shadow-blue-900/50">
