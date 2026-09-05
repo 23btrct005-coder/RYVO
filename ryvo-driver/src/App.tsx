@@ -31,6 +31,7 @@ interface RideRequest {
   timestamp?: any;
   otp?: string;
   riderPhone?: string;
+  riderName?: string;
   riderid?: string;
 }
 
@@ -394,8 +395,8 @@ function App() {
               
               if (currentRide) {
                 supabase.from('rides').update({
-                  driverLat: position.coords.latitude,
-                  driverLng: position.coords.longitude
+                  driverlat: position.coords.latitude,
+                  driverlng: position.coords.longitude
                 }).eq('id', currentRide.id).then()
               } else if (isOnline && user) {
                 supabase.from('drivers').update({
@@ -578,9 +579,9 @@ function App() {
     try {
       await supabase.from('rides').update({
         status: 'accepted',
-        driverId: user?.id,
-        driverLat: driverPosition[0],
-        driverLng: driverPosition[1],
+        driverid: user?.id,
+        driverlat: driverPosition[0],
+        driverlng: driverPosition[1],
         driverName: driverProfileRef.current?.name || 'Your Driver',
         driverVehicleColor: driverProfileRef.current?.vehiclecolor || 'White',
         driverVehicleNumber: driverProfileRef.current?.vehiclenumber || 'XX-00-0000',
@@ -590,18 +591,23 @@ function App() {
         driverRating: avgRating
       }).eq('id', incomingRequest.id);
       
-      // Fetch rider phone number for display
+      // Fetch rider phone and name for display
       let fetchedPhone = '';
+      let fetchedName = '';
       try {
-        const { data: riderData } = await supabase.from('riders').select('phone').eq('id', incomingRequest.riderid).single();
-        if (riderData) fetchedPhone = riderData.phone;
+        const { data: riderData } = await supabase.from('riders').select('name, phone').eq('id', incomingRequest.riderid).single();
+        if (riderData) {
+          fetchedPhone = riderData.phone;
+          fetchedName = riderData.name;
+        }
       } catch (err) {
-        console.error("Failed to fetch rider phone", err);
+        console.error("Failed to fetch rider details", err);
       }
       
       setCurrentRide({
         ...incomingRequest,
-        riderPhone: fetchedPhone || 'Unknown'
+        riderPhone: fetchedPhone || 'Unknown',
+        riderName: fetchedName || 'Rider'
       });
       setIncomingRequest(null)
       setAppState('accepted')
@@ -920,7 +926,7 @@ function App() {
                <h2 className="text-2xl font-bold text-black truncate">{currentRide.pickup}</h2>
                {currentRide.riderPhone && (
                  <a href={`tel:${currentRide.riderPhone}`} className="inline-block mt-2 text-sm font-bold text-green-600 bg-green-50 px-3 py-1.5 rounded-lg border border-green-200">
-                   📞 Call Rider: {currentRide.riderPhone}
+                   📞 Call {currentRide.riderName || 'Rider'}: {currentRide.riderPhone}
                  </a>
                )}
              </div>
@@ -946,7 +952,7 @@ function App() {
                <p className="text-zinc-500 text-sm mt-1">Ask the rider for their 4-digit PIN.</p>
                {currentRide.riderPhone && (
                  <a href={`tel:${currentRide.riderPhone}`} className="inline-block mt-2 text-sm font-bold text-green-600 bg-green-50 px-3 py-1.5 rounded-lg border border-green-200">
-                   📞 Call Rider: {currentRide.riderPhone}
+                   📞 Call {currentRide.riderName || 'Rider'}: {currentRide.riderPhone}
                  </a>
                )}
                
@@ -980,7 +986,7 @@ function App() {
                <h2 className="text-2xl font-bold text-black truncate">{currentRide.destination}</h2>
                {currentRide.riderPhone && (
                  <a href={`tel:${currentRide.riderPhone}`} className="inline-block mt-2 text-sm font-bold text-green-600 bg-green-50 px-3 py-1.5 rounded-lg border border-green-200">
-                   📞 Call Rider: {currentRide.riderPhone}
+                   📞 Call {currentRide.riderName || 'Rider'}: {currentRide.riderPhone}
                  </a>
                )}
              </div>
