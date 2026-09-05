@@ -282,16 +282,49 @@ function App() {
     }
   }
 
+  // Helper to geocode text address using Mapbox Geocoding API
+  const geocodeAddress = async (query: string): Promise<[number, number] | null> => {
+    try {
+      const res = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?proximity=${currentPosition[1]},${currentPosition[0]}&access_token=${MAPBOX_TOKEN}`);
+      const data = await res.json();
+      if (data && data.features && data.features.length > 0) {
+        const coord = data.features[0].geometry.coordinates; // [lng, lat]
+        return [coord[1], coord[0]];
+      }
+    } catch (e) {
+      console.error("Geocoding error", e);
+    }
+    return null;
+  };
+
   const handleEstimate = async () => {
-    if (!pickup || !destination || !pickupCoords || !destCoords) {
-      alert("Please select pickup and destination from the suggestions")
+    if (!pickup || !destination) {
+      alert("Please enter both pickup and destination locations")
       return
     }
 
     setStatus('estimating')
 
     try {
-      const res = await fetch(`https://api.mapbox.com/directions/v5/mapbox/driving/${pickupCoords[1]},${pickupCoords[0]};${destCoords[1]},${destCoords[0]}?geometries=geojson&overview=full&access_token=${MAPBOX_TOKEN}`)
+      let pCoords = pickupCoords;
+      let dCoords = destCoords;
+
+      if (!pCoords) {
+        pCoords = await geocodeAddress(pickup) || currentPosition;
+        setPickupCoords(pCoords);
+      }
+      if (!dCoords) {
+        dCoords = await geocodeAddress(destination);
+        if (dCoords) setDestCoords(dCoords);
+      }
+
+      if (!pCoords || !dCoords) {
+        alert("Could not find location coordinates for the entered addresses. Please select from the dropdown suggestions.");
+        setStatus('idle');
+        return;
+      }
+
+      const res = await fetch(`https://api.mapbox.com/directions/v5/mapbox/driving/${pCoords[1]},${pCoords[0]};${dCoords[1]},${dCoords[0]}?geometries=geojson&overview=full&access_token=${MAPBOX_TOKEN}`)
       const data = await res.json()
       
       if (data.routes && data.routes.length > 0) {
@@ -305,7 +338,7 @@ function App() {
         
         setStatus('confirming')
       } else {
-        alert("Could not calculate route.")
+        alert("Could not calculate route between these locations.")
         setStatus('idle')
       }
     } catch (e) {
@@ -657,7 +690,12 @@ function App() {
             </div>
           ) : status === 'confirming' ? (
             <div className="py-2">
-               <p className="text-zinc-400 text-sm mb-3 font-medium">Select a ride</p>
+               <div className="flex justify-between items-center mb-3">
+                 <p className="text-zinc-400 text-sm font-medium">Select a ride</p>
+                 <span className="bg-zinc-800 text-zinc-200 text-xs font-bold px-3 py-1 rounded-full border border-zinc-700">
+                   📍 {distance > 0 ? `${distance.toFixed(1)} km` : ''}
+                 </span>
+               </div>
                
                <div className="space-y-3 mb-6">
                  {/* Bike */}
