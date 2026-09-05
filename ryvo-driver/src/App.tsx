@@ -692,6 +692,19 @@ function App() {
       setRouteGeometry(null)
     } catch(e) {}
   }
+
+  const cancelRide = async () => {
+    if (!currentRide) return;
+    if (!window.confirm("Are you sure you want to cancel this ride?")) return;
+    try {
+      await supabase.from('rides').update({ status: 'cancelled' }).eq('id', currentRide.id);
+      setCurrentRide(null);
+      setAppState('online');
+      setRouteGeometry(null);
+    } catch(e) {
+      console.error("Error cancelling ride:", e);
+    }
+  }
   
   const resetToOnline = () => {
     setCurrentRide(null)
@@ -980,9 +993,14 @@ function App() {
                )}
              </div>
              <div className="flex gap-2">
+                <button 
+                  onClick={cancelRide} 
+                  className="w-1/3 bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 font-bold py-4 rounded-xl transition text-sm">
+                  Cancel
+                </button>
                <button 
                  onClick={handleArrived} 
-                 className="w-full bg-black text-white font-bold py-4 rounded-xl hover:bg-zinc-800 transition-colors text-lg shadow-lg">
+                 className="flex-1 bg-black text-white font-bold py-4 rounded-xl hover:bg-zinc-800 transition-colors text-lg shadow-lg">
                  I've Arrived
                </button>
              </div>
@@ -1020,9 +1038,16 @@ function App() {
                  className="w-full text-center mt-4 text-black text-4xl font-bold tracking-[0.3em] py-4 bg-zinc-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500" 
                />
              </div>
-             <button onClick={handleStartRide} disabled={otpInput.length !== 4} className="w-full bg-blue-600 text-white font-bold py-4 rounded-xl hover:bg-blue-700 transition-colors text-lg shadow-lg shadow-blue-900/30 disabled:opacity-50">
-               Start Ride
-             </button>
+             <div className="flex gap-2">
+               <button 
+                 onClick={cancelRide} 
+                 className="w-1/3 bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 font-bold py-4 rounded-xl transition text-sm">
+                 Cancel
+               </button>
+               <button onClick={handleStartRide} disabled={otpInput.length !== 4} className="flex-1 bg-blue-600 text-white font-bold py-4 rounded-xl hover:bg-blue-700 transition-colors text-lg shadow-lg shadow-blue-900/30 disabled:opacity-50">
+                 Start Ride
+               </button>
+             </div>
           </div>
         </div>
       )}
@@ -1040,11 +1065,18 @@ function App() {
                  </a>
                )}
              </div>
-             <button 
-               onClick={handleCompleteRide} 
-               className="w-full bg-green-600 text-white font-bold py-4 rounded-xl hover:bg-green-700 transition-colors text-lg shadow-lg shadow-green-900/30">
-               Complete Ride
-             </button>
+             <div className="flex gap-2">
+               <button 
+                 onClick={cancelRide} 
+                 className="w-1/3 bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 font-bold py-4 rounded-xl transition text-sm">
+                 Cancel
+               </button>
+               <button 
+                 onClick={handleCompleteRide} 
+                 className="flex-1 bg-green-600 text-white font-bold py-4 rounded-xl hover:bg-green-700 transition-colors text-lg shadow-lg shadow-green-900/30">
+                 Complete Ride
+               </button>
+             </div>
           </div>
         </div>
       )}

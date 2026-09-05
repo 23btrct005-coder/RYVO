@@ -657,7 +657,7 @@ function App() {
                     </div>
                   )}
 
-                  {['accepted', 'arrived'].includes(status) && (
+                  {['accepted', 'arrived', 'in_transit'].includes(status) && (
                     <button 
                       onClick={cancelRide}
                       className="w-full mt-4 bg-red-900/40 text-red-400 border border-red-900/50 hover:bg-red-900/60 font-bold py-3 rounded-xl transition"
