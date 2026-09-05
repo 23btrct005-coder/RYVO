@@ -93,20 +93,37 @@ function App() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       const currentUser = session?.user ?? null
       setUser(currentUser)
-      if (currentUser) {
-        // Fetch rider profile
-        try {
-           const { data } = await supabase.from('riders').select('*').eq('id', currentUser.id).single()
-           if (data) {
-             setRiderProfile(data)
-           }
-        } catch(e) {}
-      } else {
+      if (!currentUser) {
         setRiderProfile(null)
       }
     })
     return () => subscription.unsubscribe()
   }, [])
+
+  // Robust fetch: If we have a user from getSession but riderProfile is still null, fetch it
+  useEffect(() => {
+    if (user && !riderProfile) {
+      const fetchProfile = async () => {
+        try {
+          const { data, error } = await supabase.from('riders').select('*').eq('id', user.id).single();
+          if (error) {
+            console.error("Robust fetch error:", error);
+            if (error.code === 'PGRST116') {
+               console.warn("User is not a rider. Forcing logout.");
+               await supabase.auth.signOut();
+               setUser(null);
+            }
+          }
+          if (data) {
+            setRiderProfile(data);
+          }
+        } catch (e: any) {
+          console.error("Robust fetch exception:", e);
+        }
+      };
+      fetchProfile();
+    }
+  }, [user?.id]);
 
   // Fetch current location on load
   useEffect(() => {
