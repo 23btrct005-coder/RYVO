@@ -160,10 +160,62 @@ function App() {
   const [pickupCoords, setPickupCoords] = useState<[number, number] | null>(null)
   const [destCoords, setDestCoords] = useState<[number, number] | null>(null)
 
+  const [activeInput, setActiveInput] = useState<'none' | 'pickup' | 'destination'>('none')
+
+  // Saved locations (stored locally per user)
+  const [savedPlaces, setSavedPlaces] = useState<{ label: string; address: string; coords: [number, number]; icon: string }[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem('ryvo_saved_places') || '[]');
+    } catch {
+      return [
+        { label: 'Home', address: 'Home Location', coords: [12.8753, 77.5958], icon: '🏠' },
+        { label: 'Work', address: 'Work Office', coords: [12.9716, 77.5946], icon: '💼' }
+      ];
+    }
+  });
+
+  const savePlace = (label: string, address: string, coords: [number, number], icon: string = '⭐') => {
+    const updated = [...savedPlaces.filter(p => p.label !== label), { label, address, coords, icon }];
+    setSavedPlaces(updated);
+    localStorage.setItem('ryvo_saved_places', JSON.stringify(updated));
+  };
+
   const [etaPickup, setEtaPickup] = useState<number | null>(null)
   const [distPickup, setDistPickup] = useState<string | null>(null)
   const [etaDestination, setEtaDestination] = useState<number | null>(null)
   const [distDestination, setDistDestination] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (user) {
+      fetchPastRides();
+    }
+  }, [user]);
+
+  // Fetch current device GPS location on demand
+  const handleLocateCurrentPosition = async (forField: 'pickup' | 'destination') => {
+    try {
+      const position = await Geolocation.getCurrentPosition({ enableHighAccuracy: true });
+      const lat = position.coords.latitude;
+      const lon = position.coords.longitude;
+      const coords: [number, number] = [lat, lon];
+      setCurrentPosition(coords);
+
+      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
+      const data = await res.json();
+      const addressName = data?.address ? (data.address.road || data.address.suburb || data.address.neighbourhood || data.name || "Current Location") : "Current Location";
+
+      if (forField === 'pickup') {
+        setPickup(addressName);
+        setPickupCoords(coords);
+      } else {
+        setDestination(addressName);
+        setDestCoords(coords);
+      }
+      setActiveInput('none');
+    } catch (e) {
+      alert("Could not fetch current GPS location.");
+    }
+  };
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -989,41 +1041,127 @@ function App() {
                 {/* Pickup Field */}
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                     <div className="w-2 h-2 rounded-full bg-white"></div>
+                     <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 ring-4 ring-emerald-500/20"></div>
                   </div>
                   <input 
                     type="text" 
                     value={pickup}
+                    onFocus={() => setActiveInput('pickup')}
                     onChange={(e) => {
                       setPickup(e.target.value); 
                       fetchSuggestions(e.target.value, setPickupSuggestions)
                     }}
-                    onBlur={() => setTimeout(() => setPickupSuggestions([]), 200)}
                     placeholder="Enter pickup location" 
-                    className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-xl pl-10 pr-4 py-4 focus:outline-none focus:ring-2 focus:ring-white transition-all font-medium"
+                    className="w-full bg-zinc-800/90 text-white placeholder-zinc-500 rounded-2xl pl-10 pr-12 py-4 focus:outline-none focus:ring-2 focus:ring-emerald-500 border border-zinc-700/50 transition-all font-medium text-base shadow-inner"
                   />
-                  {pickupSuggestions.length > 0 && (
-                    <div className="absolute z-50 w-full bg-zinc-900 border border-zinc-700 mt-2 rounded-2xl shadow-2xl overflow-hidden divide-y divide-zinc-800">
+                  {pickup && (
+                    <button 
+                      onClick={() => {
+                        const name = prompt("Save this place as (e.g. Gym, Home, Office):", "Favorite");
+                        if (name && pickupCoords) {
+                          savePlace(name, pickup, pickupCoords, '⭐');
+                          alert(`Saved "${name}"!`);
+                        }
+                      }}
+                      title="Save this location"
+                      className="absolute right-3 top-3.5 p-1 text-zinc-400 hover:text-yellow-400 transition"
+                    >
+                      ⭐
+                    </button>
+                  )}
+
+                  {/* Options Dropdown Box for Pickup */}
+                  {activeInput === 'pickup' && (
+                    <div className="absolute z-50 w-full bg-zinc-900 border border-zinc-700/80 mt-2 rounded-2xl shadow-2xl overflow-hidden divide-y divide-zinc-800 animate-slide-in">
+                      {/* Option 1: Locate Current GPS */}
+                      <div 
+                        onClick={() => handleLocateCurrentPosition('pickup')}
+                        className="px-4 py-3.5 hover:bg-zinc-800/80 cursor-pointer flex items-center space-x-3 text-emerald-400 font-bold transition-colors bg-emerald-500/10"
+                      >
+                         <div className="p-2 bg-emerald-500/20 rounded-full">
+                           📍
+                         </div>
+                         <div>
+                            <p className="text-sm font-extrabold">Use Current GPS Location</p>
+                            <p className="text-zinc-400 text-xs font-normal">Detect exact current position</p>
+                         </div>
+                      </div>
+
+                      {/* Option 2: Saved Places */}
+                      {savedPlaces.length > 0 && (
+                        <div className="p-3 bg-zinc-950/60">
+                          <p className="text-xs uppercase font-extrabold text-zinc-500 px-2 mb-2 tracking-wider">Saved Places</p>
+                          <div className="grid grid-cols-2 gap-2">
+                             {savedPlaces.map((sp, idx) => (
+                               <div 
+                                 key={idx}
+                                 onClick={() => {
+                                   setPickup(sp.address);
+                                   setPickupCoords(sp.coords);
+                                   setCurrentPosition(sp.coords);
+                                   setActiveInput('none');
+                                 }}
+                                 className="flex items-center space-x-2 bg-zinc-800 hover:bg-zinc-700 p-2.5 rounded-xl cursor-pointer border border-zinc-700/50"
+                               >
+                                  <span className="text-lg">{sp.icon}</span>
+                                  <div className="overflow-hidden">
+                                     <p className="text-white text-xs font-bold truncate">{sp.label}</p>
+                                     <p className="text-zinc-400 text-[10px] truncate">{sp.address}</p>
+                                  </div>
+                               </div>
+                             ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Option 3: Search Suggestions */}
                       {pickupSuggestions.map((s, i) => (
                         <div 
                           key={i} 
-                          className="px-5 py-4 hover:bg-zinc-800 cursor-pointer flex items-center space-x-4 transition-colors"
+                          className="px-5 py-3.5 hover:bg-zinc-800 cursor-pointer flex items-center space-x-3 transition-colors"
                           onClick={() => { 
                             setPickup(s.title); 
                             setPickupCoords([s.lat, s.lon]);
                             setCurrentPosition([s.lat, s.lon]);
                             setPickupSuggestions([]); 
+                            setActiveInput('none');
                           }}
                         >
-                          <div className="flex-shrink-0 bg-zinc-800 p-2 rounded-full">
-                            <svg className="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-                          </div>
+                          <div className="flex-shrink-0 bg-zinc-800 p-2 rounded-full text-zinc-400">🔍</div>
                           <div className="overflow-hidden">
-                            <p className="text-white font-bold truncate text-base">{s.title}</p>
-                            <p className="text-zinc-400 text-sm truncate">{s.subtitle}</p>
+                            <p className="text-white font-bold truncate text-sm">{s.title}</p>
+                            <p className="text-zinc-400 text-xs truncate">{s.subtitle}</p>
                           </div>
                         </div>
                       ))}
+
+                      {/* Option 4: Previous Booked Locations */}
+                      {pastRides.length > 0 && (
+                        <div className="p-3 bg-zinc-900">
+                          <p className="text-xs uppercase font-extrabold text-zinc-500 px-2 mb-2 tracking-wider">Recent Booked Locations</p>
+                          {pastRides.slice(0, 3).map((r, idx) => (
+                             <div 
+                               key={idx}
+                               onClick={() => {
+                                 setPickup(r.pickup);
+                                 if (r.pickuplat && r.pickuplng) {
+                                   setPickupCoords([r.pickuplat, r.pickuplng]);
+                                   setCurrentPosition([r.pickuplat, r.pickuplng]);
+                                 }
+                                 setActiveInput('none');
+                               }}
+                               className="flex items-center space-x-3 p-2 hover:bg-zinc-800 rounded-xl cursor-pointer"
+                             >
+                                <span className="text-zinc-400">🕒</span>
+                                <p className="text-zinc-200 text-xs font-medium truncate">{r.pickup}</p>
+                             </div>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="p-2 text-center bg-zinc-950">
+                         <button onClick={() => setActiveInput('none')} className="text-xs text-zinc-500 font-bold hover:text-white">Close Dropdown ✕</button>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -1031,41 +1169,127 @@ function App() {
                 {/* Destination Field */}
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                     <div className="w-2 h-2 bg-white"></div>
+                     <div className="w-2.5 h-2.5 rounded-full bg-red-500 ring-4 ring-red-500/20"></div>
                   </div>
                   <input 
                     type="text" 
                     value={destination}
+                    onFocus={() => setActiveInput('destination')}
                     onChange={(e) => {
                       setDestination(e.target.value);
                       fetchSuggestions(e.target.value, setDestSuggestions)
                     }}
-                    onBlur={() => setTimeout(() => setDestSuggestions([]), 200)}
                     placeholder="Where to?" 
-                    className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-xl pl-10 pr-4 py-4 focus:outline-none focus:ring-2 focus:ring-white transition-all font-medium"
+                    className="w-full bg-zinc-800/90 text-white placeholder-zinc-500 rounded-2xl pl-10 pr-12 py-4 focus:outline-none focus:ring-2 focus:ring-red-500 border border-zinc-700/50 transition-all font-medium text-base shadow-inner"
                   />
-                  {destSuggestions.length > 0 && (
-                    <div className="absolute z-50 w-full bg-zinc-900 border border-zinc-700 mt-2 rounded-2xl shadow-2xl overflow-hidden divide-y divide-zinc-800">
+                  {destination && (
+                    <button 
+                      onClick={() => {
+                        const name = prompt("Save this destination as (e.g. Gym, Friend's Place):", "Favorite");
+                        if (name && destCoords) {
+                          savePlace(name, destination, destCoords, '⭐');
+                          alert(`Saved "${name}"!`);
+                        }
+                      }}
+                      title="Save this location"
+                      className="absolute right-3 top-3.5 p-1 text-zinc-400 hover:text-yellow-400 transition"
+                    >
+                      ⭐
+                    </button>
+                  )}
+
+                  {/* Options Dropdown Box for Destination */}
+                  {activeInput === 'destination' && (
+                    <div className="absolute z-50 w-full bg-zinc-900 border border-zinc-700/80 mt-2 rounded-2xl shadow-2xl overflow-hidden divide-y divide-zinc-800 animate-slide-in">
+                      {/* Option 1: Locate Current GPS */}
+                      <div 
+                        onClick={() => handleLocateCurrentPosition('destination')}
+                        className="px-4 py-3.5 hover:bg-zinc-800/80 cursor-pointer flex items-center space-x-3 text-red-400 font-bold transition-colors bg-red-500/10"
+                      >
+                         <div className="p-2 bg-red-500/20 rounded-full">
+                           📍
+                         </div>
+                         <div>
+                            <p className="text-sm font-extrabold">Set to Current GPS Location</p>
+                            <p className="text-zinc-400 text-xs font-normal">Use current device location</p>
+                         </div>
+                      </div>
+
+                      {/* Option 2: Saved Places */}
+                      {savedPlaces.length > 0 && (
+                        <div className="p-3 bg-zinc-950/60">
+                          <p className="text-xs uppercase font-extrabold text-zinc-500 px-2 mb-2 tracking-wider">Saved Places</p>
+                          <div className="grid grid-cols-2 gap-2">
+                             {savedPlaces.map((sp, idx) => (
+                               <div 
+                                 key={idx}
+                                 onClick={() => {
+                                   setDestination(sp.address);
+                                   setDestCoords(sp.coords);
+                                   setCurrentPosition(sp.coords);
+                                   setActiveInput('none');
+                                 }}
+                                 className="flex items-center space-x-2 bg-zinc-800 hover:bg-zinc-700 p-2.5 rounded-xl cursor-pointer border border-zinc-700/50"
+                               >
+                                  <span className="text-lg">{sp.icon}</span>
+                                  <div className="overflow-hidden">
+                                     <p className="text-white text-xs font-bold truncate">{sp.label}</p>
+                                     <p className="text-zinc-400 text-[10px] truncate">{sp.address}</p>
+                                  </div>
+                               </div>
+                             ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Option 3: Search Suggestions */}
                       {destSuggestions.map((s, i) => (
                         <div 
                           key={i} 
-                          className="px-5 py-4 hover:bg-zinc-800 cursor-pointer flex items-center space-x-4 transition-colors"
+                          className="px-5 py-3.5 hover:bg-zinc-800 cursor-pointer flex items-center space-x-3 transition-colors"
                           onClick={() => { 
                             setDestination(s.title); 
                             setDestCoords([s.lat, s.lon]);
                             setCurrentPosition([s.lat, s.lon]);
                             setDestSuggestions([]); 
+                            setActiveInput('none');
                           }}
                         >
-                          <div className="flex-shrink-0 bg-zinc-800 p-2 rounded-full">
-                            <svg className="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-                          </div>
+                          <div className="flex-shrink-0 bg-zinc-800 p-2 rounded-full text-zinc-400">🔍</div>
                           <div className="overflow-hidden">
-                            <p className="text-white font-bold truncate text-base">{s.title}</p>
-                            <p className="text-zinc-400 text-sm truncate">{s.subtitle}</p>
+                            <p className="text-white font-bold truncate text-sm">{s.title}</p>
+                            <p className="text-zinc-400 text-xs truncate">{s.subtitle}</p>
                           </div>
                         </div>
                       ))}
+
+                      {/* Option 4: Previous Booked Destinations */}
+                      {pastRides.length > 0 && (
+                        <div className="p-3 bg-zinc-900">
+                          <p className="text-xs uppercase font-extrabold text-zinc-500 px-2 mb-2 tracking-wider">Recent Destinations</p>
+                          {pastRides.slice(0, 3).map((r, idx) => (
+                             <div 
+                               key={idx}
+                               onClick={() => {
+                                 setDestination(r.destination);
+                                 if (r.destlat && r.destlng) {
+                                   setDestCoords([r.destlat, r.destlng]);
+                                   setCurrentPosition([r.destlat, r.destlng]);
+                                 }
+                                 setActiveInput('none');
+                               }}
+                               className="flex items-center space-x-3 p-2 hover:bg-zinc-800 rounded-xl cursor-pointer"
+                             >
+                                <span className="text-zinc-400">🕒</span>
+                                <p className="text-zinc-200 text-xs font-medium truncate">{r.destination}</p>
+                             </div>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="p-2 text-center bg-zinc-950">
+                         <button onClick={() => setActiveInput('none')} className="text-xs text-zinc-500 font-bold hover:text-white">Close Dropdown ✕</button>
+                      </div>
                     </div>
                   )}
                 </div>
