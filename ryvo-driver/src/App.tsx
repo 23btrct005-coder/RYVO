@@ -123,8 +123,8 @@ function App() {
              
            if (data) {
              setDriverProfile(data)
-             setAppState(data.isOnline ? 'online' : 'idle')
-             setIsOnline(data.isOnline)
+             setAppState(data.isonline ? 'online' : 'idle')
+             setIsOnline(data.isonline)
            }
         } catch(e) {}
       } else {
@@ -280,7 +280,7 @@ function App() {
           vehicleFrontUrl,
           vehicleBackUrl
         },
-        isOnline: false
+        isonline: false
       }
       
       const { error: dbError } = await supabase.from('drivers').insert([profileData])
@@ -567,7 +567,7 @@ function App() {
     // Update online status in Firestore
     try {
       await supabase.from('drivers').update({
-        isOnline: newState,
+        isonline: newState,
         // Also update initial location if going online
         ...(newState && driverPosition ? {
           lat: driverPosition[0],

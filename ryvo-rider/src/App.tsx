@@ -139,7 +139,7 @@ function App() {
     if (!user || (status !== 'idle' && status !== 'estimating')) return;
     
     const fetchDrivers = async () => {
-      const { data } = await supabase.from('drivers').select('*').eq('isOnline', true)
+      const { data } = await supabase.from('drivers').select('*').eq('isonline', true)
       if (data) setOnlineDrivers(data)
     }
     fetchDrivers()
