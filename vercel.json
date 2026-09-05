@@ -1,5 +1,0 @@
-{
-  "buildCommand": "cd ryvo-rider && npm run build",
-  "outputDirectory": "ryvo-rider/dist",
-  "framework": "vite"
-}
