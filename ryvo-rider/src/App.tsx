@@ -175,6 +175,11 @@ function App() {
   const [pickupCoords, setPickupCoords] = useState<[number, number] | null>(null)
   const [destCoords, setDestCoords] = useState<[number, number] | null>(null)
 
+  const [etaPickup, setEtaPickup] = useState<number | null>(null)
+  const [distPickup, setDistPickup] = useState<string | null>(null)
+  const [etaDestination, setEtaDestination] = useState<number | null>(null)
+  const [distDestination, setDistDestination] = useState<string | null>(null)
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null)
@@ -603,7 +608,42 @@ function App() {
       }
       
       if (data.driverlat && data.driverlng) {
-         setDriverLocation([data.driverlat, data.driverlng])
+         const dLoc: [number, number] = [data.driverlat, data.driverlng];
+         setDriverLocation(dLoc);
+
+         // Dynamically calculate ETA & distance depending on ride state
+         const pLat = data.pickuplat || pickupCoords?.[0];
+         const pLng = data.pickuplng || pickupCoords?.[1];
+         const dLat = data.destlat || destCoords?.[0];
+         const dLng = data.destlng || destCoords?.[1];
+
+         if (['accepted', 'arrived'].includes(data.status) && pLat && pLng) {
+            // Driver is moving toward Pickup
+            fetch(`https://router.project-osrm.org/route/v1/driving/${dLoc[1]},${dLoc[0]};${pLng},${pLat}?overview=full&geometries=geojson`)
+              .then(res => res.json())
+              .then(osrmData => {
+                 if (osrmData.routes && osrmData.routes.length > 0) {
+                    const r = osrmData.routes[0];
+                    setEtaPickup(Math.ceil(r.duration / 60)); // in minutes
+                    setDistPickup((r.distance / 1000).toFixed(1)); // in km
+                    const swapped = r.geometry.coordinates.map((c: [number, number]) => [c[1], c[0]]);
+                    setRouteGeometry(swapped);
+                 }
+              }).catch(e => console.warn("Live route fetch error:", e));
+         } else if (data.status === 'in_transit' && dLat && dLng) {
+            // Driver is moving toward Destination
+            fetch(`https://router.project-osrm.org/route/v1/driving/${dLoc[1]},${dLoc[0]};${dLng},${dLat}?overview=full&geometries=geojson`)
+              .then(res => res.json())
+              .then(osrmData => {
+                 if (osrmData.routes && osrmData.routes.length > 0) {
+                    const r = osrmData.routes[0];
+                    setEtaDestination(Math.ceil(r.duration / 60)); // in minutes
+                    setDistDestination((r.distance / 1000).toFixed(1)); // in km
+                    const swapped = r.geometry.coordinates.map((c: [number, number]) => [c[1], c[0]]);
+                    setRouteGeometry(swapped);
+                 }
+              }).catch(e => console.warn("Live route fetch error:", e));
+         }
       }
     }
 
@@ -762,11 +802,29 @@ function App() {
                  'bg-zinc-800 border-zinc-700 text-white'
                }`}>
                   <h3 className="font-bold mb-1">
-                    {status === 'accepted' && 'Driver is on the way!'}
-                    {status === 'arrived' && 'Driver has arrived!'}
-                    {status === 'in_transit' && 'Heading to destination...'}
+                    {status === 'accepted' && 'Driver is on the way to Pickup!'}
+                    {status === 'arrived' && 'Driver has arrived at Pickup!'}
+                    {status === 'in_transit' && 'Heading to Destination...'}
                     {status === 'completed' && 'Ride Completed!'}
                   </h3>
+
+                  {/* Dynamic Live ETA & Distance Badges */}
+                  {['accepted', 'arrived'].includes(status) && (distPickup || etaPickup !== null) && (
+                    <div className="flex items-center justify-center space-x-3 my-2 bg-black/40 py-1.5 px-3 rounded-lg border border-green-500/30 text-xs">
+                       <span className="font-bold text-green-300">📍 Pickup Distance: {distPickup || '--'} km</span>
+                       <span className="text-zinc-500">|</span>
+                       <span className="font-bold text-emerald-400">⏱️ ETA: {etaPickup !== null ? `${etaPickup} min` : 'Arriving'}</span>
+                    </div>
+                  )}
+
+                  {status === 'in_transit' && (distDestination || etaDestination !== null) && (
+                    <div className="flex items-center justify-center space-x-3 my-2 bg-black/40 py-1.5 px-3 rounded-lg border border-purple-500/30 text-xs">
+                       <span className="font-bold text-purple-300">🏁 Destination Distance: {distDestination || '--'} km</span>
+                       <span className="text-zinc-500">|</span>
+                       <span className="font-bold text-pink-400">⏱️ ETA: {etaDestination !== null ? `${etaDestination} min` : 'Arriving'}</span>
+                    </div>
+                  )}
+
                   <p className="opacity-80 text-sm">
                     {status === 'accepted' && 'Please meet your driver at the pickup location.'}
                     {status === 'arrived' && 'Please meet your driver outside.'}
