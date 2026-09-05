@@ -206,21 +206,23 @@ function App() {
   }
 
   const handleLogout = async () => {
-    try {
-      const { error } = await supabase.auth.signOut()
-      if (error) {
-        console.error("Sign out failed on server, forcing local logout:", error)
-      }
-    } catch (e) {
-      console.error("Sign out exception:", e)
-    } finally {
-      // Always forcefully clear local storage to prevent ghost sessions
-      localStorage.clear()
-      setIsSidebarOpen(false)
-      setUser(null)
-      setDriverProfile(null)
-      window.location.reload()
-    }
+    // Show immediate feedback
+    document.body.style.opacity = '0.5';
+    
+    // Attempt network signout but don't await it so we don't block the UI
+    supabase.auth.signOut().catch(e => console.error("Sign out exception:", e));
+    
+    // Immediately clear local storage to prevent ghost sessions
+    localStorage.clear();
+    sessionStorage.clear();
+    setIsSidebarOpen(false);
+    setUser(null);
+    setDriverProfile(null);
+    
+    // Reload quickly to show login screen
+    setTimeout(() => {
+      window.location.reload();
+    }, 100);
   }
 
   const uploadImage = async (file: File | null, path: string) => {
