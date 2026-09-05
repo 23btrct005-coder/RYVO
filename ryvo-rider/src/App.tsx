@@ -78,6 +78,16 @@ const LiveDriverMarker = ({ type }: { type: string }) => {
   );
 };
 
+
+const StopMarker = ({ index }: { index: number }) => (
+  <div className="relative flex flex-col items-center">
+    <div className="w-7 h-7 bg-amber-500 border-2 border-white rounded-full flex items-center justify-center shadow-lg text-xs font-black text-black">
+      {index + 1}
+    </div>
+    <div className="w-1 h-3 bg-amber-600 rounded-b-full shadow-md" />
+  </div>
+);
+
 const VehicleMarker = ({ type }: { type: string }) => {
   const emoji = type?.toUpperCase() === 'AUTO' ? '🛺' : type?.toUpperCase() === 'BIKE' ? '🛵' : '🚗';
   return (
@@ -127,7 +137,102 @@ function App() {
   
   const [onlineDrivers, setOnlineDrivers] = useState<any[]>([])
   
-    const [savingPlace, setSavingPlace] = useState<{ address: string; coords: [number, number] } | null>(null);
+    
+  // Multi-stop State
+  const [stops, setStops] = useState<{ id: string; address: string; coords: [number, number] | null }[]>([]);
+
+  const addStop = () => {
+    if (stops.length >= 3) {
+      showToast("Maximum 3 intermediate stops allowed.");
+      return;
+    }
+    setStops([...stops, { id: 'stop_' + Date.now(), address: '', coords: null }]);
+  };
+
+  const removeStop = (id: string) => {
+    setStops(stops.filter(s => s.id !== id));
+  };
+
+  const updateStop = (id: string, address: string, coords: [number, number] | null) => {
+    setStops(stops.map(s => s.id === id ? { ...s, address, coords } : s));
+  };
+
+  // Interactive Map Location Picker State
+  const [isSelectingOnMap, setIsSelectingOnMap] = useState<boolean>(false);
+  const [mapTargetInput, setMapTargetInput] = useState<'pickup' | 'destination' | string>('destination');
+  const [mapCenterCoords, setMapCenterCoords] = useState<[number, number]>([12.8753, 77.5958]);
+  const [reverseGeoAddress, setReverseGeoAddress] = useState<string>('Fetching location...');
+  const [isGeocodingMapPin, setIsGeocodingMapPin] = useState<boolean>(false);
+
+  const startMapSelection = (target: 'pickup' | 'destination' | string) => {
+    setMapTargetInput(target);
+    setActiveInput('none');
+    
+    let initialCoords = currentPosition;
+    if (target === 'pickup' && pickupCoords) initialCoords = pickupCoords;
+    if (target === 'destination' && destCoords) initialCoords = destCoords;
+    const foundStop = stops.find(s => s.id === target);
+    if (foundStop && foundStop.coords) initialCoords = foundStop.coords;
+
+    setMapCenterCoords(initialCoords);
+    if (mapRef.current) {
+      mapRef.current.flyTo({ center: [initialCoords[1], initialCoords[0]], zoom: 16 });
+    }
+    reverseGeocode(initialCoords[0], initialCoords[1]);
+    setIsSelectingOnMap(true);
+  };
+
+  const reverseGeocode = async (lat: number, lon: number) => {
+    setIsGeocodingMapPin(true);
+    try {
+      const res = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${lon},${lat}.json?access_token=${MAPBOX_TOKEN}&types=poi,address,neighborhood,locality,place`);
+      const data = await res.json();
+      if (data && data.features && data.features.length > 0) {
+        const placeName = data.features[0].place_name;
+        const text = data.features[0].text || placeName.split(',')[0];
+        const rest = placeName.split(',').slice(1, 3).join(',');
+        setReverseGeoAddress(rest ? `${text}, ${rest}` : text);
+        setIsGeocodingMapPin(false);
+        return;
+      }
+    } catch (e) {
+      console.warn("Mapbox Reverse geocoding fallback:", e);
+    }
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
+      const data = await res.json();
+      if (data && data.display_name) {
+        const parts = data.display_name.split(',');
+        setReverseGeoAddress(parts.slice(0, 3).join(','));
+      } else {
+        setReverseGeoAddress(`Location (${lat.toFixed(4)}, ${lon.toFixed(4)})`);
+      }
+    } catch {
+      setReverseGeoAddress(`Location (${lat.toFixed(4)}, ${lon.toFixed(4)})`);
+    }
+    setIsGeocodingMapPin(false);
+  };
+
+  const confirmMapLocation = () => {
+    const address = reverseGeoAddress;
+    const coords: [number, number] = [mapCenterCoords[0], mapCenterCoords[1]];
+
+    if (mapTargetInput === 'pickup') {
+      setPickup(address);
+      setPickupCoords(coords);
+    } else if (mapTargetInput === 'destination') {
+      setDestination(address);
+      setDestCoords(coords);
+    } else {
+      updateStop(mapTargetInput, address, coords);
+    }
+
+    setCurrentPosition(coords);
+    setIsSelectingOnMap(false);
+    showToast(`Set ${mapTargetInput === 'pickup' ? 'Pickup' : mapTargetInput === 'destination' ? 'Destination' : 'Stop'} location from map!`);
+  };
+
+  const [savingPlace, setSavingPlace] = useState<{ address: string; coords: [number, number] } | null>(null);
   const [saveTagInput, setSaveTagInput] = useState<string>('Home');
   const [selectedIcon, setSelectedIcon] = useState<string>('🏠');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -550,6 +655,23 @@ function App() {
         return;
       }
 
+      // Process intermediate stops
+      const validStopCoords: [number, number][] = [];
+      for (const stop of stops) {
+        if (stop.address) {
+          let sCoords = stop.coords;
+          if (!sCoords) {
+            sCoords = await geocodeAddress(stop.address);
+            if (sCoords) updateStop(stop.id, stop.address, sCoords);
+          }
+          if (sCoords) validStopCoords.push(sCoords);
+        }
+      }
+
+      // Build waypoints: [Pickup, ...Stops, Destination]
+      const waypoints: [number, number][] = [pCoords, ...validStopCoords, dCoords];
+      const waypointsStr = waypoints.map(c => `${c[1]},${c[0]}`).join(';');
+
       // 1. Try Google Maps Directions & Distance Matrix API if key is present
       if (GOOGLE_MAPS_KEY) {
         try {
@@ -571,7 +693,7 @@ function App() {
 
       // 2. OSRM (Open Source Routing Machine) Engine calculation (100% accurate, local road paths)
       try {
-        const osrmRes = await fetch(`https://router.project-osrm.org/route/v1/driving/${pCoords[1]},${pCoords[0]};${dCoords[1]},${dCoords[0]}?overview=full&geometries=geojson`);
+        const osrmRes = await fetch(`https://router.project-osrm.org/route/v1/driving/${waypointsStr}?overview=full&geometries=geojson`);
         const osrmData = await osrmRes.json();
         if (osrmData.routes && osrmData.routes.length > 0) {
           const osrmRoute = osrmData.routes[0];
@@ -587,7 +709,7 @@ function App() {
       }
 
       // 3. Mapbox Directions API fallback
-      const res = await fetch(`https://api.mapbox.com/directions/v5/mapbox/driving-traffic/${pCoords[1]},${pCoords[0]};${dCoords[1]},${dCoords[0]}?alternatives=true&geometries=geojson&overview=full&access_token=${MAPBOX_TOKEN}`)
+      const res = await fetch(`https://api.mapbox.com/directions/v5/mapbox/driving-traffic/${waypointsStr}?alternatives=true&geometries=geojson&overview=full&access_token=${MAPBOX_TOKEN}`)
       const data = await res.json()
       
       if (data.routes && data.routes.length > 0) {
@@ -803,6 +925,16 @@ function App() {
           style={{ height: '100%', width: '100%' }}
           mapStyle="mapbox://styles/mapbox/streets-v11"
           mapboxAccessToken={MAPBOX_TOKEN}
+          onMove={(e: any) => {
+            if (isSelectingOnMap) {
+              setMapCenterCoords([e.viewState.latitude, e.viewState.longitude]);
+            }
+          }}
+          onMoveEnd={(e: any) => {
+            if (isSelectingOnMap) {
+              reverseGeocode(e.viewState.latitude, e.viewState.longitude);
+            }
+          }}
         >
           
           {/* Current GPS Location Marker */}
@@ -823,6 +955,15 @@ function App() {
               <DestinationMarker />
             </Marker>
           )}
+
+          {/* Intermediate Stop Location Pins */}
+          {stops.map((stop, idx) => (
+            stop.coords ? (
+              <Marker key={stop.id} longitude={stop.coords[1]} latitude={stop.coords[0]} anchor="bottom">
+                <StopMarker index={idx} />
+              </Marker>
+            ) : null
+          ))}
 
           {/* Route Polyline */}
           {routeGeometry && (
@@ -1162,7 +1303,21 @@ function App() {
                   {/* Options Dropdown Box for Pickup */}
                   {activeInput === 'pickup' && (
                     <div className="absolute z-50 w-full bg-zinc-950 border border-zinc-800 mt-2 rounded-2xl shadow-2xl overflow-y-auto max-h-72 divide-y divide-zinc-900 animate-slide-in">
-                      {/* Option 1: Locate Current GPS */}
+                      {/* Option 0: Set on Map */}
+                      <div 
+                        onClick={() => startMapSelection('pickup')}
+                        className="px-4 py-3.5 hover:bg-zinc-900 cursor-pointer flex items-center space-x-3 text-cyan-400 font-bold transition-colors bg-cyan-500/10 border-b border-zinc-900"
+                      >
+                         <div className="p-2 bg-cyan-500/20 rounded-full">
+                           📌
+                         </div>
+                         <div>
+                            <p className="text-sm font-extrabold">Choose Location on Map</p>
+                            <p className="text-zinc-400 text-xs font-normal">Drag and set precise map pin</p>
+                         </div>
+                      </div>
+
+{/* Option 1: Locate Current GPS */}
                       <div 
                         onClick={() => handleLocateCurrentPosition('pickup')}
                         className="px-4 py-3.5 hover:bg-zinc-900 cursor-pointer flex items-center space-x-3 text-emerald-400 font-bold transition-colors bg-emerald-500/10"
@@ -1315,6 +1470,58 @@ function App() {
                   )}
                 </div>
                 
+                
+
+                {/* Intermediate Stops */}
+                {stops.map((stop, index) => (
+                  <div key={stop.id} className="relative z-20">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                       <div className="w-2.5 h-2.5 rounded-full bg-amber-500 ring-4 ring-amber-500/20"></div>
+                    </div>
+                    <input 
+                      type="text" 
+                      value={stop.address}
+                      onChange={(e) => updateStop(stop.id, e.target.value, null)}
+                      placeholder={`Stop ${index + 1} location`} 
+                      className="w-full bg-zinc-800/90 text-white placeholder-zinc-500 rounded-2xl pl-10 pr-20 py-3.5 focus:outline-none focus:ring-2 focus:ring-amber-500 border border-zinc-700/50 transition-all font-medium text-sm shadow-inner"
+                    />
+                    <div className="absolute right-2 top-2.5 flex items-center space-x-1">
+                      <button 
+                        type="button"
+                        onClick={() => startMapSelection(stop.id)}
+                        title="Set stop on map"
+                        className="p-1.5 text-zinc-400 hover:text-cyan-400 transition"
+                      >
+                        📌
+                      </button>
+                      <button 
+                        type="button"
+                        onClick={() => removeStop(stop.id)}
+                        title="Remove stop"
+                        className="p-1.5 text-zinc-500 hover:text-red-400 transition"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+                ))}
+
+                {/* Add Stop Button */}
+                <div className="flex justify-between items-center px-1 py-0.5">
+                  {stops.length < 3 ? (
+                    <button
+                      type="button"
+                      onClick={addStop}
+                      className="text-xs font-bold text-emerald-400 hover:text-emerald-300 flex items-center space-x-1.5 py-1 px-2 bg-emerald-500/10 rounded-lg border border-emerald-500/20 transition hover:bg-emerald-500/20"
+                    >
+                      <span>+ Add Stop</span>
+                      <span className="text-[10px] text-zinc-400 font-medium">({stops.length}/3)</span>
+                    </button>
+                  ) : (
+                    <span className="text-[10px] text-zinc-500 font-semibold">Max 3 stops reached</span>
+                  )}
+                </div>
+
                 {/* Destination Field */}
                 <div className="relative z-20">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -1344,7 +1551,21 @@ function App() {
                   {/* Options Dropdown Box for Destination */}
                   {activeInput === 'destination' && (
                     <div className="absolute z-50 w-full bg-zinc-950 border border-zinc-800 mt-2 rounded-2xl shadow-2xl overflow-y-auto max-h-72 divide-y divide-zinc-900 animate-slide-in">
-                      {/* Option 1: Locate Current GPS */}
+                      {/* Option 0: Set on Map */}
+                      <div 
+                        onClick={() => startMapSelection('destination')}
+                        className="px-4 py-3.5 hover:bg-zinc-900 cursor-pointer flex items-center space-x-3 text-cyan-400 font-bold transition-colors bg-cyan-500/10 border-b border-zinc-900"
+                      >
+                         <div className="p-2 bg-cyan-500/20 rounded-full">
+                           📌
+                         </div>
+                         <div>
+                            <p className="text-sm font-extrabold">Choose Location on Map</p>
+                            <p className="text-zinc-400 text-xs font-normal">Drag and set precise map pin</p>
+                         </div>
+                      </div>
+
+{/* Option 1: Locate Current GPS */}
                       <div 
                         onClick={() => handleLocateCurrentPosition('destination')}
                         className="px-4 py-3.5 hover:bg-zinc-900 cursor-pointer flex items-center space-x-3 text-red-400 font-bold transition-colors bg-red-500/10"
@@ -1777,6 +1998,63 @@ function App() {
             </div>
           </div>
         </div>
+      )}
+
+
+      {/* Interactive Map Location Selection Overlay */}
+      {isSelectingOnMap && (
+        <>
+          {/* Center Bouncing Location Pin */}
+          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-full z-[2500] pointer-events-none flex flex-col items-center animate-bounce">
+            <div className="bg-zinc-900 border-2 border-cyan-400 text-white font-extrabold text-xs px-3.5 py-1.5 rounded-full shadow-2xl mb-1 flex items-center space-x-1.5 whitespace-nowrap">
+              <span>📍</span>
+              <span>Set {mapTargetInput === 'pickup' ? 'Pickup' : mapTargetInput === 'destination' ? 'Destination' : 'Stop'}</span>
+            </div>
+            <div className="w-10 h-10 bg-cyan-500 border-2 border-white rounded-full flex items-center justify-center shadow-2xl">
+              <div className="w-4 h-4 bg-white rounded-full" />
+            </div>
+            <div className="w-1.5 h-4 bg-cyan-600 rounded-b-full shadow-md" />
+            <div className="w-4 h-1.5 bg-black/50 rounded-full blur-xs mt-0.5" />
+          </div>
+
+          {/* Bottom Map Selection Action Panel */}
+          <div className="fixed bottom-6 left-4 right-4 z-[2600] max-w-md mx-auto bg-zinc-900/95 backdrop-blur-xl border border-zinc-700/80 rounded-3xl p-5 shadow-2xl animate-slide-in">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs uppercase font-extrabold tracking-wider text-cyan-400">
+                Set Location on Map
+              </span>
+              <button
+                onClick={() => setIsSelectingOnMap(false)}
+                className="text-zinc-400 hover:text-white text-xs font-bold px-2.5 py-1 bg-zinc-800 rounded-full"
+              >
+                Cancel ✕
+              </button>
+            </div>
+
+            <div className="bg-zinc-950 p-3.5 rounded-2xl border border-zinc-800 mb-4 flex items-center space-x-3">
+              <div className="w-8 h-8 rounded-full bg-cyan-500/20 text-cyan-400 flex items-center justify-center shrink-0 text-base">
+                📍
+              </div>
+              <div className="overflow-hidden min-w-0">
+                <p className="text-white text-xs font-bold truncate">
+                  {isGeocodingMapPin ? 'Detecting address...' : reverseGeoAddress}
+                </p>
+                <p className="text-zinc-500 text-[10px] truncate font-mono">
+                  {mapCenterCoords[0].toFixed(5)}, {mapCenterCoords[1].toFixed(5)}
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={confirmMapLocation}
+              disabled={isGeocodingMapPin}
+              className="w-full bg-cyan-500 hover:bg-cyan-400 text-black font-extrabold py-4 rounded-2xl transition text-base shadow-xl shadow-cyan-500/20 disabled:opacity-60 flex items-center justify-center space-x-2"
+            >
+              <span>Confirm Location</span>
+              <span>➔</span>
+            </button>
+          </div>
+        </>
       )}
 
     </div>
