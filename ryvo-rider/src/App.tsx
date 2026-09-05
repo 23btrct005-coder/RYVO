@@ -428,7 +428,7 @@ function App() {
     return R * c;
   };
 
-  // Fetch suggestions using Mapbox Geocoding API (100% accurate, local proximity)
+  // Fetch suggestions using Mapbox Geocoding API with Nominatim fallback
   const fetchSuggestions = async (query: string, setter: (s: Suggestion[]) => void) => {
     if (query.length < 2) {
       setter([])
@@ -437,7 +437,7 @@ function App() {
     try {
       const res = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?proximity=${currentPosition[1]},${currentPosition[0]}&autocomplete=true&limit=5&access_token=${MAPBOX_TOKEN}`)
       const data = await res.json()
-      if (data && data.features) {
+      if (data && data.features && data.features.length > 0) {
         const results = data.features.map((f: any) => {
            const title = f.text || f.place_name.split(',')[0];
            const subtitle = f.place_name;
@@ -449,8 +449,29 @@ function App() {
            }
         }).filter((s: Suggestion) => s.title)
         setter(results)
+        return;
       }
     } catch (e) {
+      console.warn("Mapbox geocoding error, trying Nominatim fallback", e)
+    }
+
+    // Fallback: Nominatim OpenStreetMap Search API
+    try {
+      const nomRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&viewbox=${currentPosition[1]-0.5},${currentPosition[0]+0.5},${currentPosition[1]+0.5},${currentPosition[0]-0.5}`)
+      const nomData = await nomRes.json()
+      if (Array.isArray(nomData) && nomData.length > 0) {
+        const results = nomData.map((item: any) => {
+           const title = item.display_name.split(',')[0];
+           return {
+             title: title,
+             subtitle: item.display_name,
+             lat: parseFloat(item.lat),
+             lon: parseFloat(item.lon)
+           }
+        });
+        setter(results);
+      }
+    } catch (err) {
       setter([])
     }
   }
@@ -1198,27 +1219,32 @@ function App() {
                         </div>
                       )}
 
-                      {/* Option 4: Search Suggestions */}
-                      {pickupSuggestions.map((s, i) => (
-                        <div 
-                          key={i} 
-                          className="px-5 py-3.5 hover:bg-zinc-800 cursor-pointer flex items-center space-x-3 transition-colors"
-                          onClick={() => { 
-                            setPickup(s.title); 
-                            setPickupCoords([s.lat, s.lon]);
-                            setCurrentPosition([s.lat, s.lon]);
-                            addRecentSearch(s);
-                            setPickupSuggestions([]); 
-                            setActiveInput('none');
-                          }}
-                        >
-                          <div className="flex-shrink-0 bg-zinc-800 p-2 rounded-full text-zinc-400">🔍</div>
-                          <div className="overflow-hidden">
-                            <p className="text-white font-bold truncate text-sm">{s.title}</p>
-                            <p className="text-zinc-400 text-xs truncate">{s.subtitle}</p>
-                          </div>
+                      {/* Live Search Suggestions (Shown immediately while typing) */}
+                      {pickupSuggestions.length > 0 && (
+                        <div className="bg-zinc-900 border-b border-zinc-700/60 divide-y divide-zinc-800">
+                          <p className="text-[11px] uppercase font-black text-emerald-400 px-4 py-2 bg-emerald-950/30 tracking-wider">Search Results</p>
+                          {pickupSuggestions.map((s, i) => (
+                            <div 
+                              key={i} 
+                              className="px-5 py-3.5 hover:bg-zinc-800 cursor-pointer flex items-center space-x-3 transition-colors"
+                              onClick={() => { 
+                                setPickup(s.title); 
+                                setPickupCoords([s.lat, s.lon]);
+                                setCurrentPosition([s.lat, s.lon]);
+                                addRecentSearch(s);
+                                setPickupSuggestions([]); 
+                                setActiveInput('none');
+                              }}
+                            >
+                              <div className="flex-shrink-0 bg-emerald-500/20 text-emerald-400 p-2 rounded-full">📍</div>
+                              <div className="overflow-hidden">
+                                <p className="text-white font-bold truncate text-sm">{s.title}</p>
+                                <p className="text-zinc-400 text-xs truncate">{s.subtitle}</p>
+                              </div>
+                            </div>
+                          ))}
                         </div>
-                      ))}
+                      )}
 
                       {/* Option 4: Previous Booked Locations (Deduplicated) */}
                       {pastRides.length > 0 && (() => {
@@ -1376,27 +1402,32 @@ function App() {
                         </div>
                       )}
 
-                      {/* Option 4: Search Suggestions */}
-                      {destSuggestions.map((s, i) => (
-                        <div 
-                          key={i} 
-                          className="px-5 py-3.5 hover:bg-zinc-800 cursor-pointer flex items-center space-x-3 transition-colors"
-                          onClick={() => { 
-                            setDestination(s.title); 
-                            setDestCoords([s.lat, s.lon]);
-                            setCurrentPosition([s.lat, s.lon]);
-                            addRecentSearch(s);
-                            setDestSuggestions([]); 
-                            setActiveInput('none');
-                          }}
-                        >
-                          <div className="flex-shrink-0 bg-zinc-800 p-2 rounded-full text-zinc-400">🔍</div>
-                          <div className="overflow-hidden">
-                            <p className="text-white font-bold truncate text-sm">{s.title}</p>
-                            <p className="text-zinc-400 text-xs truncate">{s.subtitle}</p>
-                          </div>
+                      {/* Live Search Suggestions (Shown immediately while typing) */}
+                      {destSuggestions.length > 0 && (
+                        <div className="bg-zinc-900 border-b border-zinc-700/60 divide-y divide-zinc-800">
+                          <p className="text-[11px] uppercase font-black text-emerald-400 px-4 py-2 bg-emerald-950/30 tracking-wider">Search Results</p>
+                          {destSuggestions.map((s, i) => (
+                            <div 
+                              key={i} 
+                              className="px-5 py-3.5 hover:bg-zinc-800 cursor-pointer flex items-center space-x-3 transition-colors"
+                              onClick={() => { 
+                                setDestination(s.title); 
+                                setDestCoords([s.lat, s.lon]);
+                                setCurrentPosition([s.lat, s.lon]);
+                                addRecentSearch(s);
+                                setDestSuggestions([]); 
+                                setActiveInput('none');
+                              }}
+                            >
+                              <div className="flex-shrink-0 bg-emerald-500/20 text-emerald-400 p-2 rounded-full">📍</div>
+                              <div className="overflow-hidden">
+                                <p className="text-white font-bold truncate text-sm">{s.title}</p>
+                                <p className="text-zinc-400 text-xs truncate">{s.subtitle}</p>
+                              </div>
+                            </div>
+                          ))}
                         </div>
-                      ))}
+                      )}
 
                       {/* Option 4: Previous Booked Destinations (Deduplicated) */}
                       {pastRides.length > 0 && (() => {
