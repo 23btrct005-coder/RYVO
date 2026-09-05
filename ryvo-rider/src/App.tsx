@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Map, { Marker, Source, Layer } from 'react-map-gl/mapbox'
+import type { MapRef } from 'react-map-gl/mapbox'
 // Leaflet CSS removed; Mapbox styles are applied via mapStyle prop
 const DEFAULT_MAPBOX_TOKEN = "pk.eyJ1IjoiYWJoaTA5MjUiLCJhIjoiY210bzV2YnN0MGRrbjM0c2c5ajR0MWVsbyJ9" + "." + "_78OmqK7nqvyHwwjDoDfzw";
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN || DEFAULT_MAPBOX_TOKEN;
@@ -61,7 +62,14 @@ function App() {
   
   const [selectedVehicle, setSelectedVehicle] = useState<VehicleType>('mini')
   
-  const [currentPosition, setCurrentPosition] = useState<[number, number]>([40.7128, -74.0060])
+  const [currentPosition, setCurrentPosition] = useState<[number, number]>([12.8753, 77.5958])
+  const mapRef = useRef<MapRef>(null)
+
+  useEffect(() => {
+    if (currentPosition && mapRef.current) {
+      mapRef.current.flyTo({ center: [currentPosition[1], currentPosition[0]], zoom: 15 });
+    }
+  }, [currentPosition]);
 
   const [pickupSuggestions, setPickupSuggestions] = useState<Suggestion[]>([])
   const [destSuggestions, setDestSuggestions] = useState<Suggestion[]>([])
@@ -445,6 +453,7 @@ function App() {
     <div className="relative w-full h-screen bg-zinc-900 text-white overflow-hidden">
       <div className="absolute inset-0 z-0">
         <Map
+          ref={mapRef}
           initialViewState={{ longitude: currentPosition[1], latitude: currentPosition[0], zoom: 15 }}
           style={{ height: '100%', width: '100%' }}
           mapStyle="mapbox://styles/mapbox/streets-v11"

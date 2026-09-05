@@ -46,6 +46,8 @@ declare module 'react-map-gl/mapbox' {
     [key: string]: any;
   }
 
+  export type MapRef = any;
+
   const Map: ComponentType<MapProps>;
   export const Marker: ComponentType<MarkerProps>;
   export const Source: ComponentType<SourceProps>;

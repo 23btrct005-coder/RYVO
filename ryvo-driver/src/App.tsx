@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import Map, { Marker, Source, Layer } from 'react-map-gl/mapbox'
+import type { MapRef } from 'react-map-gl/mapbox'
 import 'mapbox-gl/dist/mapbox-gl.css'
 import { supabase } from './supabase'
 import type { User } from '@supabase/supabase-js'
@@ -96,8 +97,15 @@ function App() {
     return R * c;
   }
   
-  const [driverPosition, setDriverPosition] = useState<[number, number]>([40.7128, -74.0060])
+  const [driverPosition, setDriverPosition] = useState<[number, number]>([12.8753, 77.5958])
   const [routeGeometry, setRouteGeometry] = useState<[number, number][] | null>(null)
+  const mapRef = useRef<MapRef>(null)
+
+  useEffect(() => {
+    if (driverPosition && mapRef.current) {
+      mapRef.current.flyTo({ center: [driverPosition[1], driverPosition[0]], zoom: 16 });
+    }
+  }, [driverPosition])
   
   const watchIdRef = useRef<string | null>(null)
   const driverPositionRef = useRef(driverPosition)
@@ -803,6 +811,7 @@ function App() {
     <div className="relative w-full h-screen bg-zinc-900 text-white overflow-hidden">
       <div className="absolute inset-0 z-0">
         <Map
+          ref={mapRef}
           initialViewState={{ longitude: driverPosition[1], latitude: driverPosition[0], zoom: 16 }}
           style={{ height: '100%', width: '100%' }}
           mapStyle="mapbox://styles/mapbox/streets-v11"
