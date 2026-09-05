@@ -947,7 +947,7 @@ function App() {
                  <div className="flex items-center space-x-4 mb-4">
                     <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center text-2xl font-bold border-2 border-blue-400 overflow-hidden">
                        {driverProfile?.documents?.driverPhotoUrl ? (
-                         <img src={driverProfile.documents.driverPhotoUrl} alt="Profile" className="w-full h-full object-cover" />
+                         <img src={driverProfile.documents.driverPhotoUrl.replace('/object/public/', '/render/image/public/') + '?width=200&height=200&format=webp'} alt="Profile" className="w-full h-full object-cover" />
                        ) : (
                          driverProfile?.name?.charAt(0) || user?.email?.charAt(0)?.toUpperCase() || 'D'
                        )}
