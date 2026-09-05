@@ -162,21 +162,18 @@ function App() {
 
   const [activeInput, setActiveInput] = useState<'none' | 'pickup' | 'destination'>('none')
 
-  // Saved locations (stored locally per user)
+  // Saved locations (stored locally per user - starts empty until saved via Heart)
   const [savedPlaces, setSavedPlaces] = useState<{ label: string; address: string; coords: [number, number]; icon: string }[]>(() => {
     try {
       const stored = localStorage.getItem('ryvo_saved_places');
       if (stored) {
          const parsed = JSON.parse(stored);
-         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+         if (Array.isArray(parsed)) return parsed;
       }
     } catch (e) {
       console.warn("Error reading saved places", e);
     }
-    return [
-      { label: 'Home', address: 'Set Home Address', coords: [12.8753, 77.5958], icon: '🏠' },
-      { label: 'Work / Office', address: 'Set Work Address', coords: [12.9716, 77.5946], icon: '💼' },
-    ];
+    return [];
   });
 
   const savePlace = (label: string, address: string, coords: [number, number], icon: string = '⭐') => {
@@ -1284,12 +1281,16 @@ function App() {
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         if (sampleRide?.pickuplat && sampleRide?.pickuplng) {
-                                          savePlace(pName.split(',')[0], pName, [sampleRide.pickuplat, sampleRide.pickuplng], '❤️');
-                                          alert(`Saved "${pName}" to favorites!`);
+                                          const tag = prompt("Save as Favorite:\n1 = Home 🏠\n2 = Work 💼\nOr type custom name (e.g. Gym, Friend):", "Home");
+                                          if (tag) {
+                                            const icon = tag.toLowerCase().includes('home') ? '🏠' : tag.toLowerCase().includes('work') ? '💼' : '❤️';
+                                            savePlace(tag, pName, [sampleRide.pickuplat, sampleRide.pickuplng], icon);
+                                            alert(`Saved "${pName}" as ${tag}!`);
+                                          }
                                         }
                                       }}
-                                      title="Save to favorites"
-                                      className="text-zinc-600 hover:text-red-500 p-2 transition shrink-0"
+                                      title="Save to favorites (Home / Work / Custom)"
+                                      className="text-zinc-600 hover:text-red-500 p-2 transition shrink-0 hover:scale-125"
                                     >
                                       🤍
                                     </button>
@@ -1471,12 +1472,16 @@ function App() {
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         if (sampleRide?.destlat && sampleRide?.destlng) {
-                                          savePlace(dName.split(',')[0], dName, [sampleRide.destlat, sampleRide.destlng], '❤️');
-                                          alert(`Saved "${dName}" to favorites!`);
+                                          const tag = prompt("Save as Favorite:\n1 = Home 🏠\n2 = Work 💼\nOr type custom name (e.g. Gym, Friend):", "Home");
+                                          if (tag) {
+                                            const icon = tag.toLowerCase().includes('home') ? '🏠' : tag.toLowerCase().includes('work') ? '💼' : '❤️';
+                                            savePlace(tag, dName, [sampleRide.destlat, sampleRide.destlng], icon);
+                                            alert(`Saved "${dName}" as ${tag}!`);
+                                          }
                                         }
                                       }}
-                                      title="Save to favorites"
-                                      className="text-zinc-600 hover:text-red-500 p-2 transition shrink-0"
+                                      title="Save to favorites (Home / Work / Custom)"
+                                      className="text-zinc-600 hover:text-red-500 p-2 transition shrink-0 hover:scale-125"
                                     >
                                       🤍
                                     </button>
