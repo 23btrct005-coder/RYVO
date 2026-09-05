@@ -1033,11 +1033,12 @@ function App() {
         </div>
       </div>
 
-      <div className={`absolute left-0 right-0 z-20 p-4 transition-all duration-500 ease-out pointer-events-none ${
-        activeInput !== 'none' 
-          ? 'top-1/2 -translate-y-1/2' 
-          : 'bottom-0 pb-8 bg-gradient-to-t from-black/90 to-transparent'
-      }`}>
+      {!isSelectingOnMap && (
+        <div className={`absolute left-0 right-0 z-20 p-4 transition-all duration-500 ease-out pointer-events-none ${
+          activeInput !== 'none' 
+            ? 'top-1/2 -translate-y-1/2' 
+            : 'bottom-0 pb-8 bg-gradient-to-t from-black/90 to-transparent'
+        }`}>
         <div className={`bg-zinc-900/95 backdrop-blur-xl border border-zinc-800 p-6 rounded-3xl shadow-2xl max-w-md mx-auto relative transition-transform duration-500 ease-out pointer-events-auto ${
           activeInput !== 'none' ? 'scale-105 ring-2 ring-emerald-500/50' : 'scale-100'
         }`}>
@@ -1736,6 +1737,7 @@ function App() {
           )}
         </div>
       </div>
+      )}
 
       {/* Sidebar Overlay */}
       {isSidebarOpen && (
