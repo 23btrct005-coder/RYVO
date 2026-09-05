@@ -203,9 +203,7 @@ function App() {
       const data = await res.json();
       if (data && data.features && data.features.length > 0) {
         const placeName = data.features[0].place_name;
-        const text = data.features[0].text || placeName.split(',')[0];
-        const rest = placeName.split(',').slice(1, 3).join(',');
-        setReverseGeoAddress(rest ? `${text}, ${rest}` : text);
+        setReverseGeoAddress(placeName);
         setIsGeocodingMapPin(false);
         return;
       }
@@ -216,8 +214,7 @@ function App() {
       const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
       const data = await res.json();
       if (data && data.display_name) {
-        const parts = data.display_name.split(',');
-        setReverseGeoAddress(parts.slice(0, 3).join(','));
+        setReverseGeoAddress(data.display_name);
       } else {
         setReverseGeoAddress(`Location (${lat.toFixed(4)}, ${lon.toFixed(4)})`);
       }
@@ -686,7 +683,27 @@ function App() {
       const waypoints: [number, number][] = [pCoords, ...validStopCoords, dCoords];
       const waypointsStr = waypoints.map(c => `${c[1]},${c[0]}`).join(';');
 
-      // 1. Try Google Maps Directions & Distance Matrix API if key is present
+      // 1. Mapbox Driving-Traffic API for Real-Time Traffic ETAs (Matches Google Maps accurately)
+      try {
+        const res = await fetch(`https://api.mapbox.com/directions/v5/mapbox/driving-traffic/${waypointsStr}?alternatives=true&geometries=geojson&overview=full&access_token=${MAPBOX_TOKEN}`)
+        const data = await res.json()
+        
+        if (data.routes && data.routes.length > 0) {
+          const shortestRoute = data.routes.reduce((min: any, r: any) => r.duration < min.duration ? r : min, data.routes[0]);
+          const distanceKm = shortestRoute.distance / 1000;
+          const durationMins = Math.max(1, Math.ceil((shortestRoute.duration || 0) / 60));
+          setEstimatedDuration(durationMins);
+          setDistance(distanceKm);
+          const swappedGeometry = shortestRoute.geometry.coordinates.map((coord: [number, number]) => [coord[1], coord[0]]);
+          setRouteGeometry(swappedGeometry);
+          setStatus('confirming');
+          return;
+        }
+      } catch (e) {
+        console.warn("Mapbox Driving-Traffic API error, attempting fallback:", e);
+      }
+
+      // 2. Try Google Maps Directions API if key present
       if (GOOGLE_MAPS_KEY) {
         try {
           const gRes = await fetch(`https://maps.googleapis.com/maps/api/directions/json?origin=${pCoords[0]},${pCoords[1]}&destination=${dCoords[0]},${dCoords[1]}&key=${GOOGLE_MAPS_KEY}`);
@@ -707,7 +724,7 @@ function App() {
         }
       }
 
-      // 2. OSRM (Open Source Routing Machine) Engine calculation (100% accurate, local road paths)
+      // 3. OSRM (Open Source Routing Machine) Engine fallback
       try {
         const osrmRes = await fetch(`https://router.project-osrm.org/route/v1/driving/${waypointsStr}?overview=full&geometries=geojson`);
         const osrmData = await osrmRes.json();
@@ -723,31 +740,17 @@ function App() {
           return;
         }
       } catch (e) {
-        console.warn("OSRM Routing error, falling back to Mapbox:", e);
+        console.warn("OSRM Routing error:", e);
       }
 
-      // 3. Mapbox Directions API fallback
-      const res = await fetch(`https://api.mapbox.com/directions/v5/mapbox/driving-traffic/${waypointsStr}?alternatives=true&geometries=geojson&overview=full&access_token=${MAPBOX_TOKEN}`)
-      const data = await res.json()
-      
-      if (data.routes && data.routes.length > 0) {
-        const shortestRoute = data.routes.reduce((min: any, r: any) => r.distance < min.distance ? r : min, data.routes[0]);
-        const distanceKm = shortestRoute.distance / 1000;
-        const durationMins = Math.max(1, Math.ceil((shortestRoute.duration || 0) / 60));
-        setEstimatedDuration(durationMins);
-        setDistance(distanceKm);
-        const swappedGeometry = shortestRoute.geometry.coordinates.map((coord: [number, number]) => [coord[1], coord[0]]);
-        setRouteGeometry(swappedGeometry);
-        setStatus('confirming');
-      } else {
-        const haversineKm = getHaversineDistance(pCoords[0], pCoords[1], dCoords[0], dCoords[1]);
-        const distanceKm = haversineKm * 1.20;
-        const durationMins = Math.max(2, Math.ceil((distanceKm / 25) * 60));
-        setEstimatedDuration(durationMins);
-        setDistance(distanceKm);
-        setRouteGeometry([[pCoords[0], pCoords[1]], [dCoords[0], dCoords[1]]]);
-        setStatus('confirming');
-      }
+      // 4. Haversine fallback
+      const haversineKm = getHaversineDistance(pCoords[0], pCoords[1], dCoords[0], dCoords[1]);
+      const distanceKm = haversineKm * 1.20;
+      const durationMins = Math.max(2, Math.ceil((distanceKm / 25) * 60));
+      setEstimatedDuration(durationMins);
+      setDistance(distanceKm);
+      setRouteGeometry([[pCoords[0], pCoords[1]], [dCoords[0], dCoords[1]]]);
+      setStatus('confirming');
     } catch (e) {
        alert("Routing error")
        setStatus('idle')
@@ -1407,7 +1410,8 @@ function App() {
                               key={i} 
                               className="px-5 py-3.5 hover:bg-zinc-800 cursor-pointer flex items-center space-x-3 transition-colors"
                               onClick={() => { 
-                                setPickup(s.title); 
+                                const fullAddr = s.subtitle ? (s.subtitle.startsWith(s.title) ? s.subtitle : `${s.title}, ${s.subtitle}`) : s.title;
+                                setPickup(fullAddr); 
                                 setPickupCoords([s.lat, s.lon]);
                                 setCurrentPosition([s.lat, s.lon]);
                                 addRecentSearch(s);
@@ -1647,7 +1651,8 @@ function App() {
                               key={i} 
                               className="px-5 py-3.5 hover:bg-zinc-800 cursor-pointer flex items-center space-x-3 transition-colors"
                               onClick={() => { 
-                                setDestination(s.title); 
+                                const fullAddr = s.subtitle ? (s.subtitle.startsWith(s.title) ? s.subtitle : `${s.title}, ${s.subtitle}`) : s.title;
+                                setDestination(fullAddr); 
                                 setDestCoords([s.lat, s.lon]);
                                 setCurrentPosition([s.lat, s.lon]);
                                 addRecentSearch(s);
