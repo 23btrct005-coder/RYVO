@@ -115,18 +115,23 @@ function App() {
       if (currentUser) {
         // Fetch driver profile
         try {
-           const { data } = await supabase
+           const { data, error } = await supabase
              .from('drivers')
              .select('*')
              .eq('id', currentUser.id)
              .single()
              
+           if (error) {
+             console.error("Failed to fetch driver profile:", error);
+           }
            if (data) {
              setDriverProfile(data)
              setAppState(data.isonline ? 'online' : 'idle')
              setIsOnline(data.isonline)
            }
-        } catch(e) {}
+        } catch(e) {
+             console.error("Exception fetching driver profile:", e);
+        }
       } else {
         setDriverProfile(null)
       }
@@ -573,8 +578,23 @@ function App() {
   }
 
   const toggleOnline = async () => {
-    if (!driverProfile || !user) {
-      alert("Error: Driver profile not found. If you created this account on the Rider app, please create a new Driver account.");
+    let currentProfile = driverProfile;
+    
+    // Resiliency: If profile is missing but user is logged in, try to fetch it again
+    if (!currentProfile && user) {
+      try {
+        const { data } = await supabase.from('drivers').select('*').eq('id', user.id).single();
+        if (data) {
+          setDriverProfile(data);
+          currentProfile = data;
+        }
+      } catch (e) {
+        console.error("Failed to fetch profile during toggle:", e);
+      }
+    }
+
+    if (!currentProfile || !user) {
+      alert("Error: Driver profile not found. Please log out and sign up again.");
       return;
     }
     const newState = !isOnline
