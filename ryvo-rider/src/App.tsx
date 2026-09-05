@@ -1118,7 +1118,7 @@ function App() {
               <div className="space-y-4 relative">
                 
                 {/* Pickup Field */}
-                <div className="relative">
+                <div className="relative z-20">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                      <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 ring-4 ring-emerald-500/20"></div>
                   </div>
@@ -1151,7 +1151,7 @@ function App() {
 
                   {/* Options Dropdown Box for Pickup */}
                   {activeInput === 'pickup' && (
-                    <div className="absolute z-50 w-full bg-zinc-955 border border-zinc-800 mt-2 rounded-2xl shadow-2xl overflow-y-auto max-h-72 divide-y divide-zinc-900 animate-slide-in">
+                    <div className="absolute z-50 w-full bg-zinc-950 border border-zinc-800 mt-2 rounded-2xl shadow-2xl overflow-y-auto max-h-72 divide-y divide-zinc-900 animate-slide-in">
                       {/* Option 1: Locate Current GPS */}
                       <div 
                         onClick={() => handleLocateCurrentPosition('pickup')}
@@ -1311,7 +1311,7 @@ function App() {
                 </div>
                 
                 {/* Destination Field */}
-                <div className="relative">
+                <div className="relative z-20">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                      <div className="w-2.5 h-2.5 rounded-full bg-red-500 ring-4 ring-red-500/20"></div>
                   </div>
