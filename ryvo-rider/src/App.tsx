@@ -295,16 +295,19 @@ function App() {
   }
 
   const cancelRide = async () => {
+    setStatus('idle');
+    setCurrentRideId(null);
+    setDriverDetails(null);
+    setDriverLocation(null);
+    setRouteGeometry(null);
+    
     if (!currentRideId) return;
     try {
-      await supabase.from('rides').update({
+      const { error } = await supabase.from('rides').update({
         status: 'cancelled'
       }).eq('id', currentRideId);
-      setStatus('idle');
-      setCurrentRideId(null);
-      setDriverDetails(null);
-      setDriverLocation(null);
-      setRouteGeometry(null);
+      
+      if (error) console.error("Cancel update error:", error);
     } catch(e) {
       console.error("Cancel failed", e);
     }
