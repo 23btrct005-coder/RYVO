@@ -965,28 +965,9 @@ function App() {
              </div>
              <div className="flex gap-2">
                <button 
-                 onClick={() => {
-                   if (!routeGeometry || routeGeometry.length === 0) return;
-                   let step = 0;
-                   const interval = setInterval(() => {
-                     if (step >= routeGeometry.length) {
-                       clearInterval(interval);
-                       return;
-                     }
-                     const pos = routeGeometry[step];
-                     setDriverPosition([pos[0], pos[1]]);
-                     supabase.from('rides').update({ driverlat: pos[0], driverlng: pos[1] }).eq('id', currentRide.id).then();
-                     step += 2; // skip points to go faster
-                   }, 1000);
-                 }}
-                 className="bg-blue-100 text-blue-600 font-bold px-4 py-4 rounded-xl hover:bg-blue-200 transition-colors text-sm uppercase tracking-wider">
-                 Simulate<br/>Drive
-               </button>
-               <button 
                  onClick={handleArrived} 
-                 disabled={!currentRide.pickupCoords || calculateDistance(driverPosition[0], driverPosition[1], currentRide.pickupCoords[0], currentRide.pickupCoords[1]) > 0.1}
-                 className="flex-1 bg-black text-white font-bold py-4 rounded-xl hover:bg-zinc-800 transition-colors text-lg disabled:opacity-50 disabled:cursor-not-allowed">
-                 {(!currentRide.pickupCoords || calculateDistance(driverPosition[0], driverPosition[1], currentRide.pickupCoords[0], currentRide.pickupCoords[1]) > 0.1) ? 'Move closer to Pickup' : "I've Arrived"}
+                 className="w-full bg-black text-white font-bold py-4 rounded-xl hover:bg-zinc-800 transition-colors text-lg shadow-lg">
+                 I've Arrived
                </button>
              </div>
           </div>
@@ -1043,32 +1024,11 @@ function App() {
                  </a>
                )}
              </div>
-             <div className="flex gap-2">
-               <button 
-                 onClick={() => {
-                   if (!routeGeometry || routeGeometry.length === 0) return;
-                   let step = 0;
-                   const interval = setInterval(() => {
-                     if (step >= routeGeometry.length) {
-                       clearInterval(interval);
-                       return;
-                     }
-                     const pos = routeGeometry[step];
-                     setDriverPosition([pos[0], pos[1]]);
-                     supabase.from('rides').update({ driverlat: pos[0], driverlng: pos[1] }).eq('id', currentRide.id).then();
-                     step += 2; // skip points to go faster
-                   }, 1000);
-                 }}
-                 className="bg-green-100 text-green-700 font-bold px-4 py-4 rounded-xl hover:bg-green-200 transition-colors text-sm uppercase tracking-wider">
-                 Simulate<br/>Drive
-               </button>
-               <button 
-                 onClick={handleCompleteRide} 
-                 disabled={!currentRide.destCoords || calculateDistance(driverPosition[0], driverPosition[1], currentRide.destCoords[0], currentRide.destCoords[1]) > 0.1}
-                 className="flex-1 bg-green-600 text-white font-bold py-4 rounded-xl hover:bg-green-700 transition-colors text-lg shadow-lg shadow-green-900/30 disabled:opacity-50 disabled:cursor-not-allowed">
-                 {(!currentRide.destCoords || calculateDistance(driverPosition[0], driverPosition[1], currentRide.destCoords[0], currentRide.destCoords[1]) > 0.1) ? 'Move closer to Dropoff' : "Complete Ride"}
-               </button>
-             </div>
+             <button 
+               onClick={handleCompleteRide} 
+               className="w-full bg-green-600 text-white font-bold py-4 rounded-xl hover:bg-green-700 transition-colors text-lg shadow-lg shadow-green-900/30">
+               Complete Ride
+             </button>
           </div>
         </div>
       )}
