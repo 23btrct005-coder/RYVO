@@ -66,6 +66,7 @@ function App() {
   const [appState, setAppState] = useState<'idle' | 'online' | 'incoming' | 'accepted' | 'arrived' | 'in_transit' | 'completed'>('idle')
   const [incomingRequest, setIncomingRequest] = useState<RideRequest | null>(null)
   const [fetchError, setFetchError] = useState<string | null>(null)
+  const [fetchStatus, setFetchStatus] = useState<string>('idle')
   const [declinedRides, setDeclinedRides] = useState<string[]>(() => {
     try {
       return JSON.parse(sessionStorage.getItem('declinedRides') || '[]');
@@ -168,11 +169,18 @@ function App() {
   useEffect(() => {
     if (user && !driverProfile) {
       const fetchProfile = async () => {
+        setFetchStatus('fetching');
         try {
-          const { data, error } = await supabase.from('drivers').select('*').eq('id', user.id).single();
+          const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 8000));
+          const queryPromise = supabase.from('drivers').select('*').eq('id', user.id).single();
+          
+          const result: any = await Promise.race([queryPromise, timeoutPromise]);
+          const { data, error } = result;
+          
           if (error) {
             console.error("Robust fetch error:", error);
             setFetchError(`Robust fetch Error: ${error.message} (Code: ${error.code})`);
+            setFetchStatus('error');
             if (error.code === 'PGRST116') {
                console.warn("Robust fetch: User is not a driver. Forcing logout.");
                await supabase.auth.signOut();
@@ -180,13 +188,41 @@ function App() {
             }
           }
           if (data) {
+            setFetchStatus('success');
             setDriverProfile(data);
             setAppState(data.isonline ? 'online' : 'idle');
             setIsOnline(data.isonline);
+          } else if (!error) {
+             setFetchError('Robust fetch: Data is null and Error is null');
+             setFetchStatus('null_data_no_error');
           }
         } catch (e: any) {
           console.error("Robust fetch exception:", e);
           setFetchError(`Robust fetch Exception: ${e.message || String(e)}`);
+          setFetchStatus('exception');
+          
+          // Raw fetch fallback
+          try {
+             const sessionResponse = await supabase.auth.getSession();
+             const token = sessionResponse.data.session?.access_token;
+             if (token) {
+                 const rawRes = await fetch(`https://ljnybrfrbcjskauolnyu.supabase.co/rest/v1/drivers?id=eq.${user.id}`, {
+                     headers: {
+                         apikey: 'sb_publishable_ZT9bmCMNLh-ushHtvNtX8A_IjxDNXCJ',
+                         Authorization: `Bearer ${token}`
+                     }
+                 });
+                 const rawData = await rawRes.json();
+                 if (Array.isArray(rawData) && rawData.length > 0) {
+                     setDriverProfile(rawData[0]);
+                     setFetchStatus('raw_fetch_success');
+                 } else {
+                     setFetchError(`Raw fetch returned empty/error: ${JSON.stringify(rawData)}`);
+                 }
+             }
+          } catch(rawErr: any) {
+              setFetchError(prev => prev + ` | Raw fetch also failed: ${rawErr.message}`);
+          }
         }
       };
       fetchProfile();
@@ -1024,6 +1060,9 @@ function App() {
                         </h3>
                         <div className="mt-2 text-xs text-zinc-400 break-all">
                           USER: {user ? user.id : 'NULL'}
+                        </div>
+                        <div className="mt-2 text-xs text-blue-400 break-all">
+                          STATUS: {fetchStatus}
                         </div>
                         <div className="mt-2 text-xs text-red-400 break-all">
                           ERROR: {fetchError ? fetchError : 'NULL'}
