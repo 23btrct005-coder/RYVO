@@ -376,19 +376,27 @@ function App() {
     const checkRequests = (requests: any[]) => {
       let foundRequest = false;
       requests.forEach((data) => {
+        // Map postgres flat columns to the expected React state interface
+        const mappedData = {
+          ...data,
+          pickupCoords: (data.pickuplat && data.pickuplng) ? [data.pickuplat, data.pickuplng] : undefined,
+          destCoords: (data.destlat && data.destlng) ? [data.destlat, data.destlng] : undefined,
+          price: typeof data.price === 'string' ? parseFloat(data.price) : data.price
+        };
+        
         // 1. Vehicle Type Match
-        const driverType = (driverProfileRef.current?.vehicleType || 'mini').toLowerCase();
-        const requestType = (data.vehicleType || 'mini').toLowerCase();
+        const driverType = (driverProfileRef.current?.vehicletype || 'mini').toLowerCase();
+        const requestType = (mappedData.vehicletype || 'mini').toLowerCase();
         const isTypeMatch = driverType === requestType;
 
         // 2. Distance check (<= 5km)
         let isNear = false;
-        if (data.pickuplat && data.pickuplng) {
+        if (mappedData.pickupCoords) {
            const dist = calculateDistance(
              driverPositionRef.current[0], 
              driverPositionRef.current[1], 
-             data.pickuplat, 
-             data.pickuplng
+             mappedData.pickupCoords[0], 
+             mappedData.pickupCoords[1]
            );
            if (dist <= 5.0) {
              isNear = true;
@@ -396,7 +404,7 @@ function App() {
         }
         
         if (!foundRequest && !currentRide && isTypeMatch && isNear) {
-          setIncomingRequest(data);
+          setIncomingRequest(mappedData);
           foundRequest = true;
         }
       });
