@@ -127,6 +127,22 @@ function App() {
   
   const [onlineDrivers, setOnlineDrivers] = useState<any[]>([])
   
+    const [savingPlace, setSavingPlace] = useState<{ address: string; coords: [number, number] } | null>(null);
+  const [saveTagInput, setSaveTagInput] = useState<string>('Home');
+  const [selectedIcon, setSelectedIcon] = useState<string>('🏠');
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const triggerSaveModal = (address: string, coords: [number, number], defaultTag = 'Home', defaultIcon = '🏠') => {
+    setSaveTagInput(defaultTag);
+    setSelectedIcon(defaultIcon);
+    setSavingPlace({ address, coords });
+  };
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3000);
+  };
+
   const [selectedVehicle, setSelectedVehicle] = useState<VehicleType>('mini')
   const [activeModal, setActiveModal] = useState<'none' | 'history' | 'payments' | 'settings' | 'help'>('none')
   const [pastRides, setPastRides] = useState<any[]>([])
@@ -1133,17 +1149,11 @@ function App() {
                     placeholder="Enter pickup location" 
                     className="w-full bg-zinc-800/90 text-white placeholder-zinc-500 rounded-2xl pl-10 pr-12 py-4 focus:outline-none focus:ring-2 focus:ring-emerald-500 border border-zinc-700/50 transition-all font-medium text-base shadow-inner"
                   />
-                  {pickup && (
+                  {pickup && pickupCoords && (
                     <button 
-                      onClick={() => {
-                        const name = prompt("Save this place as (e.g. Gym, Home, Office):", "Favorite");
-                        if (name && pickupCoords) {
-                          savePlace(name, pickup, pickupCoords, '⭐');
-                          alert(`Saved "${name}"!`);
-                        }
-                      }}
+                      onClick={() => triggerSaveModal(pickup, pickupCoords, 'Home', '🏠')}
                       title="Save this location"
-                      className="absolute right-3 top-3.5 p-1 text-zinc-400 hover:text-yellow-400 transition"
+                      className="absolute right-3 top-3.5 p-1 text-zinc-400 hover:text-yellow-400 transition hover:scale-110"
                     >
                       ⭐
                     </button>
@@ -1283,16 +1293,11 @@ function App() {
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         if (sampleRide?.pickuplat && sampleRide?.pickuplng) {
-                                          const tag = prompt("Save as Favorite:\n1 = Home 🏠\n2 = Work 💼\nOr type custom name (e.g. Gym, Friend):", "Home");
-                                          if (tag) {
-                                            const icon = tag.toLowerCase().includes('home') ? '🏠' : tag.toLowerCase().includes('work') ? '💼' : '❤️';
-                                            savePlace(tag, pName, [sampleRide.pickuplat, sampleRide.pickuplng], icon);
-                                            alert(`Saved "${pName}" as ${tag}!`);
-                                          }
+                                          triggerSaveModal(pName, [sampleRide.pickuplat, sampleRide.pickuplng], 'Home', '🏠');
                                         }
                                       }}
                                       title="Save to favorites (Home / Work / Custom)"
-                                      className="text-zinc-600 hover:text-red-500 p-2 transition shrink-0 hover:scale-125"
+                                      className="text-zinc-500 hover:text-red-500 p-2 transition shrink-0 hover:scale-125"
                                     >
                                       🤍
                                     </button>
@@ -1326,17 +1331,11 @@ function App() {
                     placeholder="Where to?" 
                     className="w-full bg-zinc-800/90 text-white placeholder-zinc-500 rounded-2xl pl-10 pr-12 py-4 focus:outline-none focus:ring-2 focus:ring-red-500 border border-zinc-700/50 transition-all font-medium text-base shadow-inner"
                   />
-                  {destination && (
+                  {destination && destCoords && (
                     <button 
-                      onClick={() => {
-                        const name = prompt("Save this destination as (e.g. Gym, Friend's Place):", "Favorite");
-                        if (name && destCoords) {
-                          savePlace(name, destination, destCoords, '⭐');
-                          alert(`Saved "${name}"!`);
-                        }
-                      }}
+                      onClick={() => triggerSaveModal(destination, destCoords, 'Work', '💼')}
                       title="Save this location"
-                      className="absolute right-3 top-3.5 p-1 text-zinc-400 hover:text-yellow-400 transition"
+                      className="absolute right-3 top-3.5 p-1 text-zinc-400 hover:text-yellow-400 transition hover:scale-110"
                     >
                       ⭐
                     </button>
@@ -1694,6 +1693,97 @@ function App() {
            </div>
         </div>
       )}
+
+      {/* Toast Feedback Notification */}
+      {toastMessage && (
+        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[4000] bg-emerald-500 text-zinc-950 px-5 py-3 rounded-full font-bold text-sm shadow-2xl flex items-center space-x-2 animate-bounce">
+          <span>✨</span>
+          <span>{toastMessage}</span>
+        </div>
+      )}
+
+      {/* Save Place In-App Modal Dialog */}
+      {savingPlace && (
+        <div className="fixed inset-0 z-[3500] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
+          <div className="bg-zinc-900 border border-zinc-700/80 rounded-3xl p-6 w-full max-w-sm shadow-2xl relative overflow-hidden animate-slide-in">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center space-x-2.5">
+                <span className="text-2xl">{selectedIcon}</span>
+                <h3 className="text-lg font-extrabold text-white">Save Favorite Place</h3>
+              </div>
+              <button 
+                onClick={() => setSavingPlace(null)}
+                className="text-zinc-400 hover:text-white p-1 rounded-full hover:bg-zinc-800 transition"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="bg-zinc-950 p-3 rounded-2xl border border-zinc-800 mb-4">
+              <p className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-1">Location Address</p>
+              <p className="text-white text-xs font-semibold truncate">{savingPlace.address}</p>
+            </div>
+
+            <p className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2">Quick Preset</p>
+            <div className="grid grid-cols-4 gap-2 mb-4">
+              {[
+                { label: 'Home', icon: '🏠' },
+                { label: 'Work', icon: '💼' },
+                { label: 'Gym', icon: '🏋️' },
+                { label: 'Fav', icon: '❤️' }
+              ].map((preset) => (
+                <button
+                  key={preset.label}
+                  type="button"
+                  onClick={() => {
+                    setSaveTagInput(preset.label);
+                    setSelectedIcon(preset.icon);
+                  }}
+                  className={`py-2 px-2 rounded-xl text-xs font-bold flex flex-col items-center space-y-1 transition-all border ${saveTagInput.toLowerCase() === preset.label.toLowerCase() ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400 scale-105' : 'bg-zinc-800/80 border-zinc-700 text-zinc-400 hover:bg-zinc-800'}`}
+                >
+                  <span className="text-base">{preset.icon}</span>
+                  <span>{preset.label}</span>
+                </button>
+              ))}
+            </div>
+
+            <div className="mb-5">
+              <label className="block text-xs font-bold text-zinc-400 uppercase tracking-wider mb-1.5">Custom Label Name</label>
+              <input
+                type="text"
+                value={saveTagInput}
+                onChange={(e) => setSaveTagInput(e.target.value)}
+                placeholder="e.g. Home, Work, Gym, Friend"
+                className="w-full bg-zinc-950 text-white placeholder-zinc-500 rounded-xl px-4 py-3 border border-zinc-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm font-semibold"
+              />
+            </div>
+
+            <div className="flex space-x-3">
+              <button
+                type="button"
+                onClick={() => setSavingPlace(null)}
+                className="flex-1 bg-zinc-800 text-zinc-300 font-bold py-3.5 rounded-xl hover:bg-zinc-700 transition text-sm"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (saveTagInput.trim()) {
+                    savePlace(saveTagInput.trim(), savingPlace.address, savingPlace.coords, selectedIcon);
+                    showToast(`Saved "${saveTagInput.trim()}" to Favorites!`);
+                    setSavingPlace(null);
+                  }
+                }}
+                className="flex-1 bg-emerald-500 hover:bg-emerald-400 text-black font-extrabold py-3.5 rounded-xl transition text-sm shadow-lg shadow-emerald-500/20"
+              >
+                Save Place
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }
