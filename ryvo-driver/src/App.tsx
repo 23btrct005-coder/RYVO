@@ -565,6 +565,7 @@ function App() {
         // Map postgres flat columns to the expected React state interface
         const mappedData: RideRequest = {
           ...data,
+          vehicleType: data.vehicletype || data.vehicleType,
           stops: Array.isArray(data.stops) ? data.stops : (typeof data.stops === 'string' ? JSON.parse(data.stops) : undefined),
           pickupCoords: (data.pickuplat && data.pickuplng) ? [data.pickuplat, data.pickuplng] : undefined,
           destCoords: (data.destlat && data.destlng) ? [data.destlat, data.destlng] : undefined,
@@ -1047,7 +1048,7 @@ function App() {
               : '9.6');
 
         const totalFareFormatted = activeReq.price ? activeReq.price.toFixed(0) : '399';
-        const activeVehicleType = (driverProfile?.vehicletype || activeReq.vehicleType || 'mini').toLowerCase();
+        const activeVehicleType = ((activeReq as any).vehicletype || activeReq.vehicleType || driverProfile?.vehicletype || 'mini').toLowerCase();
         const activeEmoji = activeVehicleType === 'auto' ? '🛺' : activeVehicleType === 'bike' ? '🛵' : '🚗';
         
         // Exact fare matching formula from Rider App getPrice
