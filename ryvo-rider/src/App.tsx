@@ -1602,16 +1602,16 @@ function App() {
                       </span>
                     </div>
                     <p className="text-xs text-zinc-300 mb-3 font-medium">
-                      Drivers are busy. Switch to {selectedVehicle === 'bike' ? 'AUTO (🛺)' : selectedVehicle === 'auto' ? 'BIKE (🛵)' : 'AUTO (🛺)'} for instant dispatch!
+                      Drivers are busy. Switch to {selectedVehicle === 'bike' ? 'AUTO (🛺)' : selectedVehicle === 'auto' ? 'CAB (🚗)' : 'AUTO (🛺)'} for instant dispatch!
                     </p>
                     <button
                       onClick={() => {
-                        const alt: VehicleType = selectedVehicle === 'bike' ? 'auto' : selectedVehicle === 'auto' ? 'bike' : 'auto';
+                        const alt: VehicleType = selectedVehicle === 'bike' ? 'auto' : selectedVehicle === 'auto' ? 'mini' : 'auto';
                         handleConfirmRide(alt);
                       }}
                       className="w-full bg-amber-500 hover:bg-amber-400 text-black font-extrabold py-3 rounded-xl text-xs transition shadow-md flex items-center justify-center space-x-2"
                     >
-                      <span>Switch to {selectedVehicle === 'bike' ? 'RYVO Auto 🛺' : selectedVehicle === 'auto' ? 'RYVO Bike 🛵' : 'RYVO Auto 🛺'} ➔</span>
+                      <span>Switch to {selectedVehicle === 'bike' ? 'RYVO Auto 🛺' : selectedVehicle === 'auto' ? 'RYVO Cab 🚗' : 'RYVO Auto 🛺'} ➔</span>
                     </button>
                   </div>
                 )}
