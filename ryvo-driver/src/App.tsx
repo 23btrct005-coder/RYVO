@@ -1104,24 +1104,24 @@ function App() {
               )}
 
               {/* Main Order Card */}
-              <div className="flex-1 bg-white text-zinc-900 rounded-3xl p-5 shadow-2xl border border-zinc-200 transition-all transform animate-in slide-in-from-bottom duration-300">
+              <div className="flex-1 bg-zinc-900 text-white rounded-3xl p-5 shadow-2xl border border-zinc-800 transition-all transform animate-in slide-in-from-bottom duration-300">
                 {/* Header: Driver Vehicle Icon + Total Fare + Tip & Stops Badges */}
-                <div className="flex items-center justify-between pb-3 border-b border-zinc-100 mb-4">
+                <div className="flex items-center justify-between pb-3 border-b border-zinc-800 mb-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-11 h-11 rounded-full bg-slate-900 flex items-center justify-center text-2xl text-white shadow-md border border-slate-700">
+                    <div className="w-11 h-11 rounded-full bg-gradient-to-tr from-amber-500 to-yellow-400 flex items-center justify-center text-2xl text-black shadow-md border border-amber-400">
                       {activeEmoji}
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-3xl font-black text-slate-900 tracking-tight">₹{totalFareFormatted}</span>
+                      <span className="text-3xl font-black text-emerald-400 tracking-tight">₹{totalFareFormatted}</span>
                       {calculatedTip > 0 && (
-                        <span className="bg-emerald-500 text-black text-xs font-black px-2.5 py-1 rounded-full border border-emerald-400 shadow-sm animate-pulse">
+                        <span className="bg-emerald-500/20 text-emerald-400 text-xs font-extrabold px-2.5 py-1 rounded-full border border-emerald-500/30 shadow-sm animate-pulse">
                           +₹{calculatedTip} Tip
                         </span>
                       )}
                     </div>
                   </div>
                   {activeReq.stops && Array.isArray(activeReq.stops) && activeReq.stops.length > 0 && (
-                    <span className="bg-amber-500/10 border border-amber-500/30 text-amber-600 text-xs font-black px-3 py-1 rounded-full">
+                    <span className="bg-amber-500/20 border border-amber-500/40 text-amber-400 text-xs font-black px-3 py-1 rounded-full">
                       📍 {activeReq.stops.length} STOP{activeReq.stops.length > 1 ? 'S' : ''}
                     </span>
                   )}
@@ -1130,17 +1130,17 @@ function App() {
                 {/* Vertical Timeline Addresses (Pickup -> Intermediate Stops -> Dropoff) */}
                 <div className="relative pl-6 space-y-4 mb-5">
                   {/* Vertical Connecting Line */}
-                  <div className="absolute left-[7px] top-[14px] bottom-[14px] w-[2px] bg-zinc-300 rounded-full" />
+                  <div className="absolute left-[7px] top-[14px] bottom-[14px] w-[2px] bg-zinc-750 rounded-full" />
 
                   {/* Pickup Location */}
                   <div className="relative flex flex-col">
-                    <div className="absolute -left-[24px] top-1 w-3.5 h-3.5 rounded-full border-2 border-emerald-500 bg-white flex items-center justify-center shadow-sm">
-                      <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
+                    <div className="absolute -left-[24px] top-1 w-3.5 h-3.5 rounded-full border-2 border-emerald-400 bg-zinc-900 flex items-center justify-center shadow-sm">
+                      <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full" />
                     </div>
-                    <h3 className="font-bold text-slate-900 text-base leading-tight truncate">
+                    <h3 className="font-bold text-zinc-100 text-base leading-tight truncate">
                       {activeReq.pickup.split(',')[0]}
                     </h3>
-                    <p className="text-xs text-zinc-500 truncate mt-0.5 font-normal">
+                    <p className="text-xs text-zinc-400 truncate mt-0.5 font-normal">
                       {activeReq.pickup.split(',').slice(1).join(',').trim() || activeReq.pickup}
                     </p>
                   </div>
@@ -1151,18 +1151,18 @@ function App() {
                     if (!addressStr) return null;
                     return (
                       <div key={idx} className="relative flex flex-col pt-1">
-                        <div className="absolute -left-[24px] top-2 w-3.5 h-3.5 rounded-full border-2 border-amber-500 bg-white flex items-center justify-center shadow-sm">
-                          <div className="w-1.5 h-1.5 bg-amber-500 rounded-full" />
+                        <div className="absolute -left-[24px] top-2 w-3.5 h-3.5 rounded-full border-2 border-amber-400 bg-zinc-900 flex items-center justify-center shadow-sm">
+                          <div className="w-1.5 h-1.5 bg-amber-400 rounded-full" />
                         </div>
                         <div className="flex items-center space-x-1.5">
-                          <span className="text-[9px] font-black uppercase text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded border border-amber-300">
+                          <span className="text-[9px] font-black uppercase text-amber-400 bg-amber-500/20 px-1.5 py-0.5 rounded border border-amber-500/30">
                             Stop {idx + 1}
                           </span>
-                          <h3 className="font-bold text-slate-900 text-sm leading-tight truncate">
+                          <h3 className="font-bold text-zinc-200 text-sm leading-tight truncate">
                             {addressStr.split(',')[0]}
                           </h3>
                         </div>
-                        <p className="text-xs text-zinc-500 truncate mt-0.5 font-normal">
+                        <p className="text-xs text-zinc-400 truncate mt-0.5 font-normal">
                           {addressStr.split(',').slice(1).join(',').trim() || addressStr}
                         </p>
                       </div>
@@ -1171,27 +1171,27 @@ function App() {
 
                   {/* Dropoff Location */}
                   <div className="relative flex flex-col pt-1">
-                    <div className="absolute -left-[24px] top-2 w-3.5 h-3.5 rounded-full border-2 border-rose-500 bg-white flex items-center justify-center shadow-sm">
+                    <div className="absolute -left-[24px] top-2 w-3.5 h-3.5 rounded-full border-2 border-rose-500 bg-zinc-900 flex items-center justify-center shadow-sm">
                       <div className="w-1.5 h-1.5 bg-rose-500 rounded-full" />
                     </div>
-                    <h3 className="font-bold text-slate-900 text-base leading-tight truncate">
+                    <h3 className="font-bold text-zinc-100 text-base leading-tight truncate">
                       {activeReq.destination.split(',')[0]}
                     </h3>
-                    <p className="text-xs text-zinc-500 truncate mt-0.5 font-normal">
+                    <p className="text-xs text-zinc-400 truncate mt-0.5 font-normal">
                       {activeReq.destination.split(',').slice(1).join(',').trim() || activeReq.destination}
                     </p>
                   </div>
                 </div>
 
                 {/* Metrics Bar (Pickup Distance & Drop Distance) */}
-                <div className="grid grid-cols-2 gap-4 py-3 px-4 bg-zinc-50 rounded-2xl border border-zinc-100 mb-5">
+                <div className="grid grid-cols-2 gap-4 py-3 px-4 bg-zinc-950/80 rounded-2xl border border-zinc-800 mb-5">
                   <div>
                     <span className="text-xs font-semibold text-zinc-400 block mb-0.5">Pickup</span>
-                    <span className="text-base font-extrabold text-slate-900">{pickupDist} Km</span>
+                    <span className="text-base font-extrabold text-emerald-400">{pickupDist} Km</span>
                   </div>
-                  <div className="border-l border-zinc-200 pl-4">
+                  <div className="border-l border-zinc-800 pl-4">
                     <span className="text-xs font-semibold text-zinc-400 block mb-0.5">Drop</span>
-                    <span className="text-base font-extrabold text-slate-900">{dropDist} Km</span>
+                    <span className="text-base font-extrabold text-white">{dropDist} Km</span>
                   </div>
                 </div>
 
@@ -1213,7 +1213,7 @@ function App() {
                         }
                       }
                     }}
-                    className="w-14 h-14 rounded-2xl border border-zinc-200 bg-white hover:bg-zinc-100 flex items-center justify-center text-zinc-600 transition-colors shadow-sm shrink-0"
+                    className="w-14 h-14 rounded-2xl border border-zinc-700 bg-zinc-800 hover:bg-zinc-700 flex items-center justify-center text-zinc-300 transition-colors shadow-md shrink-0"
                     title="Decline Request"
                   >
                     <svg className="w-6 h-6 stroke-[2.5]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1226,10 +1226,10 @@ function App() {
                       setIncomingRequest(activeReq);
                       handleAccept();
                     }}
-                    className="flex-1 h-14 bg-amber-400 hover:bg-amber-500 text-slate-950 font-black text-xl rounded-2xl flex items-center justify-center gap-3 transition-colors shadow-lg shadow-amber-400/30 active:scale-[0.99]"
+                    className="flex-1 h-14 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-slate-950 font-black text-xl rounded-2xl flex items-center justify-center gap-3 transition-all shadow-lg shadow-amber-500/20 active:scale-[0.99]"
                   >
                     <span>Accept</span>
-                    <div className="w-9 h-9 rounded-full bg-white/90 text-slate-900 font-black text-sm flex items-center justify-center shadow-inner border border-amber-500/30">
+                    <div className="w-9 h-9 rounded-full bg-black/90 text-amber-400 font-black text-sm flex items-center justify-center shadow-md border border-amber-500/40">
                       {requestCountdown}
                     </div>
                   </button>
