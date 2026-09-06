@@ -1,4 +1,4 @@
-// Vercel Production Trigger: 2026-09-06T09:55:00 - fix: auto-fetch route line and hide recent searches when typing
+// Vercel Production Trigger: 2026-09-06T09:58:00 - style: convert Choose on Map and Current GPS to compact side-by-side buttons
 import { useState, useEffect, useRef } from 'react'
 import Map, { Marker, Source, Layer } from 'react-map-gl/mapbox'
 import type { MapRef } from 'react-map-gl/mapbox'
@@ -1436,32 +1436,35 @@ function App() {
                   {/* Options Dropdown Box for Pickup */}
                   {activeInput === 'pickup' && (
                     <div className="absolute z-50 w-full bg-zinc-950 border border-zinc-800 mt-2 rounded-2xl shadow-2xl overflow-y-auto max-h-96 divide-y divide-zinc-900 animate-slide-in">
-                      {/* Option 0: Set on Map */}
-                      <div 
-                        onClick={() => startMapSelection('pickup')}
-                        className="px-4 py-3.5 hover:bg-zinc-900 cursor-pointer flex items-center space-x-3 text-cyan-400 font-bold transition-colors bg-cyan-500/10 border-b border-zinc-900"
-                      >
-                         <div className="p-2 bg-cyan-500/20 rounded-full">
-                           📌
-                         </div>
-                         <div>
-                            <p className="text-sm font-extrabold">Choose Location on Map</p>
-                            <p className="text-zinc-400 text-xs font-normal">Drag and set precise map pin</p>
-                         </div>
-                      </div>
+                      {/* Compact Quick Actions: Choose on Map & Current GPS */}
+                      <div className="p-2 grid grid-cols-2 gap-2 bg-zinc-900/60 border-b border-zinc-900">
+                        <button
+                          type="button"
+                          onClick={() => startMapSelection('pickup')}
+                          className="flex items-center space-x-2 p-2 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/20 rounded-xl transition text-left group"
+                        >
+                          <div className="w-7 h-7 rounded-lg bg-cyan-500/20 flex items-center justify-center text-sm shrink-0">
+                            📌
+                          </div>
+                          <div className="overflow-hidden min-w-0">
+                            <p className="text-cyan-400 font-extrabold text-xs truncate">Choose on Map</p>
+                            <p className="text-zinc-400 text-[10px] truncate">Set map pin</p>
+                          </div>
+                        </button>
 
-{/* Option 1: Locate Current GPS */}
-                      <div 
-                        onClick={() => handleLocateCurrentPosition('pickup')}
-                        className="px-4 py-3.5 hover:bg-zinc-900 cursor-pointer flex items-center space-x-3 text-emerald-400 font-bold transition-colors bg-emerald-500/10"
-                      >
-                         <div className="p-2 bg-emerald-500/20 rounded-full">
-                           📍
-                         </div>
-                         <div>
-                            <p className="text-sm font-extrabold">Use Current GPS Location</p>
-                            <p className="text-zinc-400 text-xs font-normal">Detect exact current position</p>
-                         </div>
+                        <button
+                          type="button"
+                          onClick={() => handleLocateCurrentPosition('pickup')}
+                          className="flex items-center space-x-2 p-2 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 rounded-xl transition text-left group"
+                        >
+                          <div className="w-7 h-7 rounded-lg bg-emerald-500/20 flex items-center justify-center text-sm shrink-0">
+                            📍
+                          </div>
+                          <div className="overflow-hidden min-w-0">
+                            <p className="text-emerald-400 font-extrabold text-xs truncate">Current GPS</p>
+                            <p className="text-zinc-400 text-[10px] truncate">Use my position</p>
+                          </div>
+                        </button>
                       </div>
 
                       {/* Option 2: Saved Places List (Home, Work, Gym, Custom) */}
@@ -1732,32 +1735,35 @@ function App() {
                   {/* Options Dropdown Box for Destination */}
                   {activeInput === 'destination' && (
                     <div className="absolute z-50 w-full bg-zinc-950 border border-zinc-800 mt-2 rounded-2xl shadow-2xl overflow-y-auto max-h-96 divide-y divide-zinc-900 animate-slide-in">
-                      {/* Option 0: Set on Map */}
-                      <div 
-                        onClick={() => startMapSelection('destination')}
-                        className="px-4 py-3.5 hover:bg-zinc-900 cursor-pointer flex items-center space-x-3 text-cyan-400 font-bold transition-colors bg-cyan-500/10 border-b border-zinc-900"
-                      >
-                         <div className="p-2 bg-cyan-500/20 rounded-full">
-                           📌
-                         </div>
-                         <div>
-                            <p className="text-sm font-extrabold">Choose Location on Map</p>
-                            <p className="text-zinc-400 text-xs font-normal">Drag and set precise map pin</p>
-                         </div>
-                      </div>
+                      {/* Compact Quick Actions: Choose on Map & Current GPS */}
+                      <div className="p-2 grid grid-cols-2 gap-2 bg-zinc-900/60 border-b border-zinc-900">
+                        <button
+                          type="button"
+                          onClick={() => startMapSelection('destination')}
+                          className="flex items-center space-x-2 p-2 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/20 rounded-xl transition text-left group"
+                        >
+                          <div className="w-7 h-7 rounded-lg bg-cyan-500/20 flex items-center justify-center text-sm shrink-0">
+                            📌
+                          </div>
+                          <div className="overflow-hidden min-w-0">
+                            <p className="text-cyan-400 font-extrabold text-xs truncate">Choose on Map</p>
+                            <p className="text-zinc-400 text-[10px] truncate">Set map pin</p>
+                          </div>
+                        </button>
 
-{/* Option 1: Locate Current GPS */}
-                      <div 
-                        onClick={() => handleLocateCurrentPosition('destination')}
-                        className="px-4 py-3.5 hover:bg-zinc-900 cursor-pointer flex items-center space-x-3 text-red-400 font-bold transition-colors bg-red-500/10"
-                      >
-                         <div className="p-2 bg-red-500/20 rounded-full">
-                           📍
-                         </div>
-                         <div>
-                            <p className="text-sm font-extrabold">Set to Current GPS Location</p>
-                            <p className="text-zinc-400 text-xs font-normal">Use current device location</p>
-                         </div>
+                        <button
+                          type="button"
+                          onClick={() => handleLocateCurrentPosition('destination')}
+                          className="flex items-center space-x-2 p-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 rounded-xl transition text-left group"
+                        >
+                          <div className="w-7 h-7 rounded-lg bg-red-500/20 flex items-center justify-center text-sm shrink-0">
+                            📍
+                          </div>
+                          <div className="overflow-hidden min-w-0">
+                            <p className="text-red-400 font-extrabold text-xs truncate">Current GPS</p>
+                            <p className="text-zinc-400 text-[10px] truncate">Use my position</p>
+                          </div>
+                        </button>
                       </div>
 
                       {/* Option 2: Saved Places List (Home, Work, Gym, Custom) */}
