@@ -1,4 +1,4 @@
-// Vercel Production Trigger: 2026-09-05T23:39:00 - feat: smooth center positioning transition when input clicked
+// Vercel Production Trigger: 2026-09-06T09:43:30 - sync live rider and driver apps
 import { useState, useEffect, useRef } from 'react'
 import Map, { Marker, Source, Layer } from 'react-map-gl/mapbox'
 import type { MapRef } from 'react-map-gl/mapbox'
