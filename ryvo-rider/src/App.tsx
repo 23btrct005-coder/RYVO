@@ -158,9 +158,9 @@ function App() {
   const getETAForVehicle = (type: VehicleType, baseMins: number) => {
     if (baseMins <= 0) return 1;
     switch(type) {
-      case 'bike': return Math.max(2, Math.round(baseMins * 0.95));
-      case 'auto': return Math.max(3, Math.round(baseMins * 1.05));
-      case 'mini': return Math.max(4, Math.round(baseMins * 1.15));
+      case 'bike': return Math.max(1, Math.round(baseMins * 0.90));
+      case 'auto': return Math.max(1, Math.round(baseMins * 0.98));
+      case 'mini': return Math.max(1, Math.round(baseMins * 1.0));
       default: return baseMins;
     }
   };
@@ -544,12 +544,12 @@ function App() {
         const res = await fetch(`https://api.mapbox.com/directions/v5/mapbox/driving-traffic/${waypointsStr}?alternatives=true&geometries=geojson&overview=full&access_token=${MAPBOX_TOKEN}`);
         const data = await res.json();
         if (data?.routes && data.routes.length > 0) {
-          const shortestRoute = data.routes.reduce((min: any, r: any) => r.duration < min.duration ? r : min, data.routes[0]);
-          const swappedGeometry = shortestRoute.geometry.coordinates.map((coord: [number, number]) => [coord[1], coord[0]]);
+          const primaryRoute = data.routes.reduce((best: any, r: any) => r.distance < best.distance ? r : best, data.routes[0]);
+          const swappedGeometry = primaryRoute.geometry.coordinates.map((coord: [number, number]) => [coord[1], coord[0]]);
           setRouteGeometry(swappedGeometry);
-          const distanceKm = shortestRoute.distance / 1000;
+          const distanceKm = primaryRoute.distance / 1000;
           setDistance(distanceKm);
-          const durationMins = Math.max(1, Math.ceil((shortestRoute.duration || 0) / 60));
+          const durationMins = Math.max(1, Math.ceil(((primaryRoute.duration || 0) * 1.20) / 60));
           setEstimatedDuration(durationMins);
 
           // Fit map camera bounds to display BOTH pickup and destination markers clearly
@@ -820,12 +820,12 @@ function App() {
         const data = await res.json()
         
         if (data.routes && data.routes.length > 0) {
-          const shortestRoute = data.routes.reduce((min: any, r: any) => r.duration < min.duration ? r : min, data.routes[0]);
-          const distanceKm = shortestRoute.distance / 1000;
-          const durationMins = Math.max(1, Math.ceil((shortestRoute.duration || 0) / 60));
+          const primaryRoute = data.routes.reduce((best: any, r: any) => r.distance < best.distance ? r : best, data.routes[0]);
+          const distanceKm = primaryRoute.distance / 1000;
+          const durationMins = Math.max(1, Math.ceil(((primaryRoute.duration || 0) * 1.20) / 60));
           setEstimatedDuration(durationMins);
           setDistance(distanceKm);
-          const swappedGeometry = shortestRoute.geometry.coordinates.map((coord: [number, number]) => [coord[1], coord[0]]);
+          const swappedGeometry = primaryRoute.geometry.coordinates.map((coord: [number, number]) => [coord[1], coord[0]]);
           setRouteGeometry(swappedGeometry);
           setStatus('confirming');
           return;
