@@ -1406,53 +1406,72 @@ function App() {
                 </div>
               </div>
            ) : status === 'searching' ? (
-              <div className="py-2">
-                 {/* 🚕 Clean Real-World Ride Searching Sheet (Uber / Lyft Standard) */}
-                 <div className="mb-4 p-5 bg-gradient-to-b from-zinc-900 to-zinc-950 rounded-3xl border border-zinc-800 shadow-2xl text-left space-y-4">
+              <div className="py-2 space-y-3">
+                 {/* 🚕 Authentic Native Searching Card (Uber / Ola / Rapido Standard) */}
+                 <div className="bg-zinc-900 rounded-3xl p-5 border border-zinc-800 shadow-2xl text-left space-y-4">
                    
-                   {/* Animated Searching Status Banner */}
-                   <div className="flex items-center space-x-3.5">
-                     <div className="relative flex items-center justify-center shrink-0 w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-400">
-                       <span className="text-2xl animate-pulse">{selectedVehicle === 'bike' ? '🛵' : selectedVehicle === 'auto' ? '🛺' : '🚗'}</span>
-                       <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                   {/* Top Header Row with Pulsing Signal Pill */}
+                   <div className="flex items-center justify-between">
+                     <div className="flex items-center space-x-2">
+                       <span className="relative flex h-3 w-3">
                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                          <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
                        </span>
+                       <span className="text-xs font-black text-white uppercase tracking-wider">Contacting Nearby Drivers</span>
                      </div>
-                     <div className="flex-1 min-w-0">
-                       <div className="flex items-center justify-between">
-                         <h3 className="text-base font-black text-white truncate">Connecting with drivers...</h3>
-                         <span className="text-xs font-black text-amber-400 bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/20">
-                           {Math.floor(searchingTimer / 60)}:{String(searchingTimer % 60).padStart(2, '0')}
-                         </span>
-                       </div>
-                       <p className="text-xs text-zinc-400 font-medium truncate mt-0.5">
-                         {searchingTimer > 90 ? 'Searching 2.5km radius in Bengaluru...' :
-                          searchingTimer > 60 ? 'Connecting with top-rated nearby drivers...' :
-                          'Expanding driver search area...'}
-                       </p>
+                     <span className="text-xs font-black text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-500/20">
+                       {Math.floor(searchingTimer / 60)}:{String(searchingTimer % 60).padStart(2, '0')}
+                     </span>
+                   </div>
+
+                   {/* Radar Pulse Animation & Vehicle Avatar */}
+                   <div className="relative py-4 flex items-center justify-center">
+                     {/* Sonar Radar Rings */}
+                     <div className="absolute w-24 h-24 rounded-full border border-amber-500/30 animate-ping"></div>
+                     <div className="absolute w-16 h-16 rounded-full border border-amber-500/50 animate-pulse"></div>
+                     
+                     {/* Vehicle Icon Center Badge */}
+                     <div className="relative z-10 w-14 h-14 rounded-full bg-gradient-to-tr from-amber-500 to-yellow-400 flex items-center justify-center text-3xl shadow-[0_0_20px_rgba(245,158,11,0.4)] text-black">
+                       {selectedVehicle === 'bike' ? '🛵' : selectedVehicle === 'auto' ? '🛺' : '🚗'}
                      </div>
                    </div>
 
-                   {/* Smooth Animated Linear Progress Bar */}
-                   <div className="w-full h-1.5 bg-zinc-900 rounded-full overflow-hidden border border-zinc-800">
-                     <div className="h-full bg-gradient-to-r from-amber-500 via-yellow-400 to-emerald-400 animate-pulse rounded-full w-3/4 transition-all duration-1000"></div>
+                   {/* Subtitle Message */}
+                   <p className="text-xs text-zinc-300 text-center font-semibold animate-pulse">
+                     {searchingTimer > 90 ? 'Broadcasting request to nearby drivers...' :
+                      searchingTimer > 60 ? 'Connecting with top-rated drivers in your area...' :
+                      'Expanding search area for quick pickup...'}
+                   </p>
+
+                   {/* Indeterminate Shimmer Progress Bar */}
+                   <div className="w-full h-1 bg-zinc-950 rounded-full overflow-hidden">
+                     <div className="w-full h-full bg-gradient-to-r from-amber-500 via-emerald-400 to-amber-500 animate-pulse rounded-full"></div>
                    </div>
 
-                   {/* Trip Summary Capsule */}
-                   <div className="bg-zinc-950/80 p-3.5 rounded-2xl border border-zinc-850 flex items-center justify-between">
-                     <div className="flex items-center space-x-3 min-w-0">
-                       <div className="text-left min-w-0">
-                         <div className="flex items-center space-x-1.5">
-                           <span className="text-xs font-black text-white">RYVO {selectedVehicle.toUpperCase()}</span>
-                           <span className="text-[10px] font-bold text-zinc-400 bg-zinc-800 px-2 py-0.5 rounded-md">
-                             ~{getETAForVehicle(selectedVehicle, estimatedDuration)} min pickup
-                           </span>
-                         </div>
-                         <p className="text-[11px] text-zinc-400 truncate mt-0.5">{pickup} ➔ {destination}</p>
+                   {/* Trip Information Capsule */}
+                   <div className="pt-2 border-t border-zinc-800 space-y-2.5">
+                     <div className="flex items-center justify-between">
+                       <div>
+                         <h4 className="text-sm font-black text-white">RYVO {selectedVehicle.toUpperCase()}</h4>
+                         <p className="text-[11px] text-zinc-400 font-medium">Pickup ETA ~{getETAForVehicle(selectedVehicle, estimatedDuration)} mins</p>
+                       </div>
+                       <div className="text-right">
+                         <span className="text-lg font-black text-emerald-400 block">₹{getPrice(selectedVehicle, distance).toFixed(2)}</span>
+                         <span className="text-[10px] font-bold text-zinc-400 bg-zinc-800 px-2 py-0.5 rounded-md inline-block">💵 Cash / UPI</span>
                        </div>
                      </div>
-                     <span className="text-lg font-black text-emerald-400 shrink-0 pl-2">₹{getPrice(selectedVehicle, distance).toFixed(2)}</span>
+
+                     {/* Pickup & Destination Timeline Summary */}
+                     <div className="bg-zinc-950/80 p-3 rounded-2xl border border-zinc-850 space-y-1.5">
+                       <div className="flex items-center space-x-2.5 truncate">
+                         <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span>
+                         <span className="text-[11px] font-bold text-zinc-300 truncate">{pickup}</span>
+                       </div>
+                       <div className="flex items-center space-x-2.5 truncate">
+                         <span className="w-2 h-2 rounded-full bg-red-500 shrink-0"></span>
+                         <span className="text-[11px] font-bold text-zinc-300 truncate">{destination}</span>
+                       </div>
+                     </div>
                    </div>
                  </div>
 
