@@ -548,6 +548,13 @@ function App() {
               return remaining;
             });
           }
+        } else if (updated && updated.status === 'pending') {
+          // Real-time fare/tip update sync
+          const updatedPrice = typeof updated.price === 'string' ? parseFloat(updated.price) : updated.price;
+          setAvailableRequests(prev => prev.map(r => r.id === updated.id ? { ...r, price: updatedPrice } : r));
+          if (incomingRequestRef.current?.id === updated.id) {
+            setIncomingRequest(prev => prev ? { ...prev, price: updatedPrice } : null);
+          }
         }
       })
       .subscribe()
@@ -1040,14 +1047,18 @@ function App() {
               : '9.6');
 
         const totalFareFormatted = activeReq.price ? activeReq.price.toFixed(0) : '399';
-        const activeVehicleType = (driverProfile?.vehicletype || activeReq.vehicleType || 'mini').toUpperCase();
-        const activeEmoji = activeVehicleType === 'AUTO' ? '🛺' : activeVehicleType === 'BIKE' ? '🛵' : '🚗';
+        const activeVehicleType = (driverProfile?.vehicletype || activeReq.vehicleType || 'mini').toLowerCase();
+        const activeEmoji = activeVehicleType === 'auto' ? '🛺' : activeVehicleType === 'bike' ? '🛵' : '🚗';
         
-        // Calculate optional tip badge for driver view
-        // If price is higher than distance base rate or explicitly tipped
-        const estimatedBase = activeReq.distance ? (activeVehicleType === 'BIKE' ? activeReq.distance * 10 : activeVehicleType === 'AUTO' ? activeReq.distance * 15 : activeReq.distance * 20) : 0;
-        const calculatedTip = activeReq.price && estimatedBase > 0 && activeReq.price > estimatedBase + 5 
-          ? Math.round(activeReq.price - estimatedBase) 
+        // Exact fare matching formula from Rider App getPrice
+        const tripDistance = activeReq.distance || Number(dropDist) || 0;
+        const calculatedBase = activeVehicleType === 'bike' ? Math.max(20, 20 + (tripDistance * 8))
+          : activeVehicleType === 'auto' ? Math.max(30, 30 + (tripDistance * 12))
+          : Math.max(50, 50 + (tripDistance * 15));
+          
+        const currentPriceNum = activeReq.price ? Number(activeReq.price) : 0;
+        const calculatedTip = currentPriceNum > 0 && calculatedBase > 0 && currentPriceNum > calculatedBase + 2
+          ? Math.round(currentPriceNum - calculatedBase)
           : 0;
 
         return (
