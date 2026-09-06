@@ -206,17 +206,28 @@ function App() {
     }
   };
 
-  // Check if spoken phrase contains "RYVO" in any Indian pronunciation or slang
+  // Check if spoken phrase contains "RYVO" in any Indian pronunciation, phonetic misspelling or slang
   const isRyvoWakeWordDetected = (text: string): boolean => {
     if (!text) return false;
-    const lower = text.toLowerCase();
+    const lower = text.toLowerCase().trim();
+
+    // 1. Direct phonetic slangs & common Speech-to-Text misinterpretations
     const ryvoSlangs = [
-      'ryvo', 'rivo', 'riva', 'raivo', 'raivoo', 'reevo', 'revo', 
-      'राइवो', 'राइवा', 'रीवो', 'रिवो', 
-      'ರೈವೋ', 'ರೈವ', 'ರೀವೋ', 
+      'ryvo', 'rivo', 'riva', 'raivo', 'raivoo', 'reevo', 'revo', 'rive', 'ribo',
+      'arivo', 'arivo', 'drive o', 'ray vo', 'rye vo', 'rie vo', 'r ivo', 'r evo',
+      'rider vo', 'hey ryvo', 'hi ryvo', 'ok ryvo',
+      'राइवो', 'राइवा', 'रीवो', 'रिवो', 'राइ वो', 'राईवो',
+      'ರೈವೋ', 'ರೈವ', 'ರೀವೋ', 'ರೈ ವೋ',
       'ரைவோ', 'ரிவோ'
     ];
-    return ryvoSlangs.some(slang => lower.includes(slang));
+    
+    if (ryvoSlangs.some(slang => lower.includes(slang))) {
+      return true;
+    }
+
+    // 2. Fuzzy regex match for sounds starting with r/rh/r-v/r-b
+    const fuzzyRyvoPattern = /\b(h[ea]y\s+)?(r[aeiouy]{1,2}[vb]o?|r[aiy]v[oae]?)\b/i;
+    return fuzzyRyvoPattern.test(lower);
   };
 
   // Continuous Background Wake-Word Listener ("Hey RYVO")
@@ -224,56 +235,69 @@ function App() {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognition || !isWakeWordActive) return;
 
-    try {
-      const bgRecognition = new SpeechRecognition();
-      bgRecognition.continuous = true;
-      bgRecognition.interimResults = true;
-      bgRecognition.lang = 'en-IN';
+    let isComponentMounted = true;
+    let bgRecognition: any = null;
 
-      bgRecognition.onresult = (event: any) => {
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          const spoken = event.results[i][0].transcript;
-          if (isRyvoWakeWordDetected(spoken)) {
-            console.log("⚡ Wake Word 'RYVO' Detected:", spoken);
-            showToast("⚡ 'RYVO' Voice Agent Activated!");
-            setIsVoiceModalOpen(true);
-            setAiSpeechResponse(`🎙️ Activated by "RYVO"! Where would you like to go?`);
-            speakAiText("RYVO activated! Where would you like to go?", voiceLang);
+    const startBgListener = () => {
+      if (!isComponentMounted || isListening) return;
+
+      try {
+        bgRecognition = new SpeechRecognition();
+        bgRecognition.continuous = true;
+        bgRecognition.interimResults = true;
+        bgRecognition.lang = voiceLang;
+
+        bgRecognition.onresult = (event: any) => {
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            const spoken = event.results[i][0].transcript;
+            console.log("🎙️ Live Speech Stream:", spoken);
             
-            // Extract remaining command if available
-            const commandAfterWakeWord = spoken.replace(/hey|hi|hello|ok|ryvo|rivo|raivo|राइवो|ರೈವೋ/gi, '').trim();
-            if (commandAfterWakeWord.length > 3) {
-              parseVoiceIntentAndProcess(commandAfterWakeWord);
-            } else {
+            if (isRyvoWakeWordDetected(spoken)) {
+              console.log("⚡ WAKE WORD 'RYVO' MATCHED:", spoken);
+              showToast("⚡ 'Hey RYVO' Voice Agent Activated!");
+              setIsVoiceModalOpen(true);
+              setAiSpeechResponse(`🎙️ Activated by "${spoken}"! Where would you like to go?`);
+              speakAiText("RYVO activated! Where would you like to go?", voiceLang);
+              
+              // Stop background listener & switch to active command listening
+              try { bgRecognition.stop(); } catch (e) {}
               startVoiceRecognition();
+              break;
             }
-            break;
           }
-        }
-      };
+        };
 
-      bgRecognition.onerror = (e: any) => {
-        console.warn("Background wake-word listener error (auto-restarting):", e.error);
-      };
+        bgRecognition.onerror = (e: any) => {
+          console.warn("Background wake-word listener notice:", e.error);
+          if (e.error === 'not-allowed') {
+            console.warn("Microphone permission required for wake-word listener.");
+          }
+        };
 
-      bgRecognition.onend = () => {
-        if (isWakeWordActive && !isListening) {
-          try { bgRecognition.start(); } catch (err) {}
-        }
-      };
+        bgRecognition.onend = () => {
+          if (isComponentMounted && isWakeWordActive && !isListening && !isVoiceModalOpen) {
+            setTimeout(() => {
+              try { bgRecognition.start(); } catch (err) {}
+            }, 300);
+          }
+        };
 
-      wakeWordRecognitionRef.current = bgRecognition;
-      bgRecognition.start();
-    } catch (err) {
-      console.warn("Could not start background wake-word listener:", err);
-    }
+        wakeWordRecognitionRef.current = bgRecognition;
+        bgRecognition.start();
+      } catch (err) {
+        console.warn("Could not start background wake-word listener:", err);
+      }
+    };
+
+    startBgListener();
 
     return () => {
+      isComponentMounted = false;
       if (wakeWordRecognitionRef.current) {
         try { wakeWordRecognitionRef.current.stop(); } catch (e) {}
       }
     };
-  }, [isWakeWordActive, voiceLang]);
+  }, [isWakeWordActive, voiceLang, isListening, isVoiceModalOpen]);
 
   const startVoiceRecognition = () => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
