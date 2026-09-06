@@ -181,13 +181,43 @@ function App() {
   const [isQuietRide, setIsQuietRide] = useState<boolean>(false);
   const [customNote, setCustomNote] = useState<string>('');
 
-  // Interactive Quiz & Scratch Card Reward State
-  const [activeTab, setActiveTab] = useState<'prefs' | 'quiz' | 'scratch'>('prefs');
+  // Interactive Multi-Tab State (Prefs, News, Quiz, Rewards)
+  const [activeTab, setActiveTab] = useState<'news' | 'prefs' | 'quiz' | 'scratch'>('news');
+  const [newsCategory, setNewsCategory] = useState<'local' | 'sports' | 'world'>('local');
+  const [currentNewsIdx, setCurrentNewsIdx] = useState<number>(0);
   const [quizScore, setQuizScore] = useState<number>(0);
   const [currentQuestionIdx, setCurrentQuestionIdx] = useState<number>(0);
   const [quizAnswered, setQuizAnswered] = useState<number | null>(null);
   const [isScratched, setIsScratched] = useState<boolean>(false);
   const [discountWon, setDiscountWon] = useState<number>(0);
+
+  // Live Auto-Swapping News Feed Data
+  const newsFeed = {
+    local: [
+      { id: 1, tag: "📍 LOCAL BENGALURU", title: "Namma Metro Purple Line Extends Frequency to 3 Mins", time: "10m ago", icon: "🚇" },
+      { id: 2, tag: "📍 LOCAL BENGALURU", title: "Indiranagar 100ft Road Gets New Green Cycle Lanes", time: "25m ago", icon: "🚴" },
+      { id: 3, tag: "📍 LOCAL BENGALURU", title: "Cubbon Park Sunday Farmers Market Opens at 7 AM", time: "1h ago", icon: "🥦" }
+    ],
+    sports: [
+      { id: 4, tag: "🏆 SPORTS FLASH", title: "RCB Pre-Season Camp Begins in Chinnaswamy Stadium", time: "15m ago", icon: "🏏" },
+      { id: 5, tag: "🏆 SPORTS FLASH", title: "India Clinches Thrilling T20 Series Victory in Final Over", time: "40m ago", icon: "⚽" },
+      { id: 6, tag: "🏆 SPORTS FLASH", title: "Bengaluru FC Signs Premier League Academy Talent", time: "2h ago", icon: "🥅" }
+    ],
+    world: [
+      { id: 7, tag: "🌍 WORLD HEADLINES", title: "Global Tech Summit Unveils Next-Gen Quantum Chips", time: "5m ago", icon: "🚀" },
+      { id: 8, tag: "🌍 WORLD HEADLINES", title: "Electric Aircraft Completes First Zero-Emission Flight", time: "30m ago", icon: "✈️" },
+      { id: 9, tag: "🌍 WORLD HEADLINES", title: "Global Renewable Energy Milestone Hits 45% Share", time: "1h ago", icon: "🌱" }
+    ]
+  };
+
+  // Auto-Swap News Reels Every 3.5 Seconds
+  useEffect(() => {
+    if (status !== 'searching') return;
+    const newsTimer = setInterval(() => {
+      setCurrentNewsIdx(prev => (prev + 1) % 3);
+    }, 3500);
+    return () => clearInterval(newsTimer);
+  }, [status]);
 
   const [noDriverFound, setNoDriverFound] = useState<boolean>(false);
   const [suggestedVehicle, setSuggestedVehicle] = useState<VehicleType | null>(null);
@@ -1484,48 +1514,128 @@ function App() {
                      </div>
                    </div>
 
-                   {/* Multi-Tab Interactive Searching Hub */}
-                   <div className="bg-zinc-900/90 p-3 rounded-2xl border border-amber-500/30 my-3 text-left space-y-2.5">
-                     
-                     {/* Tab Headers */}
-                     <div className="grid grid-cols-3 gap-1 p-1 bg-zinc-950 rounded-xl border border-zinc-800 text-center">
-                       <button
-                         type="button"
-                         onClick={() => setActiveTab('prefs')}
-                         className={`py-1.5 text-[10px] font-black rounded-lg transition-all ${
-                           activeTab === 'prefs'
-                             ? 'bg-amber-500 text-black shadow-md'
-                             : 'text-zinc-400 hover:text-white'
-                         }`}
-                       >
-                         ⚙️ Prefs
-                       </button>
-                       <button
-                         type="button"
-                         onClick={() => setActiveTab('quiz')}
-                         className={`py-1.5 text-[10px] font-black rounded-lg transition-all ${
-                           activeTab === 'quiz'
-                             ? 'bg-amber-500 text-black shadow-md'
-                             : 'text-zinc-400 hover:text-white'
-                         }`}
-                       >
-                         ❓ City Quiz
-                       </button>
-                       <button
-                         type="button"
-                         onClick={() => setActiveTab('scratch')}
-                         className={`py-1.5 text-[10px] font-black rounded-lg transition-all relative ${
-                           activeTab === 'scratch'
-                             ? 'bg-amber-500 text-black shadow-md'
-                             : 'text-zinc-400 hover:text-white'
-                         }`}
-                       >
-                         🎁 Rewards
-                         {discountWon > 0 && (
-                           <span className="absolute -top-1 -right-1 w-2 h-2 bg-emerald-400 rounded-full animate-ping"></span>
-                         )}
-                       </button>
-                     </div>
+                    {/* Multi-Tab Interactive Searching Hub */}
+                    <div className="bg-zinc-900/90 p-3 rounded-2xl border border-amber-500/30 my-3 text-left space-y-2.5">
+                      
+                      {/* Tab Headers (4 Columns: News, Prefs, Quiz, Rewards) */}
+                      <div className="grid grid-cols-4 gap-1 p-1 bg-zinc-950 rounded-xl border border-zinc-800 text-center">
+                        <button
+                          type="button"
+                          onClick={() => setActiveTab('news')}
+                          className={`py-1.5 text-[10px] font-black rounded-lg transition-all flex items-center justify-center gap-1 ${
+                            activeTab === 'news'
+                              ? 'bg-amber-500 text-black shadow-md'
+                              : 'text-zinc-400 hover:text-white'
+                          }`}
+                        >
+                          <span>📰 News</span>
+                          <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-ping"></span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setActiveTab('prefs')}
+                          className={`py-1.5 text-[10px] font-black rounded-lg transition-all ${
+                            activeTab === 'prefs'
+                              ? 'bg-amber-500 text-black shadow-md'
+                              : 'text-zinc-400 hover:text-white'
+                          }`}
+                        >
+                          ⚙️ Prefs
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setActiveTab('quiz')}
+                          className={`py-1.5 text-[10px] font-black rounded-lg transition-all ${
+                            activeTab === 'quiz'
+                              ? 'bg-amber-500 text-black shadow-md'
+                              : 'text-zinc-400 hover:text-white'
+                          }`}
+                        >
+                          ❓ Quiz
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setActiveTab('scratch')}
+                          className={`py-1.5 text-[10px] font-black rounded-lg transition-all relative ${
+                            activeTab === 'scratch'
+                              ? 'bg-amber-500 text-black shadow-md'
+                              : 'text-zinc-400 hover:text-white'
+                          }`}
+                        >
+                          🎁 Gift
+                          {discountWon > 0 && (
+                            <span className="absolute -top-1 -right-1 w-2 h-2 bg-emerald-400 rounded-full animate-ping"></span>
+                          )}
+                        </button>
+                      </div>
+
+                      {/* TAB 0: AUTO-SWAPPING LIVE NEWS REELS */}
+                      {activeTab === 'news' && (
+                        <div className="space-y-2">
+                          {/* Category Switcher Pills */}
+                          <div className="flex items-center justify-between gap-1 pb-1">
+                            <div className="flex gap-1">
+                              {(['local', 'sports', 'world'] as const).map((cat) => (
+                                <button
+                                  key={cat}
+                                  type="button"
+                                  onClick={() => {
+                                    setNewsCategory(cat);
+                                    setCurrentNewsIdx(0);
+                                  }}
+                                  className={`px-2.5 py-1 text-[10px] font-extrabold rounded-lg capitalize border transition-all ${
+                                    newsCategory === cat
+                                      ? 'bg-amber-500/20 text-amber-300 border-amber-500/50'
+                                      : 'bg-zinc-950 text-zinc-400 border-zinc-800 hover:text-zinc-200'
+                                  }`}
+                                >
+                                  {cat === 'local' ? '📍 Local' : cat === 'sports' ? '🏆 Sports' : '🌍 World'}
+                                </button>
+                              ))}
+                            </div>
+                            <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider animate-pulse flex items-center gap-1">
+                              <span>🔄 AUTO SWAP</span>
+                            </span>
+                          </div>
+
+                          {/* Auto-Swapping Active News Card */}
+                          {newsFeed[newsCategory][currentNewsIdx] && (
+                            <div className="relative p-3 bg-gradient-to-r from-zinc-950 via-zinc-900 to-zinc-950 border border-zinc-800 rounded-2xl animate-fade-in shadow-inner overflow-hidden">
+                              {/* Top Bar Tag & Time */}
+                              <div className="flex items-center justify-between mb-1.5">
+                                <span className="text-[10px] font-black text-amber-400 uppercase tracking-wider flex items-center gap-1">
+                                  <span>{newsFeed[newsCategory][currentNewsIdx].icon}</span>
+                                  <span>{newsFeed[newsCategory][currentNewsIdx].tag}</span>
+                                </span>
+                                <span className="text-[9px] font-semibold text-zinc-500">
+                                  {newsFeed[newsCategory][currentNewsIdx].time}
+                                </span>
+                              </div>
+
+                              {/* News Headline Title */}
+                              <h4 className="text-xs font-extrabold text-white leading-snug">
+                                {newsFeed[newsCategory][currentNewsIdx].title}
+                              </h4>
+
+                              {/* Swapping Slide Progress Dots */}
+                              <div className="flex items-center justify-between mt-2.5 pt-2 border-t border-zinc-800/60">
+                                <span className="text-[9px] font-bold text-zinc-400">Card {currentNewsIdx + 1} of 3</span>
+                                <div className="flex items-center space-x-1">
+                                  {[0, 1, 2].map((idx) => (
+                                    <span
+                                      key={idx}
+                                      onClick={() => setCurrentNewsIdx(idx)}
+                                      className={`h-1.5 rounded-full transition-all cursor-pointer ${
+                                        currentNewsIdx === idx ? 'w-5 bg-amber-400' : 'w-1.5 bg-zinc-700'
+                                      }`}
+                                    ></span>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
 
                      {/* TAB 1: PREFERENCES */}
                      {activeTab === 'prefs' && (
