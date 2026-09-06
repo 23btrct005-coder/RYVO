@@ -144,6 +144,14 @@ function App() {
   const [pickup, setPickup] = useState('')
   const [destination, setDestination] = useState('')
   const [status, setStatus] = useState<'idle' | 'estimating' | 'confirming' | 'searching' | 'accepted' | 'arrived' | 'in_transit' | 'completed'>('idle')
+  const [showSplash, setShowSplash] = useState<boolean>(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowSplash(false);
+    }, 2800);
+    return () => clearTimeout(timer);
+  }, []);
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [currentRideId, setCurrentRideId] = useState<string | null>(null)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
@@ -1131,6 +1139,65 @@ function App() {
 
   return (
     <div className="relative w-full h-screen bg-zinc-900 text-white overflow-hidden">
+      {/* UBER / OLA / RAPIDO STYLE APP OPENING ANIMATED SPLASH SCREEN */}
+      {showSplash && (
+        <div className="fixed inset-0 z-[5000] bg-gradient-to-b from-zinc-950 via-zinc-900 to-black flex flex-col items-center justify-between p-8 text-center animate-fadeIn select-none pointer-events-auto">
+          {/* Top Brand Tag */}
+          <div className="mt-6 flex items-center space-x-2 bg-emerald-500/10 border border-emerald-500/30 px-3.5 py-1.5 rounded-full shadow-lg">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
+            <span className="text-xs font-black uppercase tracking-widest text-emerald-400">RYVO Mobility 2.0</span>
+          </div>
+
+          {/* Center Logo & Vehicle Motion Animations */}
+          <div className="flex flex-col items-center space-y-6">
+            <div className="relative flex items-center justify-center">
+              <div className="absolute w-36 h-36 bg-emerald-500/20 rounded-full animate-ping"></div>
+              <div className="w-28 h-28 bg-gradient-to-tr from-emerald-500 via-teal-400 to-cyan-400 rounded-3xl shadow-2xl flex items-center justify-center border-2 border-white/20 animate-bounce">
+                <span className="text-6xl font-black tracking-tighter text-zinc-950">R</span>
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <h1 className="text-4xl font-black tracking-tight text-white flex items-center justify-center space-x-2">
+                <span>RYVO</span>
+                <span className="text-emerald-400">Rider</span>
+              </h1>
+              <p className="text-xs text-zinc-400 font-extrabold uppercase tracking-widest">
+                India's Fastest Bike, Auto & Taxi Network
+              </p>
+            </div>
+
+            {/* Animated Vehicle Row */}
+            <div className="flex items-center space-x-6 py-2 bg-zinc-900/80 px-6 rounded-2xl border border-zinc-800 shadow-inner">
+              <div className="flex flex-col items-center space-y-1 animate-pulse">
+                <span className="text-3xl">🛵</span>
+                <span className="text-[10px] font-bold text-amber-400">BIKE</span>
+              </div>
+              <div className="w-px h-6 bg-zinc-700"></div>
+              <div className="flex flex-col items-center space-y-1 animate-pulse delay-100">
+                <span className="text-3xl">🛺</span>
+                <span className="text-[10px] font-bold text-emerald-400">AUTO</span>
+              </div>
+              <div className="w-px h-6 bg-zinc-700"></div>
+              <div className="flex flex-col items-center space-y-1 animate-pulse delay-200">
+                <span className="text-3xl">🚗</span>
+                <span className="text-[10px] font-bold text-cyan-400">CAB</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom Loading Indicator */}
+          <div className="w-full max-w-xs space-y-3 mb-4">
+            <div className="h-1.5 w-full bg-zinc-800 rounded-full overflow-hidden border border-zinc-700/50">
+              <div className="h-full bg-gradient-to-r from-emerald-500 via-teal-300 to-emerald-500 rounded-full animate-shimmer w-full"></div>
+            </div>
+            <p className="text-[11px] font-bold text-zinc-500 flex items-center justify-center space-x-1.5">
+              <span>Connecting to nearest drivers...</span>
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="absolute inset-0 z-0">
         <Map
           ref={mapRef}
