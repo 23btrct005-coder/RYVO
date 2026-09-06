@@ -1,4 +1,4 @@
-// Vercel Production Trigger: 2026-09-06T10:28:00 - fix: hide quick actions & favorites when typing, move saved favorites to bottom
+// Vercel Production Trigger: 2026-09-06T10:35:00 - feat: display address name badge on map pin markers and enable interactive pin click edit
 import { useState, useEffect, useRef } from 'react'
 import Map, { Marker, Source, Layer } from 'react-map-gl/mapbox'
 import type { MapRef } from 'react-map-gl/mapbox'
@@ -50,18 +50,32 @@ const CurrentLocationMarker = () => (
   </div>
 );
 
-const PickupMarker = () => (
-  <div className="relative flex flex-col items-center">
-    <div className="w-7 h-7 bg-emerald-500 border-2 border-white rounded-full flex items-center justify-center shadow-lg">
+const PickupMarker = ({ name, onClick }: { name?: string; onClick?: () => void }) => (
+  <div onClick={onClick} className="relative flex flex-col items-center cursor-pointer group z-30">
+    {name && (
+      <div className="bg-zinc-900/95 backdrop-blur-md border border-emerald-500/80 text-white font-extrabold text-[11px] px-2.5 py-1 rounded-full shadow-2xl mb-1 flex items-center space-x-1 whitespace-nowrap max-w-[170px] truncate group-hover:scale-105 transition-transform">
+        <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0"></span>
+        <span className="truncate">{name}</span>
+        <span className="text-[9px] text-emerald-400 font-bold ml-1">✏️</span>
+      </div>
+    )}
+    <div className="w-7 h-7 bg-emerald-500 border-2 border-white rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
       <div className="w-3 h-3 bg-white rounded-full" />
     </div>
     <div className="w-1 h-3 bg-emerald-600 rounded-b-full shadow-md" />
   </div>
 );
 
-const DestinationMarker = () => (
-  <div className="relative flex flex-col items-center">
-    <div className="w-7 h-7 bg-red-600 border-2 border-white rounded-full flex items-center justify-center shadow-lg">
+const DestinationMarker = ({ name, onClick }: { name?: string; onClick?: () => void }) => (
+  <div onClick={onClick} className="relative flex flex-col items-center cursor-pointer group z-30">
+    {name && (
+      <div className="bg-zinc-900/95 backdrop-blur-md border border-red-500/80 text-white font-extrabold text-[11px] px-2.5 py-1 rounded-full shadow-2xl mb-1 flex items-center space-x-1 whitespace-nowrap max-w-[170px] truncate group-hover:scale-105 transition-transform">
+        <span className="w-2 h-2 rounded-full bg-red-500 shrink-0"></span>
+        <span className="truncate">{name}</span>
+        <span className="text-[9px] text-red-400 font-bold ml-1">✏️</span>
+      </div>
+    )}
+    <div className="w-7 h-7 bg-red-600 border-2 border-white rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
       <span className="text-xs">🏁</span>
     </div>
     <div className="w-1 h-3 bg-red-600 rounded-b-full shadow-md" />
@@ -80,9 +94,16 @@ const LiveDriverMarker = ({ type }: { type: string }) => {
 };
 
 
-const StopMarker = ({ index }: { index: number }) => (
-  <div className="relative flex flex-col items-center">
-    <div className="w-7 h-7 bg-amber-500 border-2 border-white rounded-full flex items-center justify-center shadow-lg text-xs font-black text-black">
+const StopMarker = ({ index, name, onClick }: { index: number; name?: string; onClick?: () => void }) => (
+  <div onClick={onClick} className="relative flex flex-col items-center cursor-pointer group z-30">
+    {name && (
+      <div className="bg-zinc-900/95 backdrop-blur-md border border-amber-500/80 text-white font-extrabold text-[11px] px-2.5 py-1 rounded-full shadow-2xl mb-1 flex items-center space-x-1 whitespace-nowrap max-w-[170px] truncate group-hover:scale-105 transition-transform">
+        <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0"></span>
+        <span className="truncate">{name}</span>
+        <span className="text-[9px] text-amber-400 font-bold ml-1">✏️</span>
+      </div>
+    )}
+    <div className="w-7 h-7 bg-amber-500 border-2 border-white rounded-full flex items-center justify-center shadow-lg text-xs font-black text-black group-hover:scale-110 transition-transform">
       {index + 1}
     </div>
     <div className="w-1 h-3 bg-amber-600 rounded-b-full shadow-md" />
@@ -1074,14 +1095,20 @@ function App() {
           {/* Pickup Location Pin */}
           {pickupCoords && (
             <Marker longitude={pickupCoords[1]} latitude={pickupCoords[0]} anchor="bottom">
-              <PickupMarker />
+              <PickupMarker 
+                name={pickup} 
+                onClick={() => startMapSelection('pickup')} 
+              />
             </Marker>
           )}
 
           {/* Destination Location Pin */}
           {destCoords && (
             <Marker longitude={destCoords[1]} latitude={destCoords[0]} anchor="bottom">
-              <DestinationMarker />
+              <DestinationMarker 
+                name={destination} 
+                onClick={() => startMapSelection('destination')} 
+              />
             </Marker>
           )}
 
@@ -1089,7 +1116,11 @@ function App() {
           {stops.map((stop, idx) => (
             stop.coords ? (
               <Marker key={stop.id} longitude={stop.coords[1]} latitude={stop.coords[0]} anchor="bottom">
-                <StopMarker index={idx} />
+                <StopMarker 
+                  index={idx} 
+                  name={stop.address} 
+                  onClick={() => startMapSelection(stop.id)} 
+                />
               </Marker>
             ) : null
           ))}
