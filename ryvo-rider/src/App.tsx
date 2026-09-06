@@ -1,4 +1,4 @@
-// Vercel Production Trigger: 2026-09-06T10:18:00 - feat: search card moves to center on click with unclipped dropdown
+// Vercel Production Trigger: 2026-09-06T10:21:00 - fix: dropdown absolute positioning top-full and max-h-64 scroll alignment
 import { useState, useEffect, useRef } from 'react'
 import Map, { Marker, Source, Layer } from 'react-map-gl/mapbox'
 import type { MapRef } from 'react-map-gl/mapbox'
@@ -1466,7 +1466,7 @@ function App() {
 
                   {/* Options Dropdown Box for Pickup */}
                   {activeInput === 'pickup' && (
-                    <div className="absolute z-50 w-full bg-zinc-950 border border-zinc-800 mt-2 rounded-2xl shadow-2xl overflow-y-auto max-h-96 divide-y divide-zinc-900 animate-slide-in">
+                    <div className="absolute top-full left-0 right-0 z-50 bg-zinc-950/98 backdrop-blur-2xl border-2 border-zinc-700/80 mt-2 rounded-2xl shadow-2xl overflow-y-auto max-h-64 divide-y divide-zinc-900 animate-slide-in ring-1 ring-black/50">
                       {/* Compact Quick Actions: Choose on Map & Current GPS */}
                       <div className="p-2 grid grid-cols-2 gap-2 bg-zinc-900/60 border-b border-zinc-900">
                         <button
@@ -1680,7 +1680,7 @@ function App() {
 
                     {/* Options Dropdown Box for Intermediate Stop */}
                     {activeInput === stop.id && (
-                      <div className="absolute z-50 w-full bg-zinc-950 border border-zinc-800 mt-2 rounded-2xl shadow-2xl overflow-y-auto max-h-96 divide-y divide-zinc-900 animate-slide-in">
+                      <div className="absolute top-full left-0 right-0 z-50 bg-zinc-950/98 backdrop-blur-2xl border-2 border-zinc-700/80 mt-2 rounded-2xl shadow-2xl overflow-y-auto max-h-64 divide-y divide-zinc-900 animate-slide-in ring-1 ring-black/50">
                         {/* Set on Map */}
                         <div 
                           onClick={() => startMapSelection(stop.id)}
@@ -1765,7 +1765,7 @@ function App() {
 
                   {/* Options Dropdown Box for Destination */}
                   {activeInput === 'destination' && (
-                    <div className="absolute z-50 w-full bg-zinc-950 border border-zinc-800 mt-2 rounded-2xl shadow-2xl overflow-y-auto max-h-96 divide-y divide-zinc-900 animate-slide-in">
+                    <div className="absolute top-full left-0 right-0 z-50 bg-zinc-950/98 backdrop-blur-2xl border-2 border-zinc-700/80 mt-2 rounded-2xl shadow-2xl overflow-y-auto max-h-64 divide-y divide-zinc-900 animate-slide-in ring-1 ring-black/50">
                       {/* Compact Quick Actions: Choose on Map & Current GPS */}
                       <div className="p-2 grid grid-cols-2 gap-2 bg-zinc-900/60 border-b border-zinc-900">
                         <button
