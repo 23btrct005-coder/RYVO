@@ -1109,7 +1109,7 @@ function App() {
                 {/* Header: Driver Vehicle Icon + Total Fare + Tip & Stops Badges */}
                 <div className="flex items-center justify-between pb-3 border-b border-zinc-800 mb-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-11 h-11 rounded-full bg-gradient-to-tr from-amber-500 to-yellow-400 flex items-center justify-center text-2xl text-black shadow-md border border-amber-400">
+                    <div className="w-11 h-11 rounded-full bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-2xl text-black shadow-md border border-emerald-400">
                       {activeEmoji}
                     </div>
                     <div className="flex items-center gap-2">
@@ -1122,7 +1122,7 @@ function App() {
                     </div>
                   </div>
                   {activeReq.stops && Array.isArray(activeReq.stops) && activeReq.stops.length > 0 && (
-                    <span className="bg-amber-500/20 border border-amber-500/40 text-amber-400 text-xs font-black px-3 py-1 rounded-full">
+                    <span className="bg-cyan-500/20 border border-cyan-500/40 text-cyan-400 text-xs font-black px-3 py-1 rounded-full">
                       📍 {activeReq.stops.length} STOP{activeReq.stops.length > 1 ? 'S' : ''}
                     </span>
                   )}
@@ -1152,11 +1152,11 @@ function App() {
                     if (!addressStr) return null;
                     return (
                       <div key={idx} className="relative flex flex-col pt-1">
-                        <div className="absolute -left-[24px] top-2 w-3.5 h-3.5 rounded-full border-2 border-amber-400 bg-zinc-900 flex items-center justify-center shadow-sm">
-                          <div className="w-1.5 h-1.5 bg-amber-400 rounded-full" />
+                        <div className="absolute -left-[24px] top-2 w-3.5 h-3.5 rounded-full border-2 border-cyan-400 bg-zinc-900 flex items-center justify-center shadow-sm">
+                          <div className="w-1.5 h-1.5 bg-cyan-400 rounded-full" />
                         </div>
                         <div className="flex items-center space-x-1.5">
-                          <span className="text-[9px] font-black uppercase text-amber-400 bg-amber-500/20 px-1.5 py-0.5 rounded border border-amber-500/30">
+                          <span className="text-[9px] font-black uppercase text-cyan-400 bg-cyan-500/20 px-1.5 py-0.5 rounded border border-cyan-500/30">
                             Stop {idx + 1}
                           </span>
                           <h3 className="font-bold text-zinc-200 text-sm leading-tight truncate">
@@ -1196,7 +1196,7 @@ function App() {
                   </div>
                 </div>
 
-                {/* Action Buttons: Decline (X) & Yellow Accept with Countdown Circle */}
+                {/* Action Buttons: Decline (X) & Emerald Green Accept with Countdown Circle */}
                 <div className="flex items-center gap-3">
                   <button
                     onClick={() => {
@@ -1227,10 +1227,10 @@ function App() {
                       setIncomingRequest(activeReq);
                       handleAccept();
                     }}
-                    className="flex-1 h-14 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-slate-950 font-black text-xl rounded-2xl flex items-center justify-center gap-3 transition-all shadow-lg shadow-amber-500/20 active:scale-[0.99]"
+                    className="flex-1 h-14 bg-gradient-to-r from-emerald-500 via-emerald-400 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-black text-xl rounded-2xl flex items-center justify-center gap-3 transition-all shadow-lg shadow-emerald-500/25 active:scale-[0.99]"
                   >
                     <span>Accept</span>
-                    <div className="w-9 h-9 rounded-full bg-black/90 text-amber-400 font-black text-sm flex items-center justify-center shadow-md border border-amber-500/40">
+                    <div className="w-9 h-9 rounded-full bg-black/90 text-emerald-400 font-black text-sm flex items-center justify-center shadow-md border border-emerald-500/40">
                       {requestCountdown}
                     </div>
                   </button>
