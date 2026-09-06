@@ -1439,146 +1439,82 @@ function App() {
               </div>
            ) : status === 'searching' ? (
               <div className="py-2">
-                 {/* 📡 RYVO Live Radar & Driver Dispatch Radar Card */}
-                 <div className="relative mb-4 p-4 bg-gradient-to-b from-zinc-900 via-zinc-950 to-black rounded-3xl border border-amber-500/40 shadow-2xl overflow-hidden text-center">
+                 {/* 📰 Live Auto-Swapping News Reels Card */}
+                 <div className="relative mb-4 p-4 bg-gradient-to-b from-zinc-900 via-zinc-950 to-black rounded-3xl border border-amber-500/40 shadow-2xl overflow-hidden text-left space-y-3">
                    
-                   {/* HUD Header Bar */}
-                   <div className="flex items-center justify-between mb-3 px-1">
-                     <div className="flex items-center space-x-2">
-                       <span className="relative flex h-3 w-3">
-                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                         <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
-                       </span>
-                       <span className="text-xs font-black text-amber-400 uppercase tracking-wider">📡 LIVE DISPATCH RADAR</span>
-                     </div>
-                     <div className="flex items-center space-x-2">
-                       <div className="bg-amber-500/10 border border-amber-500/30 px-2.5 py-1 rounded-full flex items-center space-x-1">
-                         <span className="text-xs">⏱️</span>
-                         <span className="text-xs font-black text-amber-300">EST: ~2-3 MIN</span>
-                       </div>
-                       <div className="bg-emerald-500/10 border border-emerald-500/30 px-2.5 py-1 rounded-full flex items-center space-x-1">
-                         <span className="text-xs">🚕</span>
-                         <span className="text-xs font-black text-emerald-400">4 Active</span>
-                       </div>
+                   {/* Header Title & Live Pill */}
+                   <div className="flex items-center justify-between px-0.5">
+                     <span className="text-xs font-black text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+                       <span>📰 LIVE NEWS FLASH</span>
+                       <span className="w-2 h-2 rounded-full bg-red-500 animate-ping"></span>
+                     </span>
+                     <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider animate-pulse flex items-center gap-1">
+                       <span>🔄 AUTO SWAPPING</span>
+                     </span>
+                   </div>
+
+                   {/* Category Switcher Pills */}
+                   <div className="flex items-center justify-between gap-1 pb-0.5">
+                     <div className="flex gap-1.5 w-full">
+                       {(['local', 'sports', 'world'] as const).map((cat) => (
+                         <button
+                           key={cat}
+                           type="button"
+                           onClick={() => {
+                             setNewsCategory(cat);
+                             setCurrentNewsIdx(0);
+                           }}
+                           className={`flex-1 py-2 text-[11px] font-black rounded-xl capitalize border transition-all text-center ${
+                             newsCategory === cat
+                               ? 'bg-amber-500 text-black border-amber-400 shadow-md font-black scale-105'
+                               : 'bg-zinc-950 text-zinc-400 border-zinc-800 hover:text-zinc-200'
+                           }`}
+                         >
+                           {cat === 'local' ? '📍 Local' : cat === 'sports' ? '🏆 Sports' : '🌍 World'}
+                         </button>
+                       ))}
                      </div>
                    </div>
 
-                   {/* Radar Visualizer Area */}
-                   <div className="relative w-48 h-48 mx-auto my-2 flex items-center justify-center">
-                     {/* Concentric Radar Rings */}
-                     <div className="absolute inset-0 rounded-full border border-amber-500/20 animate-pulse"></div>
-                     <div className="absolute inset-6 rounded-full border border-amber-500/30"></div>
-                     <div className="absolute inset-12 rounded-full border border-amber-500/40"></div>
-                     <div className="absolute inset-18 rounded-full border border-amber-500/50"></div>
-                     
-                     {/* Crosshair Lines */}
-                     <div className="absolute inset-0 flex items-center justify-center opacity-30">
-                       <div className="w-full h-[1px] bg-amber-500"></div>
-                       <div className="h-full w-[1px] bg-amber-500 absolute"></div>
+                   {/* Auto-Swapping Active News Card */}
+                   {newsFeed[newsCategory][currentNewsIdx] && (
+                     <div className="relative p-4 bg-gradient-to-r from-zinc-950 via-zinc-900 to-zinc-950 border border-zinc-800 rounded-2xl animate-fade-in shadow-inner overflow-hidden">
+                       {/* Top Bar Tag & Time */}
+                       <div className="flex items-center justify-between mb-2">
+                         <span className="text-[10px] font-black text-amber-400 uppercase tracking-wider flex items-center gap-1">
+                           <span>{newsFeed[newsCategory][currentNewsIdx].icon}</span>
+                           <span>{newsFeed[newsCategory][currentNewsIdx].tag}</span>
+                         </span>
+                         <span className="text-[9px] font-bold text-zinc-500 bg-zinc-800 px-2 py-0.5 rounded-full">
+                           {newsFeed[newsCategory][currentNewsIdx].time}
+                         </span>
+                       </div>
+
+                       {/* News Headline Title */}
+                       <h4 className="text-sm font-black text-white leading-snug my-1.5">
+                         {newsFeed[newsCategory][currentNewsIdx].title}
+                       </h4>
+
+                       {/* Swapping Slide Progress Dots */}
+                       <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-zinc-800/80">
+                         <span className="text-[10px] font-bold text-zinc-400">Story {currentNewsIdx + 1} of 3</span>
+                         <div className="flex items-center space-x-1.5">
+                           {[0, 1, 2].map((idx) => (
+                             <span
+                               key={idx}
+                               onClick={() => setCurrentNewsIdx(idx)}
+                               className={`h-1.5 rounded-full transition-all cursor-pointer ${
+                                 currentNewsIdx === idx ? 'w-6 bg-amber-400' : 'w-2 bg-zinc-700'
+                               }`}
+                             ></span>
+                           ))}
+                         </div>
+                       </div>
                      </div>
-
-                     {/* Rotating Radar Sweep Cone */}
-                     <div className="absolute inset-0 rounded-full overflow-hidden animate-spin duration-3000">
-                       <div className="w-full h-full bg-gradient-to-tr from-amber-500/30 via-transparent to-transparent origin-center"></div>
-                     </div>
-
-                     {/* Simulated Driver Blips on Radar */}
-                     <div className="absolute top-8 left-12 flex items-center space-x-1 animate-ping">
-                       <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 border border-emerald-200"></span>
-                     </div>
-                     <div className="absolute bottom-10 right-10 flex items-center space-x-1 animate-pulse">
-                       <span className="w-2.5 h-2.5 rounded-full bg-amber-400 border border-amber-200"></span>
-                     </div>
-                     <div className="absolute top-12 right-14 flex items-center space-x-1 animate-pulse">
-                       <span className="w-2 h-2 rounded-full bg-yellow-400 border border-yellow-200"></span>
-                     </div>
-                     <div className="absolute bottom-12 left-10 flex items-center space-x-1 animate-pulse">
-                       <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-                     </div>
-
-                     {/* Center Rider Marker */}
-                     <div className="relative z-10 w-12 h-12 rounded-full bg-amber-500/20 border-2 border-amber-400 flex items-center justify-center text-xl shadow-[0_0_15px_rgba(245,158,11,0.5)]">
-                       📍
-                     </div>
-                   </div>
-
-                    {/* 📰 Live Auto-Swapping News Reels Card */}
-                    <div className="bg-zinc-900/90 p-3 rounded-2xl border border-amber-500/30 my-3 text-left space-y-2.5">
-                      
-                      {/* Header Title & Live Pill */}
-                      <div className="flex items-center justify-between px-0.5">
-                        <span className="text-xs font-black text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
-                          <span>📰 LIVE NEWS FLASH</span>
-                          <span className="w-2 h-2 rounded-full bg-red-500 animate-ping"></span>
-                        </span>
-                        <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider animate-pulse flex items-center gap-1">
-                          <span>🔄 AUTO SWAPPING</span>
-                        </span>
-                      </div>
-
-                      {/* Category Switcher Pills */}
-                      <div className="flex items-center justify-between gap-1 pb-0.5">
-                        <div className="flex gap-1.5 w-full">
-                          {(['local', 'sports', 'world'] as const).map((cat) => (
-                            <button
-                              key={cat}
-                              type="button"
-                              onClick={() => {
-                                setNewsCategory(cat);
-                                setCurrentNewsIdx(0);
-                              }}
-                              className={`flex-1 py-1.5 text-[10px] font-black rounded-xl capitalize border transition-all text-center ${
-                                newsCategory === cat
-                                  ? 'bg-amber-500 text-black border-amber-400 shadow-md font-black scale-105'
-                                  : 'bg-zinc-950 text-zinc-400 border-zinc-800 hover:text-zinc-200'
-                              }`}
-                            >
-                              {cat === 'local' ? '📍 Local' : cat === 'sports' ? '🏆 Sports' : '🌍 World'}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Auto-Swapping Active News Card */}
-                      {newsFeed[newsCategory][currentNewsIdx] && (
-                        <div className="relative p-3.5 bg-gradient-to-r from-zinc-950 via-zinc-900 to-zinc-950 border border-zinc-800 rounded-2xl animate-fade-in shadow-inner overflow-hidden">
-                          {/* Top Bar Tag & Time */}
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="text-[10px] font-black text-amber-400 uppercase tracking-wider flex items-center gap-1">
-                              <span>{newsFeed[newsCategory][currentNewsIdx].icon}</span>
-                              <span>{newsFeed[newsCategory][currentNewsIdx].tag}</span>
-                            </span>
-                            <span className="text-[9px] font-bold text-zinc-500 bg-zinc-800 px-2 py-0.5 rounded-full">
-                              {newsFeed[newsCategory][currentNewsIdx].time}
-                            </span>
-                          </div>
-
-                          {/* News Headline Title */}
-                          <h4 className="text-xs font-black text-white leading-snug my-1">
-                            {newsFeed[newsCategory][currentNewsIdx].title}
-                          </h4>
-
-                          {/* Swapping Slide Progress Dots */}
-                          <div className="flex items-center justify-between mt-3 pt-2 border-t border-zinc-800/80">
-                            <span className="text-[9px] font-bold text-zinc-400">Story {currentNewsIdx + 1} of 3</span>
-                            <div className="flex items-center space-x-1.5">
-                              {[0, 1, 2].map((idx) => (
-                                <span
-                                  key={idx}
-                                  onClick={() => setCurrentNewsIdx(idx)}
-                                  className={`h-1.5 rounded-full transition-all cursor-pointer ${
-                                    currentNewsIdx === idx ? 'w-6 bg-amber-400' : 'w-2 bg-zinc-700'
-                                  }`}
-                                ></span>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
+                   )}
 
                    {/* Search Status Text */}
-                   <div className="mt-2 text-center">
+                   <div className="mt-3 text-center border-t border-zinc-800/60 pt-2">
                      <p className="text-xs font-extrabold text-zinc-200 animate-pulse">
                        Matching your ride with active drivers nearby
                      </p>
