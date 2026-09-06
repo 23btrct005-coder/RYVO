@@ -1,4 +1,4 @@
-// Vercel Production Trigger: 2026-09-06T10:02:00 - fix: strictly restrict geocoding suggestions to Bengaluru area like Ola/Uber/Rapido
+// Vercel Production Trigger: 2026-09-06T10:10:00 - fix: redesign search view as full modal backdrop for clean alignment
 import { useState, useEffect, useRef } from 'react'
 import Map, { Marker, Source, Layer } from 'react-map-gl/mapbox'
 import type { MapRef } from 'react-map-gl/mapbox'
@@ -1141,20 +1141,20 @@ function App() {
       </div>
 
       {!isSelectingOnMap && (
-        <div className={`absolute left-0 right-0 z-20 p-4 transition-all duration-300 ease-in-out pointer-events-none ${
+        <div className={`absolute left-0 right-0 z-20 transition-all duration-300 ease-in-out pointer-events-none ${
           activeInput !== 'none'
-            ? 'top-1/2 -translate-y-1/2'
-            : 'bottom-0 pb-8 bg-gradient-to-t from-black/90 to-transparent'
+            ? 'fixed inset-0 z-[5000] p-4 flex items-center justify-center bg-black/80 backdrop-blur-md'
+            : 'bottom-0 p-4 pb-8 bg-gradient-to-t from-black/90 to-transparent'
         }`}>
-        <div className={`bg-zinc-900/95 backdrop-blur-xl border border-zinc-800 p-6 rounded-3xl shadow-2xl max-w-md mx-auto relative pointer-events-auto transition-all duration-300 ease-in-out ${
-          activeInput !== 'none' ? 'overflow-visible ring-2 ring-emerald-500/40 shadow-emerald-950/40' : 'max-h-[80vh] overflow-y-auto'
+        <div className={`bg-zinc-900/95 backdrop-blur-xl border border-zinc-800 p-6 rounded-3xl shadow-2xl max-w-md w-full relative pointer-events-auto transition-all duration-300 ease-in-out flex flex-col ${
+          activeInput !== 'none' ? 'max-h-[85vh] overflow-y-auto ring-2 ring-emerald-500/40 shadow-emerald-950/40' : 'max-h-[80vh] overflow-y-auto'
         }`}>
           <div className="flex justify-between items-center mb-1">
              <h1 className="text-3xl font-bold tracking-tight text-white">RYVO</h1>
              {activeInput !== 'none' && (
                 <button 
                   onClick={() => setActiveInput('none')}
-                  className="bg-zinc-800 text-zinc-300 hover:text-white px-3 py-1.5 rounded-full text-xs font-bold border border-zinc-700 transition hover:bg-zinc-700"
+                  className="bg-zinc-800 text-zinc-300 hover:text-white px-3.5 py-1.5 rounded-full text-xs font-bold border border-zinc-700 transition hover:bg-zinc-700"
                 >
                   Done ✕
                 </button>
