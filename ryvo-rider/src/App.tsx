@@ -1,4 +1,4 @@
-// Vercel Production Trigger: 2026-09-06T10:16:00 - revert: keep location search box anchored at bottom of screen
+// Vercel Production Trigger: 2026-09-06T10:18:00 - feat: search card moves to center on click with unclipped dropdown
 import { useState, useEffect, useRef } from 'react'
 import Map, { Marker, Source, Layer } from 'react-map-gl/mapbox'
 import type { MapRef } from 'react-map-gl/mapbox'
@@ -1141,7 +1141,11 @@ function App() {
       </div>
 
       {!isSelectingOnMap && (
-        <div className="absolute bottom-0 left-0 right-0 z-20 p-4 pb-8 bg-gradient-to-t from-black/90 to-transparent pointer-events-none">
+        <div className={`absolute left-0 right-0 z-20 p-4 transition-all duration-300 ease-in-out pointer-events-none ${
+          activeInput !== 'none'
+            ? 'top-1/2 -translate-y-1/2'
+            : 'bottom-0 pb-8 bg-gradient-to-t from-black/90 to-transparent'
+        }`}>
         <div className={`bg-zinc-900/95 backdrop-blur-xl border border-zinc-800 p-6 rounded-3xl shadow-2xl max-w-md mx-auto relative pointer-events-auto transition-all duration-300 ease-in-out ${
           activeInput !== 'none' ? 'overflow-visible ring-2 ring-emerald-500/40 shadow-emerald-950/40' : 'max-h-[80vh] overflow-y-auto'
         }`}>
