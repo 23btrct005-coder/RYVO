@@ -1,4 +1,4 @@
-// Vercel Production Trigger: 2026-09-06T09:43:30 - sync live rider and driver apps
+// Vercel Production Trigger: 2026-09-06T09:47:00 - fix: bring dropdown out of box with overflow-visible and expanded length
 import { useState, useEffect, useRef } from 'react'
 import Map, { Marker, Source, Layer } from 'react-map-gl/mapbox'
 import type { MapRef } from 'react-map-gl/mapbox'
@@ -1089,7 +1089,7 @@ function App() {
             : 'bottom-0 pb-8 bg-gradient-to-t from-black/90 to-transparent'
         }`}>
         <div className={`bg-zinc-900/95 backdrop-blur-xl border border-zinc-800 p-6 rounded-3xl shadow-2xl max-w-md mx-auto relative pointer-events-auto transition-all duration-300 ease-in-out ${
-          activeInput !== 'none' ? 'max-h-[85vh] overflow-y-auto ring-2 ring-emerald-500/40 shadow-emerald-950/40' : 'max-h-[80vh] overflow-y-auto'
+          activeInput !== 'none' ? 'overflow-visible ring-2 ring-emerald-500/40 shadow-emerald-950/40' : 'max-h-[80vh] overflow-y-auto'
         }`}>
           <div className="flex justify-between items-center mb-1">
              <h1 className="text-3xl font-bold tracking-tight text-white">RYVO</h1>
@@ -1408,7 +1408,7 @@ function App() {
 
                   {/* Options Dropdown Box for Pickup */}
                   {activeInput === 'pickup' && (
-                    <div className="absolute z-50 w-full bg-zinc-950 border border-zinc-800 mt-2 rounded-2xl shadow-2xl overflow-y-auto max-h-72 divide-y divide-zinc-900 animate-slide-in">
+                    <div className="absolute z-50 w-full bg-zinc-950 border border-zinc-800 mt-2 rounded-2xl shadow-2xl overflow-y-auto max-h-96 divide-y divide-zinc-900 animate-slide-in">
                       {/* Option 0: Set on Map */}
                       <div 
                         onClick={() => startMapSelection('pickup')}
@@ -1619,7 +1619,7 @@ function App() {
 
                     {/* Options Dropdown Box for Intermediate Stop */}
                     {activeInput === stop.id && (
-                      <div className="absolute z-50 w-full bg-zinc-950 border border-zinc-800 mt-2 rounded-2xl shadow-2xl overflow-y-auto max-h-72 divide-y divide-zinc-900 animate-slide-in">
+                      <div className="absolute z-50 w-full bg-zinc-950 border border-zinc-800 mt-2 rounded-2xl shadow-2xl overflow-y-auto max-h-96 divide-y divide-zinc-900 animate-slide-in">
                         {/* Set on Map */}
                         <div 
                           onClick={() => startMapSelection(stop.id)}
@@ -1704,7 +1704,7 @@ function App() {
 
                   {/* Options Dropdown Box for Destination */}
                   {activeInput === 'destination' && (
-                    <div className="absolute z-50 w-full bg-zinc-950 border border-zinc-800 mt-2 rounded-2xl shadow-2xl overflow-y-auto max-h-72 divide-y divide-zinc-900 animate-slide-in">
+                    <div className="absolute z-50 w-full bg-zinc-950 border border-zinc-800 mt-2 rounded-2xl shadow-2xl overflow-y-auto max-h-96 divide-y divide-zinc-900 animate-slide-in">
                       {/* Option 0: Set on Map */}
                       <div 
                         onClick={() => startMapSelection('destination')}
