@@ -1139,60 +1139,100 @@ function App() {
 
   return (
     <div className="relative w-full h-screen bg-zinc-900 text-white overflow-hidden">
-      {/* UBER / OLA / RAPIDO STYLE APP OPENING ANIMATED SPLASH SCREEN */}
+      {/* UBER / OLA / RAPIDO HIGH-IMPACT ANIMATED APP OPENING SPLASH */}
       {showSplash && (
-        <div className="fixed inset-0 z-[5000] bg-gradient-to-b from-zinc-950 via-zinc-900 to-black flex flex-col items-center justify-between p-8 text-center animate-fadeIn select-none pointer-events-auto">
-          {/* Top Brand Tag */}
-          <div className="mt-6 flex items-center space-x-2 bg-emerald-500/10 border border-emerald-500/30 px-3.5 py-1.5 rounded-full shadow-lg">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
-            <span className="text-xs font-black uppercase tracking-widest text-emerald-400">RYVO Mobility 2.0</span>
+        <div className="fixed inset-0 z-[5000] bg-gradient-to-b from-zinc-950 via-zinc-900 to-black flex flex-col items-center justify-between p-6 text-center animate-fadeIn select-none pointer-events-auto">
+          {/* Top Header Bar with Live Driver Badge & Skip Button */}
+          <div className="w-full mt-4 flex items-center justify-between px-2">
+            <div className="flex items-center space-x-2 bg-emerald-500/10 border border-emerald-500/30 px-3 py-1.5 rounded-full shadow-lg">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
+              <span className="text-[11px] font-black uppercase tracking-wider text-emerald-400">
+                🟢 {onlineDrivers.length > 0 ? `${onlineDrivers.length} Drivers Online` : '2,480+ Nearby Drivers'}
+              </span>
+            </div>
+
+            <button
+              onClick={() => setShowSplash(false)}
+              className="bg-zinc-800/90 hover:bg-zinc-700 text-white font-extrabold text-xs px-4 py-2 rounded-full border border-zinc-700 shadow-md transition-all active:scale-95 flex items-center space-x-1"
+            >
+              <span>Explore Map</span>
+              <span className="text-emerald-400">➔</span>
+            </button>
           </div>
 
-          {/* Center Logo & Vehicle Motion Animations */}
-          <div className="flex flex-col items-center space-y-6">
+          {/* Center Logo & 3D Glowing Orb Motion */}
+          <div className="flex flex-col items-center space-y-6 my-auto">
             <div className="relative flex items-center justify-center">
-              <div className="absolute w-36 h-36 bg-emerald-500/20 rounded-full animate-ping"></div>
-              <div className="w-28 h-28 bg-gradient-to-tr from-emerald-500 via-teal-400 to-cyan-400 rounded-3xl shadow-2xl flex items-center justify-center border-2 border-white/20 animate-bounce">
-                <span className="text-6xl font-black tracking-tighter text-zinc-950">R</span>
+              <div className="absolute w-44 h-44 bg-gradient-to-r from-emerald-500/30 to-teal-500/20 rounded-full animate-ping"></div>
+              <div className="w-32 h-32 bg-gradient-to-tr from-emerald-500 via-teal-400 to-amber-400 rounded-3xl shadow-2xl flex items-center justify-center border-4 border-white/20 animate-bounce relative z-10">
+                <span className="text-7xl font-black tracking-tighter text-zinc-950 drop-shadow-lg">R</span>
               </div>
             </div>
 
-            <div className="space-y-1">
+            <div className="space-y-1.5">
               <h1 className="text-4xl font-black tracking-tight text-white flex items-center justify-center space-x-2">
                 <span>RYVO</span>
-                <span className="text-emerald-400">Rider</span>
+                <span className="text-emerald-400">MOBILITY</span>
               </h1>
-              <p className="text-xs text-zinc-400 font-extrabold uppercase tracking-widest">
-                India's Fastest Bike, Auto & Taxi Network
+              <p className="text-xs text-zinc-400 font-black uppercase tracking-widest bg-zinc-900/90 px-3 py-1 rounded-full border border-zinc-800 inline-block">
+                ⚡ Zero Surge • Instant Auto, Bike & Cabs
               </p>
             </div>
 
-            {/* Animated Vehicle Row */}
-            <div className="flex items-center space-x-6 py-2 bg-zinc-900/80 px-6 rounded-2xl border border-zinc-800 shadow-inner">
-              <div className="flex flex-col items-center space-y-1 animate-pulse">
-                <span className="text-3xl">🛵</span>
-                <span className="text-[10px] font-bold text-amber-400">BIKE</span>
+            {/* Interactive Service Highlights */}
+            <div className="grid grid-cols-3 gap-3 w-full max-w-xs pt-2">
+              <div 
+                onClick={() => {
+                  setSelectedVehicle('bike');
+                  setShowSplash(false);
+                }}
+                className="flex flex-col items-center justify-center p-3 bg-zinc-900/90 border border-amber-500/40 rounded-2xl cursor-pointer hover:scale-105 transition-transform shadow-lg group"
+              >
+                <span className="text-3xl mb-1 group-hover:scale-125 transition-transform animate-float">🛵</span>
+                <span className="text-[11px] font-black text-amber-400">BIKE</span>
+                <span className="text-[9px] font-bold text-zinc-400">₹25 Quick</span>
               </div>
-              <div className="w-px h-6 bg-zinc-700"></div>
-              <div className="flex flex-col items-center space-y-1 animate-pulse delay-100">
-                <span className="text-3xl">🛺</span>
-                <span className="text-[10px] font-bold text-emerald-400">AUTO</span>
+
+              <div 
+                onClick={() => {
+                  setSelectedVehicle('auto');
+                  setShowSplash(false);
+                }}
+                className="flex flex-col items-center justify-center p-3 bg-zinc-900/90 border border-emerald-500/40 rounded-2xl cursor-pointer hover:scale-105 transition-transform shadow-lg group"
+              >
+                <span className="text-3xl mb-1 group-hover:scale-125 transition-transform animate-float">🛺</span>
+                <span className="text-[11px] font-black text-emerald-400">AUTO</span>
+                <span className="text-[9px] font-bold text-zinc-400">₹35 Local</span>
               </div>
-              <div className="w-px h-6 bg-zinc-700"></div>
-              <div className="flex flex-col items-center space-y-1 animate-pulse delay-200">
-                <span className="text-3xl">🚗</span>
-                <span className="text-[10px] font-bold text-cyan-400">CAB</span>
+
+              <div 
+                onClick={() => {
+                  setSelectedVehicle('mini');
+                  setShowSplash(false);
+                }}
+                className="flex flex-col items-center justify-center p-3 bg-zinc-900/90 border border-cyan-500/40 rounded-2xl cursor-pointer hover:scale-105 transition-transform shadow-lg group"
+              >
+                <span className="text-3xl mb-1 group-hover:scale-125 transition-transform animate-float">🚗</span>
+                <span className="text-[11px] font-black text-cyan-400">CAB</span>
+                <span className="text-[9px] font-bold text-zinc-400">₹50 AC</span>
               </div>
             </div>
           </div>
 
-          {/* Bottom Loading Indicator */}
-          <div className="w-full max-w-xs space-y-3 mb-4">
+          {/* Bottom Interactive Call to Action */}
+          <div className="w-full max-w-sm space-y-3 mb-4">
+            <button
+              onClick={() => setShowSplash(false)}
+              className="w-full py-4 bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-500 hover:from-emerald-400 hover:to-teal-300 text-zinc-950 font-black text-base rounded-2xl shadow-2xl flex items-center justify-center space-x-2 transition-all transform active:scale-98 border border-emerald-300/40"
+            >
+              <span>🚀 START BOOKING RIDE NOW</span>
+            </button>
+
             <div className="h-1.5 w-full bg-zinc-800 rounded-full overflow-hidden border border-zinc-700/50">
-              <div className="h-full bg-gradient-to-r from-emerald-500 via-teal-300 to-emerald-500 rounded-full animate-shimmer w-full"></div>
+              <div className="h-full bg-gradient-to-r from-emerald-500 via-teal-300 to-amber-400 rounded-full animate-shimmer w-full"></div>
             </div>
-            <p className="text-[11px] font-bold text-zinc-500 flex items-center justify-center space-x-1.5">
-              <span>Connecting to nearest drivers...</span>
+            <p className="text-[10px] font-bold text-zinc-500">
+              Trusted by 10M+ riders across India • Live GPS Tracking
             </p>
           </div>
         </div>
