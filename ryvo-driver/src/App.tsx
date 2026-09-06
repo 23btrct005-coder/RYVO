@@ -20,6 +20,7 @@ interface RideRequest {
   vehicleType?: string;
   pickupCoords?: [number, number];
   destCoords?: [number, number];
+  stops?: any[];
   timestamp?: any;
   otp?: string;
   riderPhone?: string;
@@ -226,6 +227,7 @@ function App() {
             if (rideData && !rideError) {
                setCurrentRide({
                   ...rideData,
+                  stops: Array.isArray(rideData.stops) ? rideData.stops : (typeof rideData.stops === 'string' ? JSON.parse(rideData.stops) : undefined),
                   pickupCoords: (rideData.pickuplat && rideData.pickuplng) ? [rideData.pickuplat, rideData.pickuplng] : undefined,
                   destCoords: (rideData.destlat && rideData.destlng) ? [rideData.destlat, rideData.destlng] : undefined,
                   price: typeof rideData.price === 'string' ? parseFloat(rideData.price) : rideData.price
@@ -547,6 +549,7 @@ function App() {
         // Map postgres flat columns to the expected React state interface
         const mappedData: RideRequest = {
           ...data,
+          stops: Array.isArray(data.stops) ? data.stops : (typeof data.stops === 'string' ? JSON.parse(data.stops) : undefined),
           pickupCoords: (data.pickuplat && data.pickuplng) ? [data.pickuplat, data.pickuplng] : undefined,
           destCoords: (data.destlat && data.destlng) ? [data.destlat, data.destlng] : undefined,
           price: typeof data.price === 'string' ? parseFloat(data.price) : data.price
@@ -1068,7 +1071,7 @@ function App() {
 
               {/* Main Order Card */}
               <div className="flex-1 bg-white text-zinc-900 rounded-3xl p-5 shadow-2xl border border-zinc-200 transition-all transform animate-in slide-in-from-bottom duration-300">
-                {/* Header: Driver Vehicle Icon + Total Fare */}
+                {/* Header: Driver Vehicle Icon + Total Fare + Stops Badge */}
                 <div className="flex items-center justify-between pb-3 border-b border-zinc-100 mb-4">
                   <div className="flex items-center gap-3">
                     <div className="w-11 h-11 rounded-full bg-slate-900 flex items-center justify-center text-2xl text-white shadow-md border border-slate-700">
@@ -1078,9 +1081,14 @@ function App() {
                       <span className="text-3xl font-black text-slate-900 tracking-tight">₹{totalFareFormatted}</span>
                     </div>
                   </div>
+                  {activeReq.stops && Array.isArray(activeReq.stops) && activeReq.stops.length > 0 && (
+                    <span className="bg-amber-500/10 border border-amber-500/30 text-amber-600 text-xs font-black px-3 py-1 rounded-full">
+                      📍 {activeReq.stops.length} STOP{activeReq.stops.length > 1 ? 'S' : ''}
+                    </span>
+                  )}
                 </div>
 
-                {/* Vertical Timeline Addresses (Pickup -> Dropoff) */}
+                {/* Vertical Timeline Addresses (Pickup -> Intermediate Stops -> Dropoff) */}
                 <div className="relative pl-6 space-y-4 mb-5">
                   {/* Vertical Connecting Line */}
                   <div className="absolute left-[7px] top-[14px] bottom-[14px] w-[2px] bg-zinc-300 rounded-full" />
@@ -1097,6 +1105,30 @@ function App() {
                       {activeReq.pickup.split(',').slice(1).join(',').trim() || activeReq.pickup}
                     </p>
                   </div>
+
+                  {/* Intermediate Stops */}
+                  {activeReq.stops && Array.isArray(activeReq.stops) && activeReq.stops.map((stop: any, idx: number) => {
+                    const addressStr = typeof stop === 'string' ? stop : stop.address;
+                    if (!addressStr) return null;
+                    return (
+                      <div key={idx} className="relative flex flex-col pt-1">
+                        <div className="absolute -left-[24px] top-2 w-3.5 h-3.5 rounded-full border-2 border-amber-500 bg-white flex items-center justify-center shadow-sm">
+                          <div className="w-1.5 h-1.5 bg-amber-500 rounded-full" />
+                        </div>
+                        <div className="flex items-center space-x-1.5">
+                          <span className="text-[9px] font-black uppercase text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded border border-amber-300">
+                            Stop {idx + 1}
+                          </span>
+                          <h3 className="font-bold text-slate-900 text-sm leading-tight truncate">
+                            {addressStr.split(',')[0]}
+                          </h3>
+                        </div>
+                        <p className="text-xs text-zinc-500 truncate mt-0.5 font-normal">
+                          {addressStr.split(',').slice(1).join(',').trim() || addressStr}
+                        </p>
+                      </div>
+                    );
+                  })}
 
                   {/* Dropoff Location */}
                   <div className="relative flex flex-col pt-1">

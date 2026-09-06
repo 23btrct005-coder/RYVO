@@ -936,11 +936,16 @@ function App() {
 
       const basePrice = getPrice(vehicleToBook, distance);
       const totalPrice = Number((basePrice + tipAmount).toFixed(2));
+      const activeStops = stops.filter(s => s.address).map(s => ({
+        address: s.address,
+        coords: s.coords
+      }));
 
       const rideData = {
         riderid: user?.id,
         pickup: pickup,
         destination: destination,
+        stops: activeStops.length > 0 ? activeStops : null,
         pickuplat: pickupCoords?.[0],
         pickuplng: pickupCoords?.[1],
         destlat: destCoords?.[0],
