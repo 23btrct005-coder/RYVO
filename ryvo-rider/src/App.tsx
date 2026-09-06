@@ -175,38 +175,6 @@ function App() {
   const [tipAmount, setTipAmount] = useState<number>(0);
   const [searchingTimer, setSearchingTimer] = useState<number>(120);
 
-  // Auto-Swapping Live News Reels State
-  const [newsCategory, setNewsCategory] = useState<'local' | 'sports' | 'world'>('local');
-  const [currentNewsIdx, setCurrentNewsIdx] = useState<number>(0);
-
-  // Live Auto-Swapping News Feed Data
-  const newsFeed = {
-    local: [
-      { id: 1, tag: "📍 LOCAL BENGALURU", title: "Namma Metro Purple Line Extends Frequency to 3 Mins", time: "10m ago", icon: "🚇" },
-      { id: 2, tag: "📍 LOCAL BENGALURU", title: "Indiranagar 100ft Road Gets New Green Cycle Lanes", time: "25m ago", icon: "🚴" },
-      { id: 3, tag: "📍 LOCAL BENGALURU", title: "Cubbon Park Sunday Farmers Market Opens at 7 AM", time: "1h ago", icon: "🥦" }
-    ],
-    sports: [
-      { id: 4, tag: "🏆 SPORTS FLASH", title: "RCB Pre-Season Camp Begins in Chinnaswamy Stadium", time: "15m ago", icon: "🏏" },
-      { id: 5, tag: "🏆 SPORTS FLASH", title: "India Clinches Thrilling T20 Series Victory in Final Over", time: "40m ago", icon: "⚽" },
-      { id: 6, tag: "🏆 SPORTS FLASH", title: "Bengaluru FC Signs Premier League Academy Talent", time: "2h ago", icon: "🥅" }
-    ],
-    world: [
-      { id: 7, tag: "🌍 WORLD HEADLINES", title: "Global Tech Summit Unveils Next-Gen Quantum Chips", time: "5m ago", icon: "🚀" },
-      { id: 8, tag: "🌍 WORLD HEADLINES", title: "Electric Aircraft Completes First Zero-Emission Flight", time: "30m ago", icon: "✈️" },
-      { id: 9, tag: "🌍 WORLD HEADLINES", title: "Global Renewable Energy Milestone Hits 45% Share", time: "1h ago", icon: "🌱" }
-    ]
-  };
-
-  // Auto-Swap News Reels Every 3.5 Seconds
-  useEffect(() => {
-    if (status !== 'searching') return;
-    const newsTimer = setInterval(() => {
-      setCurrentNewsIdx(prev => (prev + 1) % 3);
-    }, 3500);
-    return () => clearInterval(newsTimer);
-  }, [status]);
-
   const [noDriverFound, setNoDriverFound] = useState<boolean>(false);
   const [suggestedVehicle, setSuggestedVehicle] = useState<VehicleType | null>(null);
 
@@ -1439,86 +1407,131 @@ function App() {
               </div>
            ) : status === 'searching' ? (
               <div className="py-2">
-                 {/* 📰 Live Auto-Swapping News Reels Card */}
-                 <div className="relative mb-4 p-4 bg-gradient-to-b from-zinc-900 via-zinc-950 to-black rounded-3xl border border-amber-500/40 shadow-2xl overflow-hidden text-left space-y-3">
+                 {/* 📡 Premium Driver Dispatch Pipeline Tracker Card */}
+                 <div className="relative mb-4 p-4.5 bg-gradient-to-b from-zinc-900 via-zinc-950 to-black rounded-3xl border border-amber-500/40 shadow-2xl overflow-hidden text-left space-y-3.5">
                    
-                   {/* Header Title & Live Pill */}
+                   {/* HUD Top Bar Header */}
                    <div className="flex items-center justify-between px-0.5">
-                     <span className="text-xs font-black text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
-                       <span>📰 LIVE NEWS FLASH</span>
-                       <span className="w-2 h-2 rounded-full bg-red-500 animate-ping"></span>
-                     </span>
-                     <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider animate-pulse flex items-center gap-1">
-                       <span>🔄 AUTO SWAPPING</span>
-                     </span>
-                   </div>
-
-                   {/* Category Switcher Pills */}
-                   <div className="flex items-center justify-between gap-1 pb-0.5">
-                     <div className="flex gap-1.5 w-full">
-                       {(['local', 'sports', 'world'] as const).map((cat) => (
-                         <button
-                           key={cat}
-                           type="button"
-                           onClick={() => {
-                             setNewsCategory(cat);
-                             setCurrentNewsIdx(0);
-                           }}
-                           className={`flex-1 py-2 text-[11px] font-black rounded-xl capitalize border transition-all text-center ${
-                             newsCategory === cat
-                               ? 'bg-amber-500 text-black border-amber-400 shadow-md font-black scale-105'
-                               : 'bg-zinc-950 text-zinc-400 border-zinc-800 hover:text-zinc-200'
-                           }`}
-                         >
-                           {cat === 'local' ? '📍 Local' : cat === 'sports' ? '🏆 Sports' : '🌍 World'}
-                         </button>
-                       ))}
+                     <div className="flex items-center space-x-2">
+                       <span className="relative flex h-3 w-3">
+                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                         <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                       </span>
+                       <span className="text-xs font-black text-amber-400 uppercase tracking-wider">📡 DRIVER DISPATCH PIPELINE</span>
+                     </div>
+                     <div className="bg-amber-500/10 border border-amber-500/30 px-3 py-1 rounded-full flex items-center space-x-1.5">
+                       <span className="text-xs">⏱️</span>
+                       <span className="text-xs font-black text-amber-300">
+                         {Math.floor(searchingTimer / 60)}:{String(searchingTimer % 60).padStart(2, '0')}
+                       </span>
                      </div>
                    </div>
 
-                   {/* Auto-Swapping Active News Card */}
-                   {newsFeed[newsCategory][currentNewsIdx] && (
-                     <div className="relative p-4 bg-gradient-to-r from-zinc-950 via-zinc-900 to-zinc-950 border border-zinc-800 rounded-2xl animate-fade-in shadow-inner overflow-hidden">
-                       {/* Top Bar Tag & Time */}
-                       <div className="flex items-center justify-between mb-2">
-                         <span className="text-[10px] font-black text-amber-400 uppercase tracking-wider flex items-center gap-1">
-                           <span>{newsFeed[newsCategory][currentNewsIdx].icon}</span>
-                           <span>{newsFeed[newsCategory][currentNewsIdx].tag}</span>
-                         </span>
-                         <span className="text-[9px] font-bold text-zinc-500 bg-zinc-800 px-2 py-0.5 rounded-full">
-                           {newsFeed[newsCategory][currentNewsIdx].time}
-                         </span>
+                   {/* Live Step Pipeline Visualizer */}
+                   <div className="bg-zinc-950/80 p-3.5 rounded-2xl border border-zinc-850 space-y-3 shadow-inner">
+                     
+                     {/* Pipeline Step 1 */}
+                     <div className="flex items-start space-x-3">
+                       <div className="relative flex items-center justify-center shrink-0 mt-0.5">
+                         <span className="w-5 h-5 rounded-full bg-emerald-500 text-black flex items-center justify-center text-[10px] font-black shadow-md">✓</span>
                        </div>
-
-                       {/* News Headline Title */}
-                       <h4 className="text-sm font-black text-white leading-snug my-1.5">
-                         {newsFeed[newsCategory][currentNewsIdx].title}
-                       </h4>
-
-                       {/* Swapping Slide Progress Dots */}
-                       <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-zinc-800/80">
-                         <span className="text-[10px] font-bold text-zinc-400">Story {currentNewsIdx + 1} of 3</span>
-                         <div className="flex items-center space-x-1.5">
-                           {[0, 1, 2].map((idx) => (
-                             <span
-                               key={idx}
-                               onClick={() => setCurrentNewsIdx(idx)}
-                               className={`h-1.5 rounded-full transition-all cursor-pointer ${
-                                 currentNewsIdx === idx ? 'w-6 bg-amber-400' : 'w-2 bg-zinc-700'
-                               }`}
-                             ></span>
-                           ))}
+                       <div className="flex-1 min-w-0">
+                         <div className="flex items-center justify-between">
+                           <h5 className="text-xs font-extrabold text-white">Ride Request Broadcasted</h5>
+                           <span className="text-[10px] font-bold text-emerald-400">Complete</span>
                          </div>
+                         <p className="text-[11px] text-zinc-400">Signal sent to all nearby drivers in 2.5km radius</p>
                        </div>
                      </div>
-                   )}
 
-                   {/* Search Status Text */}
-                   <div className="mt-3 text-center border-t border-zinc-800/60 pt-2">
-                     <p className="text-xs font-extrabold text-zinc-200 animate-pulse">
-                       Matching your ride with active drivers nearby
-                     </p>
-                     <p className="text-[11px] text-zinc-400 mt-0.5 font-medium">Searching for {selectedVehicle.toUpperCase()} ride...</p>
+                     <div className="w-0.5 h-2.5 bg-emerald-500/60 ml-2.5 -my-1"></div>
+
+                     {/* Pipeline Step 2 */}
+                     <div className="flex items-start space-x-3">
+                       <div className="relative flex items-center justify-center shrink-0 mt-0.5">
+                         {searchingTimer > 90 ? (
+                           <span className="relative flex h-5 w-5">
+                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                             <span className="relative inline-flex rounded-full h-5 w-5 bg-amber-500 text-black items-center justify-center text-[10px] font-black">2</span>
+                           </span>
+                         ) : (
+                           <span className="w-5 h-5 rounded-full bg-emerald-500 text-black flex items-center justify-center text-[10px] font-black shadow-md">✓</span>
+                         )}
+                       </div>
+                       <div className="flex-1 min-w-0">
+                         <div className="flex items-center justify-between">
+                           <h5 className="text-xs font-extrabold text-white">Driver Availability Handshake</h5>
+                           <span className={`text-[10px] font-bold ${searchingTimer > 90 ? 'text-amber-400 animate-pulse' : 'text-emerald-400'}`}>
+                             {searchingTimer > 90 ? 'In Progress...' : '4 Drivers Active'}
+                           </span>
+                         </div>
+                         <p className="text-[11px] text-zinc-400">Analyzing live traffic & driver distance rankings</p>
+                       </div>
+                     </div>
+
+                     <div className={`w-0.5 h-2.5 ml-2.5 -my-1 ${searchingTimer <= 90 ? 'bg-emerald-500/60' : 'bg-zinc-800'}`}></div>
+
+                     {/* Pipeline Step 3 */}
+                     <div className="flex items-start space-x-3">
+                       <div className="relative flex items-center justify-center shrink-0 mt-0.5">
+                         {searchingTimer <= 90 && searchingTimer > 60 ? (
+                           <span className="relative flex h-5 w-5">
+                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                             <span className="relative inline-flex rounded-full h-5 w-5 bg-amber-500 text-black items-center justify-center text-[10px] font-black">3</span>
+                           </span>
+                         ) : searchingTimer <= 60 ? (
+                           <span className="w-5 h-5 rounded-full bg-emerald-500 text-black flex items-center justify-center text-[10px] font-black shadow-md">✓</span>
+                         ) : (
+                           <span className="w-5 h-5 rounded-full bg-zinc-800 text-zinc-500 flex items-center justify-center text-[10px] font-bold">3</span>
+                         )}
+                       </div>
+                       <div className="flex-1 min-w-0">
+                         <div className="flex items-center justify-between">
+                           <h5 className="text-xs font-extrabold text-white">Priority Dispatch Match</h5>
+                           <span className={`text-[10px] font-bold ${searchingTimer <= 90 && searchingTimer > 60 ? 'text-amber-400 animate-pulse' : searchingTimer <= 60 ? 'text-emerald-400' : 'text-zinc-500'}`}>
+                             {searchingTimer <= 90 && searchingTimer > 60 ? 'Notifying Top Rated...' : searchingTimer <= 60 ? 'Matched' : 'Pending'}
+                           </span>
+                         </div>
+                         <p className="text-[11px] text-zinc-400">Direct alert sent to highest-rated nearest drivers</p>
+                       </div>
+                     </div>
+
+                     <div className={`w-0.5 h-2.5 ml-2.5 -my-1 ${searchingTimer <= 60 ? 'bg-emerald-500/60' : 'bg-zinc-800'}`}></div>
+
+                     {/* Pipeline Step 4 */}
+                     <div className="flex items-start space-x-3">
+                       <div className="relative flex items-center justify-center shrink-0 mt-0.5">
+                         {searchingTimer <= 60 ? (
+                           <span className="relative flex h-5 w-5">
+                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                             <span className="relative inline-flex rounded-full h-5 w-5 bg-emerald-500 text-black items-center justify-center text-[10px] font-black">4</span>
+                           </span>
+                         ) : (
+                           <span className="w-5 h-5 rounded-full bg-zinc-800 text-zinc-500 flex items-center justify-center text-[10px] font-bold">4</span>
+                         )}
+                       </div>
+                       <div className="flex-1 min-w-0">
+                         <div className="flex items-center justify-between">
+                           <h5 className="text-xs font-extrabold text-white">Driver Acceptance & Lock</h5>
+                           <span className={`text-[10px] font-bold ${searchingTimer <= 60 ? 'text-emerald-400 animate-pulse' : 'text-zinc-500'}`}>
+                             {searchingTimer <= 60 ? 'Assigning Now...' : 'Waiting'}
+                           </span>
+                         </div>
+                         <p className="text-[11px] text-zinc-400">Finalizing driver arrival ETA & vehicle assignment</p>
+                       </div>
+                     </div>
+                   </div>
+
+                   {/* Ride Summary Quick Badge */}
+                   <div className="flex items-center justify-between bg-zinc-900/90 p-3 rounded-2xl border border-zinc-800">
+                     <div className="flex items-center space-x-2.5">
+                       <span className="text-xl">{selectedVehicle === 'bike' ? '🛵' : selectedVehicle === 'auto' ? '🛺' : '🚗'}</span>
+                       <div>
+                         <h5 className="text-xs font-black text-white uppercase">RYVO {selectedVehicle}</h5>
+                         <p className="text-[11px] text-zinc-400">Pickup in ~{getETAForVehicle(selectedVehicle, estimatedDuration)} mins</p>
+                       </div>
+                     </div>
+                     <span className="text-base font-black text-emerald-400">₹{getPrice(selectedVehicle, distance).toFixed(2)}</span>
                    </div>
                  </div>
 
