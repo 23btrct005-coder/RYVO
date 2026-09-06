@@ -171,9 +171,11 @@ function App() {
   const [review, setReview] = useState<string>('')
   const [hasRated, setHasRated] = useState<boolean>(false)
   
-  // Tip, Session Timeout, and Alternative Vehicle Suggestion state
+  // Tip, 2-Min Session Timeout, Game Score, and Alternative Vehicle Suggestion state
   const [tipAmount, setTipAmount] = useState<number>(0);
-  const [searchingTimer, setSearchingTimer] = useState<number>(30);
+  const [searchingTimer, setSearchingTimer] = useState<number>(120);
+  const [gameScore, setGameScore] = useState<number>(0);
+  const [tapFeedback, setTapFeedback] = useState<{ id: number; x: number; y: number; text: string }[]>([]);
   const [noDriverFound, setNoDriverFound] = useState<boolean>(false);
   const [suggestedVehicle, setSuggestedVehicle] = useState<VehicleType | null>(null);
 
@@ -922,7 +924,8 @@ function App() {
       setSelectedVehicle(overrideVehicle);
     }
     setStatus('searching');
-    setSearchingTimer(30);
+    setSearchingTimer(120);
+    setGameScore(0);
     setNoDriverFound(false);
     setErrorMessage(null);
     console.log("Confirm Ride clicked. Booking vehicle:", vehicleToBook);
@@ -962,16 +965,16 @@ function App() {
     }
   }
 
-  // 30-Second Searching Session Timeout & Vehicle Recommendation
+  // 2-Minute (120s) Searching Session Timeout & Vehicle Recommendation
   useEffect(() => {
     let timer: any;
     if (status === 'searching') {
-      setSearchingTimer(30);
+      setSearchingTimer(120);
       timer = setInterval(() => {
         setSearchingTimer(prev => {
           if (prev <= 1) {
             clearInterval(timer);
-            // Session Timeout reached - automatically cancel current unaccepted ride
+            // Session Timeout reached at 2 mins (120s) - automatically cancel current unaccepted ride
             if (currentRideId) {
               supabase.from('rides').update({ status: 'cancelled' }).eq('id', currentRideId);
             }
@@ -987,7 +990,7 @@ function App() {
         });
       }, 1000);
     } else {
-      setSearchingTimer(30);
+      setSearchingTimer(120);
     }
     return () => clearInterval(timer);
   }, [status, currentRideId, selectedVehicle]);
@@ -1402,58 +1405,157 @@ function App() {
                </div>
              </div>
           ) : status === 'searching' ? (
-            <div className="text-center py-6">
-               <div className="relative w-16 h-16 mx-auto mb-3 flex items-center justify-center">
-                 <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-emerald-400 absolute"></div>
-                 <span className="text-sm font-bold text-emerald-400">{searchingTimer}s</span>
-               </div>
-               <p className="text-zinc-200 font-bold animate-pulse mb-0.5">Finding a nearby driver...</p>
-               <p className="text-xs text-zinc-400 mb-4">Searching for {selectedVehicle.toUpperCase()} drivers around you ({searchingTimer}s remaining)</p>
+             <div className="py-3">
+                {/* Attracting Interactive Mini-Game Radar Animation (Replaces raw seconds countdown) */}
+                <div className="relative mb-4 p-4 bg-gradient-to-b from-zinc-900/90 to-zinc-950/90 rounded-3xl border border-emerald-500/30 overflow-hidden shadow-2xl">
+                  <div className="flex items-center justify-between mb-3 px-1">
+                    <div className="flex items-center space-x-2">
+                      <span className="relative flex h-3 w-3">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                      </span>
+                      <span className="text-xs font-black text-emerald-400 uppercase tracking-wider">Live Search Active</span>
+                    </div>
+                    <div className="bg-emerald-500/10 border border-emerald-500/30 px-3 py-1 rounded-full flex items-center space-x-1.5 animate-bounce">
+                      <span className="text-xs">⚡</span>
+                      <span className="text-xs font-black text-emerald-400">Signal: {gameScore}</span>
+                    </div>
+                  </div>
 
-               {/* Live Tip Add Section During Searching */}
-               <div className="mb-5 bg-zinc-800/80 p-3.5 rounded-2xl border border-zinc-700/80 text-left">
-                 <div className="flex items-center justify-between mb-2">
-                   <span className="text-xs font-bold text-zinc-200 flex items-center gap-1.5">
-                     <span className="text-emerald-400">⚡</span> Add tip to speed up driver response
-                   </span>
-                   {tipAmount > 0 && (
-                     <span className="text-xs font-extrabold text-emerald-400 bg-emerald-500/20 px-2 py-0.5 rounded-md border border-emerald-500/30">
-                       +₹{tipAmount} Tip Active
-                     </span>
-                   )}
-                 </div>
-                 <div className="grid grid-cols-5 gap-1.5">
-                   {[0, 10, 20, 30, 50].map((amount) => (
-                     <button
-                       key={amount}
-                       onClick={async () => {
-                         setTipAmount(amount);
-                         if (currentRideId) {
-                           const basePrice = getPrice(selectedVehicle, distance);
-                           const newTotal = Number((basePrice + amount).toFixed(2));
-                           await supabase.from('rides').update({ price: newTotal }).eq('id', currentRideId);
-                           showToast(`Added +₹${amount} tip! Updated total fare.`);
-                         }
-                       }}
-                       className={`py-2 px-1 text-xs font-bold rounded-xl border transition-all ${
-                         tipAmount === amount
-                           ? 'bg-emerald-500 text-black border-emerald-400 shadow-md scale-105 font-extrabold'
-                           : 'bg-zinc-900 text-zinc-300 border-zinc-750 hover:border-zinc-500'
-                       }`}
-                     >
-                       {amount === 0 ? 'No Tip' : `+₹${amount}`}
-                     </button>
-                   ))}
-                 </div>
-               </div>
+                  {/* Interactive Game Canvas / Radar Arena */}
+                  <div 
+                    onClick={(e) => {
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      const x = e.clientX - rect.left;
+                      const y = e.clientY - rect.top;
+                      setGameScore(prev => prev + 10);
+                      const newFeedback = { id: Date.now(), x, y, text: '+10 Signal! ⚡' };
+                      setTapFeedback(prev => [...prev.slice(-4), newFeedback]);
+                    }}
+                    className="relative w-full h-40 bg-zinc-950 rounded-2xl border border-zinc-800 flex items-center justify-center overflow-hidden cursor-pointer select-none group active:scale-98 transition-transform"
+                  >
+                    {/* Radar Rings & Rotating Beams */}
+                    <div className="absolute w-36 h-36 rounded-full border border-emerald-500/20 animate-ping opacity-25"></div>
+                    <div className="absolute w-28 h-28 rounded-full border border-emerald-500/30"></div>
+                    <div className="absolute w-16 h-16 rounded-full border border-emerald-500/40"></div>
+                    <div className="absolute w-full h-0.5 bg-gradient-to-r from-transparent via-emerald-500/60 to-transparent animate-spin origin-center opacity-75"></div>
 
-               <button 
-                 onClick={cancelRide}
-                 className="w-full bg-red-900/40 text-red-400 border border-red-900/50 hover:bg-red-900/60 font-bold py-3.5 rounded-xl transition"
-               >
-                 Cancel Request
-               </button>
-            </div>
+                    {/* Orbiting Driver Vehicle Icons */}
+                    <div className="absolute animate-spin duration-10000 w-32 h-32 flex items-center justify-between pointer-events-none">
+                      <span className="text-xl transform -rotate-45">🛵</span>
+                      <span className="text-xl transform rotate-45">🛺</span>
+                    </div>
+                    <div className="absolute animate-spin duration-7000 w-24 h-24 flex items-center justify-between pointer-events-none">
+                      <span className="text-lg">🚗</span>
+                      <span className="text-lg">🚕</span>
+                    </div>
+
+                    {/* Center Signal Location Pin */}
+                    <div className="z-10 bg-emerald-500/20 p-3.5 rounded-full border-2 border-emerald-400 text-2xl shadow-lg shadow-emerald-500/30 group-hover:scale-110 transition-transform">
+                      📍
+                    </div>
+
+                    {/* Interactive Tap Floating Feedback Bubbles */}
+                    {tapFeedback.map((fb) => (
+                      <span 
+                        key={fb.id}
+                        style={{ left: fb.x, top: fb.y }}
+                        className="absolute text-xs font-black text-amber-300 pointer-events-none z-30 animate-bounce"
+                      >
+                        {fb.text}
+                      </span>
+                    ))}
+
+                    <div className="absolute bottom-2 inset-x-0 text-center">
+                      <span className="text-[10px] font-extrabold text-emerald-400 bg-zinc-900/90 px-3 py-1 rounded-full border border-emerald-500/30">
+                        🎮 Tap radar to boost driver dispatch!
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Dynamic Non-Seconds Search Status */}
+                  <div className="mt-3 text-center">
+                    <p className="text-sm font-extrabold text-white animate-pulse">
+                      {searchingTimer > 90 ? "📡 Connecting with nearby drivers in Bengaluru..." :
+                       searchingTimer > 60 ? "⚡ Priority signal sent to top-rated drivers..." :
+                       "🚕 Dispatching request to all available drivers..."}
+                    </p>
+                    <p className="text-xs text-zinc-400 mt-0.5 font-medium">Searching for {selectedVehicle.toUpperCase()} ride...</p>
+                  </div>
+                </div>
+
+                {/* 1. Tips Feature Box (Shown ONLY after 30 seconds of searching, i.e., searchingTimer <= 90) */}
+                {searchingTimer <= 90 && (
+                  <div className="mb-4 bg-zinc-800/90 p-3.5 rounded-2xl border border-zinc-700/80 text-left animate-slide-in">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-bold text-zinc-200 flex items-center gap-1.5">
+                        <span className="text-emerald-400">⚡</span> Add tip to speed up driver response
+                      </span>
+                      {tipAmount > 0 && (
+                        <span className="text-xs font-extrabold text-emerald-400 bg-emerald-500/20 px-2 py-0.5 rounded-md border border-emerald-500/30">
+                          +₹{tipAmount} Tip Active
+                        </span>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-5 gap-1.5">
+                      {[0, 10, 20, 30, 50].map((amount) => (
+                        <button
+                          key={amount}
+                          onClick={async () => {
+                            setTipAmount(amount);
+                            if (currentRideId) {
+                              const basePrice = getPrice(selectedVehicle, distance);
+                              const newTotal = Number((basePrice + amount).toFixed(2));
+                              await supabase.from('rides').update({ price: newTotal }).eq('id', currentRideId);
+                              showToast(`Added +₹${amount} tip! Updated total fare.`);
+                            }
+                          }}
+                          className={`py-2 px-1 text-xs font-bold rounded-xl border transition-all ${
+                            tipAmount === amount
+                              ? 'bg-emerald-500 text-black border-emerald-400 shadow-md scale-105 font-extrabold'
+                              : 'bg-zinc-900 text-zinc-300 border-zinc-750 hover:border-zinc-500'
+                          }`}
+                        >
+                          {amount === 0 ? 'No Tip' : `+₹${amount}`}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* 2. Suggest Other Vehicle Mode Box (Shown ONLY after 1 minute of searching, i.e., searchingTimer <= 60) */}
+                {searchingTimer <= 60 && (
+                  <div className="mb-4 bg-amber-500/10 p-3.5 rounded-2xl border border-amber-500/30 text-left animate-slide-in">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-xs font-extrabold text-amber-300 flex items-center gap-1.5">
+                        💡 High Demand! Suggesting Other Mode
+                      </span>
+                      <span className="text-[10px] font-bold bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-md border border-amber-500/30">
+                        Faster Pickup
+                      </span>
+                    </div>
+                    <p className="text-xs text-zinc-300 mb-3 font-medium">
+                      Drivers are busy. Switch to {selectedVehicle === 'bike' ? 'AUTO (🛺)' : selectedVehicle === 'auto' ? 'BIKE (🛵)' : 'AUTO (🛺)'} for instant dispatch!
+                    </p>
+                    <button
+                      onClick={() => {
+                        const alt: VehicleType = selectedVehicle === 'bike' ? 'auto' : selectedVehicle === 'auto' ? 'bike' : 'auto';
+                        handleConfirmRide(alt);
+                      }}
+                      className="w-full bg-amber-500 hover:bg-amber-400 text-black font-extrabold py-3 rounded-xl text-xs transition shadow-md flex items-center justify-center space-x-2"
+                    >
+                      <span>Switch to {selectedVehicle === 'bike' ? 'RYVO Auto 🛺' : selectedVehicle === 'auto' ? 'RYVO Bike 🛵' : 'RYVO Auto 🛺'} ➔</span>
+                    </button>
+                  </div>
+                )}
+
+                <button 
+                  onClick={cancelRide}
+                  className="w-full bg-red-900/40 text-red-400 border border-red-900/50 hover:bg-red-900/60 font-bold py-3.5 rounded-xl transition"
+                >
+                  Cancel Request
+                </button>
+             </div>
           ) : status === 'confirming' ? (
             isSheetMinimized ? (
               <div className="py-2 space-y-3">
