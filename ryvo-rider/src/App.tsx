@@ -1,4 +1,4 @@
-// Vercel Production Trigger: 2026-09-06T10:21:00 - fix: dropdown absolute positioning top-full and max-h-64 scroll alignment
+// Vercel Production Trigger: 2026-09-06T10:28:00 - fix: hide quick actions & favorites when typing, move saved favorites to bottom
 import { useState, useEffect, useRef } from 'react'
 import Map, { Marker, Source, Layer } from 'react-map-gl/mapbox'
 import type { MapRef } from 'react-map-gl/mapbox'
@@ -1467,114 +1467,128 @@ function App() {
                   {/* Options Dropdown Box for Pickup */}
                   {activeInput === 'pickup' && (
                     <div className="absolute top-full left-0 right-0 z-50 bg-zinc-950/98 backdrop-blur-2xl border-2 border-zinc-700/80 mt-2 rounded-2xl shadow-2xl overflow-y-auto max-h-64 divide-y divide-zinc-900 animate-slide-in ring-1 ring-black/50">
-                      {/* Compact Quick Actions: Choose on Map & Current GPS */}
-                      <div className="p-2 grid grid-cols-2 gap-2 bg-zinc-900/60 border-b border-zinc-900">
-                        <button
-                          type="button"
-                          onClick={() => startMapSelection('pickup')}
-                          className="flex items-center space-x-2 p-2 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/20 rounded-xl transition text-left group"
-                        >
-                          <div className="w-7 h-7 rounded-lg bg-cyan-500/20 flex items-center justify-center text-sm shrink-0">
-                            📌
-                          </div>
-                          <div className="overflow-hidden min-w-0">
-                            <p className="text-cyan-400 font-extrabold text-xs truncate">Choose on Map</p>
-                            <p className="text-zinc-400 text-[10px] truncate">Set map pin</p>
-                          </div>
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => handleLocateCurrentPosition('pickup')}
-                          className="flex items-center space-x-2 p-2 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 rounded-xl transition text-left group"
-                        >
-                          <div className="w-7 h-7 rounded-lg bg-emerald-500/20 flex items-center justify-center text-sm shrink-0">
-                            📍
-                          </div>
-                          <div className="overflow-hidden min-w-0">
-                            <p className="text-emerald-400 font-extrabold text-xs truncate">Current GPS</p>
-                            <p className="text-zinc-400 text-[10px] truncate">Use my position</p>
-                          </div>
-                        </button>
-                      </div>
-
-                      {/* Option 2: Saved Places List (Home, Work, Gym, Custom) */}
-                      {savedPlaces.map((sp, idx) => (
-                         <div 
-                           key={idx}
-                           onClick={() => {
-                             setPickup(sp.address);
-                             setPickupCoords(sp.coords);
-                             setCurrentPosition(sp.coords);
-                             setActiveInput('none');
-                           }}
-                           className="flex items-center justify-between px-4 py-3.5 hover:bg-zinc-900 cursor-pointer transition group"
-                         >
-                            <div className="flex items-center space-x-3.5 min-w-0 pr-2">
-                               <div className="flex items-center justify-center shrink-0 w-8 h-8 bg-zinc-900 rounded-full text-lg">
-                                  {sp.icon}
-                               </div>
-                               <div className="overflow-hidden">
-                                  <p className="text-white text-sm font-bold truncate group-hover:text-emerald-400 transition-colors">{sp.label}</p>
-                                  <p className="text-zinc-400 text-xs truncate">{sp.address}</p>
-                               </div>
-                            </div>
-                            <span className="text-zinc-600 text-xs shrink-0">Favorites</span>
-                         </div>
-                      ))}
-
-                      {/* Option 3: Recent Searches (Shown ONLY when input is empty) */}
-                      {!pickup.trim() && recentSearches.length > 0 && (
-                        <div className="p-3 bg-zinc-900/90 border-b border-zinc-800">
-                          <p className="text-[11px] uppercase font-black text-zinc-400 px-1 mb-2 tracking-wider">Recent Searches</p>
-                          <div className="space-y-1.5">
-                            {recentSearches.map((rs, idx) => (
-                              <div
-                                key={idx}
-                                onClick={() => {
-                                  setPickup(rs.title);
-                                  setPickupCoords([rs.lat, rs.lon]);
-                                  setCurrentPosition([rs.lat, rs.lon]);
-                                  setActiveInput('none');
-                                }}
-                                className="flex items-center space-x-3 p-2 hover:bg-zinc-800 rounded-xl cursor-pointer transition"
-                              >
-                                <div className="text-sm p-1.5 bg-zinc-800 rounded-lg text-zinc-400">🕒</div>
-                                <div className="overflow-hidden">
-                                  <p className="text-white text-xs font-bold truncate">{rs.title}</p>
-                                  <p className="text-zinc-400 text-[10px] truncate">{rs.subtitle}</p>
-                                </div>
+                      {/* Quick Actions & Favorites & Recent Searches (Shown ONLY when input is empty) */}
+                      {!pickup.trim() && (
+                        <>
+                          {/* Compact Quick Actions: Choose on Map & Current GPS */}
+                          <div className="p-2 grid grid-cols-2 gap-2 bg-zinc-900/60 border-b border-zinc-900">
+                            <button
+                              type="button"
+                              onClick={() => startMapSelection('pickup')}
+                              className="flex items-center space-x-2 p-2 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/20 rounded-xl transition text-left group"
+                            >
+                              <div className="w-7 h-7 rounded-lg bg-cyan-500/20 flex items-center justify-center text-sm shrink-0">
+                                📌
                               </div>
-                            ))}
+                              <div className="overflow-hidden min-w-0">
+                                <p className="text-cyan-400 font-extrabold text-xs truncate">Choose on Map</p>
+                                <p className="text-zinc-400 text-[10px] truncate">Set map pin</p>
+                              </div>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => handleLocateCurrentPosition('pickup')}
+                              className="flex items-center space-x-2 p-2 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 rounded-xl transition text-left group"
+                            >
+                              <div className="w-7 h-7 rounded-lg bg-emerald-500/20 flex items-center justify-center text-sm shrink-0">
+                                📍
+                              </div>
+                              <div className="overflow-hidden min-w-0">
+                                <p className="text-emerald-400 font-extrabold text-xs truncate">Current GPS</p>
+                                <p className="text-zinc-400 text-[10px] truncate">Use my position</p>
+                              </div>
+                            </button>
                           </div>
-                        </div>
+
+                          {/* Recent Searches */}
+                          {recentSearches.length > 0 && (
+                            <div className="p-3 bg-zinc-900/90 border-b border-zinc-800">
+                              <p className="text-[11px] uppercase font-black text-zinc-400 px-1 mb-2 tracking-wider">Recent Searches</p>
+                              <div className="space-y-1.5">
+                                {recentSearches.map((rs, idx) => (
+                                  <div
+                                    key={idx}
+                                    onClick={() => {
+                                      setPickup(rs.title);
+                                      setPickupCoords([rs.lat, rs.lon]);
+                                      setCurrentPosition([rs.lat, rs.lon]);
+                                      setActiveInput('none');
+                                    }}
+                                    className="flex items-center space-x-3 p-2 hover:bg-zinc-800 rounded-xl cursor-pointer transition"
+                                  >
+                                    <div className="text-sm p-1.5 bg-zinc-800 rounded-lg text-zinc-400">🕒</div>
+                                    <div className="overflow-hidden">
+                                      <p className="text-white text-xs font-bold truncate">{rs.title}</p>
+                                      <p className="text-zinc-400 text-[10px] truncate">{rs.subtitle}</p>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Favorites List at Bottom (Home, Work, Custom) */}
+                          {savedPlaces.length > 0 && (
+                            <div className="bg-zinc-950 divide-y divide-zinc-900 border-t border-zinc-900">
+                              <p className="text-[11px] uppercase font-black text-amber-400/90 px-4 py-2 bg-amber-950/20 tracking-wider">Saved Favorites</p>
+                              {savedPlaces.map((sp, idx) => (
+                                 <div 
+                                   key={idx}
+                                   onClick={() => {
+                                     setPickup(sp.address);
+                                     setPickupCoords(sp.coords);
+                                     setCurrentPosition(sp.coords);
+                                     setActiveInput('none');
+                                   }}
+                                   className="flex items-center justify-between px-4 py-3 hover:bg-zinc-900 cursor-pointer transition group"
+                                 >
+                                    <div className="flex items-center space-x-3 min-w-0 pr-2">
+                                       <div className="flex items-center justify-center shrink-0 w-7 h-7 bg-zinc-900 rounded-full text-base border border-zinc-800">
+                                          {sp.icon}
+                                       </div>
+                                       <div className="overflow-hidden">
+                                          <p className="text-white text-xs font-bold truncate group-hover:text-emerald-400 transition-colors">{sp.label}</p>
+                                          <p className="text-zinc-400 text-[10px] truncate">{sp.address}</p>
+                                       </div>
+                                    </div>
+                                    <span className="text-zinc-600 text-[10px] shrink-0 font-medium">Favorites</span>
+                                 </div>
+                              ))}
+                            </div>
+                          )}
+                        </>
                       )}
 
-                      {/* Live Search Suggestions (Shown immediately while typing) */}
-                      {pickupSuggestions.length > 0 && (
-                        <div className="bg-zinc-900 border-b border-zinc-700/60 divide-y divide-zinc-800">
+                      {/* Live Search Suggestions (Shown ONLY when typing search query) */}
+                      {pickup.trim().length >= 2 && (
+                        <div className="bg-zinc-900 divide-y divide-zinc-800">
                           <p className="text-[11px] uppercase font-black text-emerald-400 px-4 py-2 bg-emerald-950/30 tracking-wider">Search Results</p>
-                          {pickupSuggestions.map((s, i) => (
-                            <div 
-                              key={i} 
-                              className="px-5 py-3.5 hover:bg-zinc-800 cursor-pointer flex items-center space-x-3 transition-colors"
-                              onClick={() => { 
-                                const fullAddr = s.subtitle ? (s.subtitle.startsWith(s.title) ? s.subtitle : `${s.title}, ${s.subtitle}`) : s.title;
-                                setPickup(fullAddr); 
-                                setPickupCoords([s.lat, s.lon]);
-                                setCurrentPosition([s.lat, s.lon]);
-                                addRecentSearch(s);
-                                setPickupSuggestions([]); 
-                                setActiveInput('none');
-                              }}
-                            >
-                              <div className="flex-shrink-0 bg-emerald-500/20 text-emerald-400 p-2 rounded-full">📍</div>
-                              <div className="overflow-hidden">
-                                <p className="text-white font-bold truncate text-sm">{s.title}</p>
-                                <p className="text-zinc-400 text-xs truncate">{s.subtitle}</p>
+                          {pickupSuggestions.length > 0 ? (
+                            pickupSuggestions.map((s, i) => (
+                              <div 
+                                key={i} 
+                                className="px-5 py-3.5 hover:bg-zinc-800 cursor-pointer flex items-center space-x-3 transition-colors"
+                                onClick={() => { 
+                                  const fullAddr = s.subtitle ? (s.subtitle.startsWith(s.title) ? s.subtitle : `${s.title}, ${s.subtitle}`) : s.title;
+                                  setPickup(fullAddr); 
+                                  setPickupCoords([s.lat, s.lon]);
+                                  setCurrentPosition([s.lat, s.lon]);
+                                  addRecentSearch(s);
+                                  setPickupSuggestions([]); 
+                                  setActiveInput('none');
+                                }}
+                              >
+                                <div className="flex-shrink-0 bg-emerald-500/20 text-emerald-400 p-2 rounded-full">📍</div>
+                                <div className="overflow-hidden">
+                                  <p className="text-white font-bold truncate text-sm">{s.title}</p>
+                                  <p className="text-zinc-400 text-xs truncate">{s.subtitle}</p>
+                                </div>
                               </div>
-                            </div>
-                          ))}
+                            ))
+                          ) : (
+                            <div className="p-4 text-center text-xs text-zinc-500 font-medium">Searching location...</div>
+                          )}
                         </div>
                       )}
 
@@ -1766,114 +1780,128 @@ function App() {
                   {/* Options Dropdown Box for Destination */}
                   {activeInput === 'destination' && (
                     <div className="absolute top-full left-0 right-0 z-50 bg-zinc-950/98 backdrop-blur-2xl border-2 border-zinc-700/80 mt-2 rounded-2xl shadow-2xl overflow-y-auto max-h-64 divide-y divide-zinc-900 animate-slide-in ring-1 ring-black/50">
-                      {/* Compact Quick Actions: Choose on Map & Current GPS */}
-                      <div className="p-2 grid grid-cols-2 gap-2 bg-zinc-900/60 border-b border-zinc-900">
-                        <button
-                          type="button"
-                          onClick={() => startMapSelection('destination')}
-                          className="flex items-center space-x-2 p-2 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/20 rounded-xl transition text-left group"
-                        >
-                          <div className="w-7 h-7 rounded-lg bg-cyan-500/20 flex items-center justify-center text-sm shrink-0">
-                            📌
-                          </div>
-                          <div className="overflow-hidden min-w-0">
-                            <p className="text-cyan-400 font-extrabold text-xs truncate">Choose on Map</p>
-                            <p className="text-zinc-400 text-[10px] truncate">Set map pin</p>
-                          </div>
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => handleLocateCurrentPosition('destination')}
-                          className="flex items-center space-x-2 p-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 rounded-xl transition text-left group"
-                        >
-                          <div className="w-7 h-7 rounded-lg bg-red-500/20 flex items-center justify-center text-sm shrink-0">
-                            📍
-                          </div>
-                          <div className="overflow-hidden min-w-0">
-                            <p className="text-red-400 font-extrabold text-xs truncate">Current GPS</p>
-                            <p className="text-zinc-400 text-[10px] truncate">Use my position</p>
-                          </div>
-                        </button>
-                      </div>
-
-                      {/* Option 2: Saved Places List (Home, Work, Gym, Custom) */}
-                      {savedPlaces.map((sp, idx) => (
-                         <div 
-                           key={idx}
-                           onClick={() => {
-                             setDestination(sp.address);
-                             setDestCoords(sp.coords);
-                             setCurrentPosition(sp.coords);
-                             setActiveInput('none');
-                           }}
-                           className="flex items-center justify-between px-4 py-3.5 hover:bg-zinc-900 cursor-pointer transition group"
-                         >
-                            <div className="flex items-center space-x-3.5 min-w-0 pr-2">
-                               <div className="flex items-center justify-center shrink-0 w-8 h-8 bg-zinc-900 rounded-full text-lg">
-                                  {sp.icon}
-                               </div>
-                               <div className="overflow-hidden">
-                                  <p className="text-white text-sm font-bold truncate group-hover:text-red-400 transition-colors">{sp.label}</p>
-                                  <p className="text-zinc-400 text-xs truncate">{sp.address}</p>
-                               </div>
-                            </div>
-                            <span className="text-zinc-600 text-xs shrink-0">Favorites</span>
-                         </div>
-                      ))}
-
-                      {/* Option 3: Recent Searches (Shown ONLY when input is empty) */}
-                      {!destination.trim() && recentSearches.length > 0 && (
-                        <div className="p-3 bg-zinc-900/90 border-b border-zinc-800">
-                          <p className="text-[11px] uppercase font-black text-zinc-400 px-1 mb-2 tracking-wider">Recent Searches</p>
-                          <div className="space-y-1.5">
-                            {recentSearches.map((rs, idx) => (
-                              <div
-                                key={idx}
-                                onClick={() => {
-                                  setDestination(rs.title);
-                                  setDestCoords([rs.lat, rs.lon]);
-                                  setCurrentPosition([rs.lat, rs.lon]);
-                                  setActiveInput('none');
-                                }}
-                                className="flex items-center space-x-3 p-2 hover:bg-zinc-800 rounded-xl cursor-pointer transition"
-                              >
-                                <div className="text-sm p-1.5 bg-zinc-800 rounded-lg text-zinc-400">🕒</div>
-                                <div className="overflow-hidden">
-                                  <p className="text-white text-xs font-bold truncate">{rs.title}</p>
-                                  <p className="text-zinc-400 text-[10px] truncate">{rs.subtitle}</p>
-                                </div>
+                      {/* Quick Actions & Favorites & Recent Searches (Shown ONLY when input is empty) */}
+                      {!destination.trim() && (
+                        <>
+                          {/* Compact Quick Actions: Choose on Map & Current GPS */}
+                          <div className="p-2 grid grid-cols-2 gap-2 bg-zinc-900/60 border-b border-zinc-900">
+                            <button
+                              type="button"
+                              onClick={() => startMapSelection('destination')}
+                              className="flex items-center space-x-2 p-2 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/20 rounded-xl transition text-left group"
+                            >
+                              <div className="w-7 h-7 rounded-lg bg-cyan-500/20 flex items-center justify-center text-sm shrink-0">
+                                📌
                               </div>
-                            ))}
+                              <div className="overflow-hidden min-w-0">
+                                <p className="text-cyan-400 font-extrabold text-xs truncate">Choose on Map</p>
+                                <p className="text-zinc-400 text-[10px] truncate">Set map pin</p>
+                              </div>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => handleLocateCurrentPosition('destination')}
+                              className="flex items-center space-x-2 p-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 rounded-xl transition text-left group"
+                            >
+                              <div className="w-7 h-7 rounded-lg bg-red-500/20 flex items-center justify-center text-sm shrink-0">
+                                📍
+                              </div>
+                              <div className="overflow-hidden min-w-0">
+                                <p className="text-red-400 font-extrabold text-xs truncate">Current GPS</p>
+                                <p className="text-zinc-400 text-[10px] truncate">Use my position</p>
+                              </div>
+                            </button>
                           </div>
-                        </div>
+
+                          {/* Recent Searches */}
+                          {recentSearches.length > 0 && (
+                            <div className="p-3 bg-zinc-900/90 border-b border-zinc-800">
+                              <p className="text-[11px] uppercase font-black text-zinc-400 px-1 mb-2 tracking-wider">Recent Searches</p>
+                              <div className="space-y-1.5">
+                                {recentSearches.map((rs, idx) => (
+                                  <div
+                                    key={idx}
+                                    onClick={() => {
+                                      setDestination(rs.title);
+                                      setDestCoords([rs.lat, rs.lon]);
+                                      setCurrentPosition([rs.lat, rs.lon]);
+                                      setActiveInput('none');
+                                    }}
+                                    className="flex items-center space-x-3 p-2 hover:bg-zinc-800 rounded-xl cursor-pointer transition"
+                                  >
+                                    <div className="text-sm p-1.5 bg-zinc-800 rounded-lg text-zinc-400">🕒</div>
+                                    <div className="overflow-hidden">
+                                      <p className="text-white text-xs font-bold truncate">{rs.title}</p>
+                                      <p className="text-zinc-400 text-[10px] truncate">{rs.subtitle}</p>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Favorites List at Bottom (Home, Work, Custom) */}
+                          {savedPlaces.length > 0 && (
+                            <div className="bg-zinc-950 divide-y divide-zinc-900 border-t border-zinc-900">
+                              <p className="text-[11px] uppercase font-black text-amber-400/90 px-4 py-2 bg-amber-950/20 tracking-wider">Saved Favorites</p>
+                              {savedPlaces.map((sp, idx) => (
+                                 <div 
+                                   key={idx}
+                                   onClick={() => {
+                                     setDestination(sp.address);
+                                     setDestCoords(sp.coords);
+                                     setCurrentPosition(sp.coords);
+                                     setActiveInput('none');
+                                   }}
+                                   className="flex items-center justify-between px-4 py-3 hover:bg-zinc-900 cursor-pointer transition group"
+                                 >
+                                    <div className="flex items-center space-x-3 min-w-0 pr-2">
+                                       <div className="flex items-center justify-center shrink-0 w-7 h-7 bg-zinc-900 rounded-full text-base border border-zinc-800">
+                                          {sp.icon}
+                                       </div>
+                                       <div className="overflow-hidden">
+                                          <p className="text-white text-xs font-bold truncate group-hover:text-red-400 transition-colors">{sp.label}</p>
+                                          <p className="text-zinc-400 text-[10px] truncate">{sp.address}</p>
+                                       </div>
+                                    </div>
+                                    <span className="text-zinc-600 text-[10px] shrink-0 font-medium">Favorites</span>
+                                 </div>
+                              ))}
+                            </div>
+                          )}
+                        </>
                       )}
 
-                      {/* Live Search Suggestions (Shown immediately while typing) */}
-                      {destSuggestions.length > 0 && (
-                        <div className="bg-zinc-900 border-b border-zinc-700/60 divide-y divide-zinc-800">
+                      {/* Live Search Suggestions (Shown ONLY when typing search query) */}
+                      {destination.trim().length >= 2 && (
+                        <div className="bg-zinc-900 divide-y divide-zinc-800">
                           <p className="text-[11px] uppercase font-black text-emerald-400 px-4 py-2 bg-emerald-950/30 tracking-wider">Search Results</p>
-                          {destSuggestions.map((s, i) => (
-                            <div 
-                              key={i} 
-                              className="px-5 py-3.5 hover:bg-zinc-800 cursor-pointer flex items-center space-x-3 transition-colors"
-                              onClick={() => { 
-                                const fullAddr = s.subtitle ? (s.subtitle.startsWith(s.title) ? s.subtitle : `${s.title}, ${s.subtitle}`) : s.title;
-                                setDestination(fullAddr); 
-                                setDestCoords([s.lat, s.lon]);
-                                setCurrentPosition([s.lat, s.lon]);
-                                addRecentSearch(s);
-                                setDestSuggestions([]); 
-                                setActiveInput('none');
-                              }}
-                            >
-                              <div className="flex-shrink-0 bg-emerald-500/20 text-emerald-400 p-2 rounded-full">📍</div>
-                              <div className="overflow-hidden">
-                                <p className="text-white font-bold truncate text-sm">{s.title}</p>
-                                <p className="text-zinc-400 text-xs truncate">{s.subtitle}</p>
+                          {destSuggestions.length > 0 ? (
+                            destSuggestions.map((s, i) => (
+                              <div 
+                                key={i} 
+                                className="px-5 py-3.5 hover:bg-zinc-800 cursor-pointer flex items-center space-x-3 transition-colors"
+                                onClick={() => { 
+                                  const fullAddr = s.subtitle ? (s.subtitle.startsWith(s.title) ? s.subtitle : `${s.title}, ${s.subtitle}`) : s.title;
+                                  setDestination(fullAddr); 
+                                  setDestCoords([s.lat, s.lon]);
+                                  setCurrentPosition([s.lat, s.lon]);
+                                  addRecentSearch(s);
+                                  setDestSuggestions([]); 
+                                  setActiveInput('none');
+                                }}
+                              >
+                                <div className="flex-shrink-0 bg-emerald-500/20 text-emerald-400 p-2 rounded-full">📍</div>
+                                <div className="overflow-hidden">
+                                  <p className="text-white font-bold truncate text-sm">{s.title}</p>
+                                  <p className="text-zinc-400 text-xs truncate">{s.subtitle}</p>
+                                </div>
                               </div>
-                            </div>
-                          ))}
+                            ))
+                          ) : (
+                            <div className="p-4 text-center text-xs text-zinc-500 font-medium">Searching location...</div>
+                          )}
                         </div>
                       )}
 
