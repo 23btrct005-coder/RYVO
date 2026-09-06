@@ -147,6 +147,7 @@ function App() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [currentRideId, setCurrentRideId] = useState<string | null>(null)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const [isSheetMinimized, setIsSheetMinimized] = useState(false)
   const [driverLocation, setDriverLocation] = useState<[number, number] | null>(null)
   const [driverDetails, setDriverDetails] = useState<any>(null)
   const [routeGeometry, setRouteGeometry] = useState<[number, number][] | null>(null)
@@ -500,7 +501,7 @@ function App() {
     getLocation()
   }, [])
 
-  // Auto-fetch route polyline line whenever pickup and destination coordinates exist
+  // Auto-fetch route polyline line whenever pickup and destination coordinates exist & fit map bounds
   useEffect(() => {
     if (!pickupCoords || !destCoords) return;
     const fetchAutoRoute = async () => {
@@ -519,6 +520,19 @@ function App() {
           setDistance(distanceKm);
           const durationMins = Math.max(1, Math.ceil((shortestRoute.duration || 0) / 60));
           setEstimatedDuration(durationMins);
+
+          // Fit map camera bounds to display BOTH pickup and destination markers clearly
+          if (mapRef.current) {
+            const minLng = Math.min(pickupCoords[1], destCoords[1]);
+            const maxLng = Math.max(pickupCoords[1], destCoords[1]);
+            const minLat = Math.min(pickupCoords[0], destCoords[0]);
+            const maxLat = Math.max(pickupCoords[0], destCoords[0]);
+            
+            mapRef.current.fitBounds(
+              [[minLng, minLat], [maxLng, maxLat]],
+              { padding: { top: 100, bottom: 280, left: 60, right: 60 }, duration: 1200 }
+            );
+          }
         }
       } catch (e) {
         console.warn("Auto-route fetch error:", e);
@@ -1181,7 +1195,18 @@ function App() {
           activeInput !== 'none' ? 'overflow-visible ring-2 ring-emerald-500/40 shadow-emerald-950/40' : 'max-h-[80vh] overflow-y-auto'
         }`}>
           <div className="flex justify-between items-center mb-1">
-             <h1 className="text-3xl font-bold tracking-tight text-white">RYVO</h1>
+             <div className="flex items-center space-x-2">
+               <h1 className="text-3xl font-bold tracking-tight text-white">RYVO</h1>
+               {pickup && destination && (
+                 <button
+                   onClick={() => setIsSheetMinimized(!isSheetMinimized)}
+                   className="text-[11px] font-extrabold bg-zinc-800 hover:bg-zinc-700 text-emerald-400 px-2.5 py-1 rounded-full border border-zinc-700 flex items-center space-x-1 transition"
+                   title="Toggle card size"
+                 >
+                   <span>{isSheetMinimized ? 'Expand 🗖' : 'Minimize 🗕'}</span>
+                 </button>
+               )}
+             </div>
              {activeInput !== 'none' && (
                 <button 
                   onClick={() => setActiveInput('none')}
@@ -1468,13 +1493,62 @@ function App() {
                 </button>
             </div>
           ) : (
-            <>
-              {errorMessage && (
-                <div className="bg-red-500/10 border border-red-500/30 p-4 rounded-xl mb-4 text-red-500 text-sm font-bold">
-                  {errorMessage}
+            isSheetMinimized ? (
+              <div className="py-1 space-y-3">
+                <div 
+                  onClick={() => setIsSheetMinimized(false)}
+                  className="bg-zinc-800/80 hover:bg-zinc-800 p-3.5 rounded-2xl border border-zinc-700/80 cursor-pointer space-y-2.5 transition shadow-md"
+                >
+                  <div className="flex items-center space-x-3">
+                    <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 ring-4 ring-emerald-500/20 shrink-0"></div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">Pickup Location</p>
+                      <p className="text-sm font-bold text-white truncate">{pickup || 'Enter pickup location'}</p>
+                    </div>
+                  </div>
+
+                  {stops.length > 0 && (
+                    <div className="flex items-center space-x-3 pl-0.5">
+                      <div className="w-2 h-2 rounded-full bg-amber-500 ring-2 ring-amber-500/20 shrink-0"></div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[10px] font-bold text-amber-400">{stops.length} Stop{stops.length > 1 ? 's' : ''} added</p>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex items-center space-x-3">
+                    <div className="w-2.5 h-2.5 rounded-full bg-red-500 ring-4 ring-red-500/20 shrink-0"></div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-red-400">Drop Location</p>
+                      <p className="text-sm font-bold text-white truncate">{destination || 'Where to?'}</p>
+                    </div>
+                  </div>
                 </div>
-              )}
-              <p className="text-zinc-400 text-sm mb-6 font-medium">Where to?</p>
+
+                <div className="flex space-x-2">
+                  <button
+                    onClick={() => setIsSheetMinimized(false)}
+                    className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold py-3 rounded-xl border border-zinc-700 text-sm flex items-center justify-center space-x-2 transition"
+                  >
+                    <span>✏️ Edit Locations</span>
+                  </button>
+                  <button
+                    onClick={handleEstimate}
+                    disabled={status === 'estimating' || !pickup || !destination}
+                    className="flex-1 bg-white hover:bg-zinc-200 text-black font-bold py-3 rounded-xl text-sm transition shadow-lg disabled:opacity-50"
+                  >
+                    {status === 'estimating' ? 'Calculating...' : 'See Prices ➔'}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                {errorMessage && (
+                  <div className="bg-red-500/10 border border-red-500/30 p-4 rounded-xl mb-4 text-red-500 text-sm font-bold">
+                    {errorMessage}
+                  </div>
+                )}
+                <p className="text-zinc-400 text-sm mb-6 font-medium">Where to?</p>
               <div className="space-y-4 relative">
                 
                 {/* Pickup Field */}
@@ -2005,7 +2079,8 @@ function App() {
                 </button>
               </div>
             </>
-          )}
+          )
+        )}
         </div>
       </div>
       )}
