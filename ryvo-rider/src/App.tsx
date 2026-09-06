@@ -493,6 +493,12 @@ function App() {
                
             if (rideData && !rideError) {
                setCurrentRideId(rideData.id);
+               if (rideData.pickup) setPickup(rideData.pickup);
+               if (rideData.destination) setDestination(rideData.destination);
+               if (rideData.pickuplat && rideData.pickuplng) setPickupCoords([rideData.pickuplat, rideData.pickuplng]);
+               if (rideData.destlat && rideData.destlng) setDestCoords([rideData.destlat, rideData.destlng]);
+               if (rideData.vehicletype) setSelectedVehicle(rideData.vehicletype as VehicleType);
+               
                if (['accepted', 'arrived', 'in_transit'].includes(rideData.status)) {
                   setStatus(rideData.status);
                   if (rideData.otp) setOtp(rideData.otp);
