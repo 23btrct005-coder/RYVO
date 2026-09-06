@@ -1800,8 +1800,135 @@ function App() {
                     {errorMessage}
                   </div>
                 )}
-                <p className="text-zinc-400 text-sm mb-6 font-medium">Where to?</p>
-              <div className="space-y-4 relative">
+                
+                {/* OLA / UBER / RAPIDO ANIMATED HYPER LANDING VIEW */}
+                <div className="space-y-5">
+                  {/* Search Bar / Quick Target Bar */}
+                  <div 
+                    onClick={() => {
+                      if (!destination) setActiveInput('destination');
+                    }}
+                    className="relative bg-gradient-to-r from-zinc-800/90 via-zinc-800 to-zinc-900 border-2 border-emerald-500/30 hover:border-emerald-400 p-3.5 rounded-2xl cursor-pointer transition-all shadow-xl hover:scale-[1.01] group"
+                  >
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center text-xl shrink-0 group-hover:scale-110 transition-transform">
+                        🔍
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[11px] font-black uppercase text-emerald-400 tracking-wider">Where are you heading today?</p>
+                        <p className="text-base font-extrabold text-white truncate">{destination || 'Search destination or tap category below'}</p>
+                      </div>
+                      <span className="bg-emerald-400 text-zinc-950 font-black text-xs px-3 py-1.5 rounded-xl shadow-md group-hover:translate-x-1 transition-transform">
+                        GO ➔
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Ola / Rapido / Uber Style Animated Category Grid */}
+                  <div>
+                    <div className="flex items-center justify-between mb-2.5">
+                      <span className="text-xs font-black uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                        Popular Services
+                      </span>
+                      <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
+                        ⚡ Instant Dispatch
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-4 gap-2.5">
+                      {/* Bike Tile */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedVehicle('bike');
+                          if (!destination) setDestination('Mg Road, Bengaluru');
+                          handleEstimate();
+                        }}
+                        className="flex flex-col items-center justify-center p-3 bg-gradient-to-b from-zinc-800 to-zinc-900/90 hover:from-amber-500/20 hover:to-zinc-800 border border-zinc-700/80 hover:border-amber-400 rounded-2xl transition-all shadow-md group active:scale-95 relative overflow-hidden"
+                      >
+                        <span className="absolute top-1 right-1 text-[8px] font-extrabold text-amber-300 bg-amber-500/20 px-1 rounded">FAST</span>
+                        <div className="w-12 h-12 rounded-full bg-amber-500/10 flex items-center justify-center text-3xl mb-1.5 group-hover:scale-125 transition-transform animate-float">
+                          🛵
+                        </div>
+                        <span className="text-xs font-extrabold text-white group-hover:text-amber-400">Bike</span>
+                        <span className="text-[10px] font-bold text-zinc-400">From ₹25</span>
+                      </button>
+
+                      {/* Auto Tile */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedVehicle('auto');
+                          if (!destination) setDestination('Indiranagar, Bengaluru');
+                          handleEstimate();
+                        }}
+                        className="flex flex-col items-center justify-center p-3 bg-gradient-to-b from-zinc-800 to-zinc-900/90 hover:from-emerald-500/20 hover:to-zinc-800 border border-zinc-700/80 hover:border-emerald-400 rounded-2xl transition-all shadow-md group active:scale-95 relative overflow-hidden"
+                      >
+                        <span className="absolute top-1 right-1 text-[8px] font-extrabold text-emerald-300 bg-emerald-500/20 px-1 rounded">TOP</span>
+                        <div className="w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center text-3xl mb-1.5 group-hover:scale-125 transition-transform animate-float">
+                          🛺
+                        </div>
+                        <span className="text-xs font-extrabold text-white group-hover:text-emerald-400">Auto</span>
+                        <span className="text-[10px] font-bold text-zinc-400">From ₹35</span>
+                      </button>
+
+                      {/* Cab Tile */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedVehicle('mini');
+                          if (!destination) setDestination('Koramangala, Bengaluru');
+                          handleEstimate();
+                        }}
+                        className="flex flex-col items-center justify-center p-3 bg-gradient-to-b from-zinc-800 to-zinc-900/90 hover:from-cyan-500/20 hover:to-zinc-800 border border-zinc-700/80 hover:border-cyan-400 rounded-2xl transition-all shadow-md group active:scale-95 relative overflow-hidden"
+                      >
+                        <span className="absolute top-1 right-1 text-[8px] font-extrabold text-cyan-300 bg-cyan-500/20 px-1 rounded">AC</span>
+                        <div className="w-12 h-12 rounded-full bg-cyan-500/10 flex items-center justify-center text-3xl mb-1.5 group-hover:scale-125 transition-transform animate-float">
+                          🚗
+                        </div>
+                        <span className="text-xs font-extrabold text-white group-hover:text-cyan-400">Cab</span>
+                        <span className="text-[10px] font-bold text-zinc-400">From ₹50</span>
+                      </button>
+
+                      {/* Hourly Rental Tile */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          showToast("⏱️ Hourly Rentals selected! Choose duration on next screen.");
+                          if (!destination) setDestination('City Tour Package');
+                          handleEstimate();
+                        }}
+                        className="flex flex-col items-center justify-center p-3 bg-gradient-to-b from-zinc-800 to-zinc-900/90 hover:from-purple-500/20 hover:to-zinc-800 border border-zinc-700/80 hover:border-purple-400 rounded-2xl transition-all shadow-md group active:scale-95 relative overflow-hidden"
+                      >
+                        <span className="absolute top-1 right-1 text-[8px] font-extrabold text-purple-300 bg-purple-500/20 px-1 rounded">NEW</span>
+                        <div className="w-12 h-12 rounded-full bg-purple-500/10 flex items-center justify-center text-3xl mb-1.5 group-hover:scale-125 transition-transform animate-float">
+                          ⏱️
+                        </div>
+                        <span className="text-xs font-extrabold text-white group-hover:text-purple-400">Rentals</span>
+                        <span className="text-[10px] font-bold text-zinc-400">Multi-Hr</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Animated Promo Banner Carousel */}
+                  <div className="relative overflow-hidden bg-gradient-to-r from-emerald-950 via-teal-900 to-zinc-900 border border-emerald-500/40 p-4 rounded-2xl shadow-xl">
+                    <div className="flex items-center justify-between relative z-10">
+                      <div className="space-y-1">
+                        <span className="bg-emerald-400 text-black text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">
+                          RYVO Super Offer
+                        </span>
+                        <h4 className="text-sm font-black text-white leading-snug">50% OFF on 1st Auto & Bike Ride!</h4>
+                        <p className="text-[11px] text-emerald-200 font-medium">Use code <span className="font-extrabold text-amber-300">FIRST50</span> at checkout</p>
+                      </div>
+                      <div className="text-4xl animate-bounce">
+                        🎉
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-5 pt-3 border-t border-zinc-800/80 space-y-4 relative">
                 
                 {/* Pickup Field */}
                 <div className={`relative ${activeInput === 'pickup' ? 'z-30' : 'z-10'}`}>
