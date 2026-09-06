@@ -171,105 +171,9 @@ function App() {
   const [review, setReview] = useState<string>('')
   const [hasRated, setHasRated] = useState<boolean>(false)
   
-  // Tip, 2-Min Session Timeout, Knife Hit Game state
+  // Tip & 2-Min Session Timeout state
   const [tipAmount, setTipAmount] = useState<number>(0);
   const [searchingTimer, setSearchingTimer] = useState<number>(120);
-  const [gameScore, setGameScore] = useState<number>(0);
-  
-  // Knife Hit Arcade Game States
-  const [knifeStage, setKnifeStage] = useState<number>(1);
-  const [knivesLeft, setKnivesLeft] = useState<number>(7);
-  const [stuckKnives, setStuckKnives] = useState<number[]>([]);
-  const [apples, setApples] = useState<number[]>([45, 225]);
-  const [applesSliced, setApplesSliced] = useState<number>(0);
-  const [isKnifeFlying, setIsKnifeFlying] = useState<boolean>(false);
-  const [knifeMessage, setKnifeMessage] = useState<string | null>(null);
-  const [targetAngle, setTargetAngle] = useState<number>(0);
-
-  const targetAngleRef = useRef(targetAngle);
-  targetAngleRef.current = targetAngle;
-  const stuckKnivesRef = useRef(stuckKnives);
-  stuckKnivesRef.current = stuckKnives;
-  const applesRef = useRef(apples);
-  applesRef.current = apples;
-  const isKnifeFlyingRef = useRef(isKnifeFlying);
-  isKnifeFlyingRef.current = isKnifeFlying;
-  const knivesLeftRef = useRef(knivesLeft);
-  knivesLeftRef.current = knivesLeft;
-  const knifeStageRef = useRef(knifeStage);
-  knifeStageRef.current = knifeStage;
-
-  // Target Rotation Loop
-  useEffect(() => {
-    if (status !== 'searching') return;
-    const interval = setInterval(() => {
-      setTargetAngle(prev => (prev + (1.5 + (knifeStageRef.current * 0.2))) % 360);
-    }, 20);
-    return () => clearInterval(interval);
-  }, [status]);
-
-  // Throw Knife Mechanics
-  const throwKnife = () => {
-    if (isKnifeFlyingRef.current || knivesLeftRef.current <= 0) return;
-    setIsKnifeFlying(true);
-
-    setTimeout(() => {
-      const currentRot = targetAngleRef.current;
-      const relativeAngle = (360 - (currentRot % 360)) % 360;
-
-      // Check collision with existing stuck knives
-      const isCollision = stuckKnivesRef.current.some(angle => {
-        const diff = Math.abs(angle - relativeAngle);
-        const minDiff = Math.min(diff, 360 - diff);
-        return minDiff < 18;
-      });
-
-      if (isCollision) {
-        setKnifeMessage("💥 BOUNCE! Knife hit another knife!");
-        setTimeout(() => {
-          setStuckKnives([]);
-          setKnivesLeft(7);
-          setKnifeMessage(null);
-        }, 1200);
-      } else {
-        const nextStuck = [...stuckKnivesRef.current, relativeAngle];
-        setStuckKnives(nextStuck);
-        setGameScore(s => s + 50);
-
-        // Check Apple hit
-        const hitApple = applesRef.current.find(appleAngle => {
-          const diff = Math.abs(appleAngle - relativeAngle);
-          const minDiff = Math.min(diff, 360 - diff);
-          return minDiff < 22;
-        });
-
-        if (hitApple !== undefined) {
-          setApples(a => a.filter(ang => ang !== hitApple));
-          setApplesSliced(a => a + 1);
-          setGameScore(s => s + 100);
-          setKnifeMessage("🍎 JUICY APPLE SLICED! +100");
-          setTimeout(() => setKnifeMessage(null), 1000);
-        }
-
-        const remaining = knivesLeftRef.current - 1;
-        setKnivesLeft(remaining);
-
-        if (remaining <= 0) {
-          setKnifeMessage("💥 LOG SHATTERED! STAGE CLEAR! 🎉");
-          setTimeout(() => {
-            setKnifeStage(st => st + 1);
-            setKnivesLeft(7 + Math.min(knifeStageRef.current, 3));
-            setStuckKnives([]);
-            setApples([(Math.random() * 120), (180 + Math.random() * 120)]);
-            setGameScore(s => s + 300);
-            setKnifeMessage(null);
-          }, 1400);
-        }
-      }
-
-      setIsKnifeFlying(false);
-    }, 120);
-  };
 
   const [noDriverFound, setNoDriverFound] = useState<boolean>(false);
   const [suggestedVehicle, setSuggestedVehicle] = useState<VehicleType | null>(null);
@@ -1020,7 +924,6 @@ function App() {
     }
     setStatus('searching');
     setSearchingTimer(120);
-    setGameScore(0);
     setNoDriverFound(false);
     setErrorMessage(null);
     console.log("Confirm Ride clicked. Booking vehicle:", vehicleToBook);
@@ -1496,162 +1399,93 @@ function App() {
                       setRating(0);
                       setReview('');
                       setHasRated(false);
-                      setDriverDetails(null);
-                      setDriverLocation(null);
-                    }} className="mt-4 w-full bg-white text-black font-bold py-3 rounded-xl hover:bg-zinc-200">
-                      Request Another Ride
-                    </button>
-                  )}
-               </div>
-             </div>
-          ) : status === 'searching' ? (
+                                }} className="mt-4 w-full bg-white text-black font-bold py-3 rounded-xl hover:bg-zinc-200">
+                       Request Another Ride
+                     </button>
+                   )}
+                </div>
+              </div>
+           ) : status === 'searching' ? (
               <div className="py-2">
-                 {/* 🗡️ RYVO Knife Hit Arcade Game Card */}
-                 <div 
-                   onClick={() => {
-                     if (!isKnifeFlying) throwKnife();
-                   }}
-                   className="relative mb-4 p-4 bg-gradient-to-b from-zinc-900 via-zinc-950 to-black rounded-3xl border border-amber-500/40 shadow-2xl overflow-hidden text-center cursor-pointer select-none"
-                 >
+                 {/* 📡 RYVO Live Radar & Driver Dispatch Radar Card */}
+                 <div className="relative mb-4 p-4 bg-gradient-to-b from-zinc-900 via-zinc-950 to-black rounded-3xl border border-amber-500/40 shadow-2xl overflow-hidden text-center">
                    
                    {/* HUD Header Bar */}
                    <div className="flex items-center justify-between mb-3 px-1">
                      <div className="flex items-center space-x-2">
                        <span className="relative flex h-3 w-3">
-                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                         <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                         <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
                        </span>
-                       <span className="text-xs font-black text-amber-400 uppercase tracking-wider">🗡️ Knife Hit Arcade</span>
+                       <span className="text-xs font-black text-amber-400 uppercase tracking-wider">📡 LIVE DISPATCH RADAR</span>
                      </div>
                      <div className="flex items-center space-x-2">
                        <div className="bg-amber-500/10 border border-amber-500/30 px-2.5 py-1 rounded-full flex items-center space-x-1">
-                         <span className="text-xs">⚔️</span>
-                         <span className="text-xs font-black text-amber-300">Stage {knifeStage}</span>
-                       </div>
-                       <div className="bg-red-500/10 border border-red-500/30 px-2.5 py-1 rounded-full flex items-center space-x-1">
-                         <span className="text-xs">🍎</span>
-                         <span className="text-xs font-black text-red-400">{applesSliced}</span>
+                         <span className="text-xs">⏱️</span>
+                         <span className="text-xs font-black text-amber-300">EST: ~2-3 MIN</span>
                        </div>
                        <div className="bg-emerald-500/10 border border-emerald-500/30 px-2.5 py-1 rounded-full flex items-center space-x-1">
-                         <span className="text-xs">🏆</span>
-                         <span className="text-xs font-black text-emerald-400">{gameScore}</span>
+                         <span className="text-xs">🚕</span>
+                         <span className="text-xs font-black text-emerald-400">4 Active</span>
                        </div>
                      </div>
                    </div>
 
-                   {/* Game Arena / Target Area */}
-                   <div className="relative w-56 h-56 mx-auto my-1 flex items-center justify-center overflow-hidden">
+                   {/* Radar Visualizer Area */}
+                   <div className="relative w-48 h-48 mx-auto my-2 flex items-center justify-center">
+                     {/* Concentric Radar Rings */}
+                     <div className="absolute inset-0 rounded-full border border-amber-500/20 animate-pulse"></div>
+                     <div className="absolute inset-6 rounded-full border border-amber-500/30"></div>
+                     <div className="absolute inset-12 rounded-full border border-amber-500/40"></div>
+                     <div className="absolute inset-18 rounded-full border border-amber-500/50"></div>
                      
-                     {/* Rotating Wooden Log Target */}
-                     <div 
-                       style={{ transform: `rotate(${targetAngle}deg)` }}
-                       className="relative w-36 h-36 rounded-full bg-gradient-to-tr from-amber-950 via-amber-900 to-yellow-950 border-4 border-amber-700/80 shadow-[0_0_25px_rgba(217,119,6,0.3)] flex items-center justify-center transition-transform duration-75"
-                     >
-                       {/* Log Wood Rings SVG */}
-                       <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full opacity-35">
-                         <circle cx="50" cy="50" r="42" fill="none" stroke="#78350f" strokeWidth="2.5" />
-                         <circle cx="50" cy="50" r="30" fill="none" stroke="#92400e" strokeWidth="2" />
-                         <circle cx="50" cy="50" r="18" fill="none" stroke="#b45309" strokeWidth="1.5" />
-                         <circle cx="50" cy="50" r="6" fill="#78350f" />
-                         <path d="M50 8 L50 92 M8 50 L92 50" stroke="#78350f" strokeWidth="0.8" opacity="0.6" />
-                       </svg>
-
-                       {/* Inner Target Core */}
-                       <div className="w-10 h-10 rounded-full bg-amber-900/60 border border-amber-600/50 flex items-center justify-center text-[10px] font-black text-amber-300 shadow-inner z-10">
-                         RYVO
-                       </div>
-
-                       {/* Stuck Knives around the rotating log */}
-                       {stuckKnives.map((angle, idx) => (
-                         <div
-                           key={idx}
-                           style={{
-                             position: 'absolute',
-                             top: '50%',
-                             left: '50%',
-                             transform: `translate(-50%, -50%) rotate(${angle}deg) translateY(68px)`
-                           }}
-                           className="flex flex-col items-center pointer-events-none"
-                         >
-                           <span className="text-xl filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] transform rotate-180">🔪</span>
-                         </div>
-                       ))}
-
-                       {/* Rotating Apples on the log target */}
-                       {apples.map((angle, idx) => (
-                         <div
-                           key={idx}
-                           style={{
-                             position: 'absolute',
-                             top: '50%',
-                             left: '50%',
-                             transform: `translate(-50%, -50%) rotate(${angle}deg) translateY(62px)`
-                           }}
-                           className="flex items-center justify-center text-lg filter drop-shadow-md animate-bounce pointer-events-none"
-                         >
-                           🍎
-                         </div>
-                       ))}
+                     {/* Crosshair Lines */}
+                     <div className="absolute inset-0 flex items-center justify-center opacity-30">
+                       <div className="w-full h-[1px] bg-amber-500"></div>
+                       <div className="h-full w-[1px] bg-amber-500 absolute"></div>
                      </div>
 
-                     {/* Flying Knife Animation when thrown */}
-                     {isKnifeFlying && (
-                       <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 animate-knife-shoot pointer-events-none z-30">
-                         <span className="text-3xl filter drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]">🔪</span>
-                       </div>
-                     )}
-
-                     {/* Ready Knife loaded at bottom waiting to throw */}
-                     {!isKnifeFlying && knivesLeft > 0 && (
-                       <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 pointer-events-none z-20 animate-pulse">
-                         <span className="text-2xl filter drop-shadow-[0_2px_6px_rgba(245,158,11,0.6)]">🔪</span>
-                       </div>
-                     )}
-                   </div>
-
-                   {/* Collision / Level Up Message Toast Banner */}
-                   {knifeMessage && (
-                     <div className="my-2 p-2.5 bg-amber-500/20 border border-amber-500/50 rounded-2xl animate-bounce">
-                       <p className="text-xs font-black text-amber-300 uppercase tracking-wider">{knifeMessage}</p>
+                     {/* Rotating Radar Sweep Cone */}
+                     <div className="absolute inset-0 rounded-full overflow-hidden animate-spin duration-3000">
+                       <div className="w-full h-full bg-gradient-to-tr from-amber-500/30 via-transparent to-transparent origin-center"></div>
                      </div>
-                   )}
 
-                   {/* Knives Remaining HUD Bar */}
-                   <div className="flex items-center justify-center gap-1.5 my-2">
-                     <span className="text-[11px] font-bold text-zinc-400 mr-1 uppercase">Knives:</span>
-                     {Array.from({ length: 7 }).map((_, idx) => (
-                       <span 
-                         key={idx} 
-                         className={`text-sm transition-all duration-200 ${
-                           idx < knivesLeft 
-                             ? 'opacity-100 filter drop-shadow-[0_0_4px_rgba(245,158,11,0.8)] scale-110' 
-                             : 'opacity-20 grayscale scale-90'
-                         }`}
-                       >
-                         🔪
-                       </span>
-                     ))}
+                     {/* Simulated Driver Blips on Radar */}
+                     <div className="absolute top-8 left-12 flex items-center space-x-1 animate-ping">
+                       <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 border border-emerald-200"></span>
+                     </div>
+                     <div className="absolute bottom-10 right-10 flex items-center space-x-1 animate-pulse">
+                       <span className="w-2.5 h-2.5 rounded-full bg-amber-400 border border-amber-200"></span>
+                     </div>
+                     <div className="absolute top-12 right-14 flex items-center space-x-1 animate-pulse">
+                       <span className="w-2 h-2 rounded-full bg-yellow-400 border border-yellow-200"></span>
+                     </div>
+                     <div className="absolute bottom-12 left-10 flex items-center space-x-1 animate-pulse">
+                       <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+                     </div>
+
+                     {/* Center Rider Marker */}
+                     <div className="relative z-10 w-12 h-12 rounded-full bg-amber-500/20 border-2 border-amber-400 flex items-center justify-center text-xl shadow-[0_0_15px_rgba(245,158,11,0.5)]">
+                       📍
+                     </div>
                    </div>
 
-                   {/* Throw Knife Button */}
-                   <button
-                     onClick={(e) => {
-                       e.stopPropagation();
-                       throwKnife();
-                     }}
-                     disabled={isKnifeFlying || knivesLeft <= 0}
-                     className="w-full mt-2 bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-black font-black py-3 rounded-2xl text-sm transition-all shadow-lg active:scale-95 disabled:opacity-50 flex items-center justify-center space-x-2"
-                   >
-                     <span className="text-base">🔪</span>
-                     <span>{isKnifeFlying ? 'THROWING...' : knivesLeft <= 0 ? 'SHATTERED!' : 'TAP TO THROW KNIFE!'}</span>
-                   </button>
+                   {/* Live Broadcast Feed Log */}
+                   <div className="bg-zinc-900/80 p-2.5 rounded-2xl border border-zinc-800 my-2 text-left">
+                     <div className="flex items-center space-x-2">
+                       <span className="text-xs">⚡</span>
+                       <p className="text-[11px] font-bold text-amber-300 truncate">
+                         {searchingTimer > 90 ? "Scanning 2km radius around pickup point..." :
+                          searchingTimer > 60 ? "Notifying top-rated drivers nearby..." :
+                          "Expanding match zone for instant assignment..."}
+                       </p>
+                     </div>
+                   </div>
 
                    {/* Search Status Text */}
-                   <div className="mt-3 text-center">
-                     <p className="text-xs font-extrabold text-zinc-300 animate-pulse">
-                       {searchingTimer > 90 ? "📡 Connecting with nearest drivers in Bengaluru..." :
-                        searchingTimer > 60 ? "⚡ Priority signal sent to top-rated drivers..." :
-                        "🚕 Dispatching request to all available drivers..."}
+                   <div className="mt-2 text-center">
+                     <p className="text-xs font-extrabold text-zinc-200 animate-pulse">
+                       Matching your ride with active drivers nearby
                      </p>
                      <p className="text-[11px] text-zinc-400 mt-0.5 font-medium">Searching for {selectedVehicle.toUpperCase()} ride...</p>
                    </div>
