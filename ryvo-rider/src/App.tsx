@@ -175,7 +175,17 @@ function App() {
   const [tipAmount, setTipAmount] = useState<number>(0);
   const [searchingTimer, setSearchingTimer] = useState<number>(120);
   const [gameScore, setGameScore] = useState<number>(0);
-  const [tapFeedback, setTapFeedback] = useState<{ id: number; x: number; y: number; text: string }[]>([]);
+  const [coinsCollected, setCoinsCollected] = useState<number>(0);
+  const [comboMultiplier, setComboMultiplier] = useState<number>(1);
+  const [playerLane, setPlayerLane] = useState<0 | 1 | 2>(1); // 0: Left, 1: Center, 2: Right
+  const [gameItems, setGameItems] = useState<{ id: number; lane: 0 | 1 | 2; top: number; type: 'coin' | 'lightning' | 'star' | 'obstacle' }[]>([]);
+  const [gamePopups, setGamePopups] = useState<{ id: number; text: string; color: string; lane: number }[]>([]);
+
+  const playerLaneRef = useRef(playerLane);
+  playerLaneRef.current = playerLane;
+  const comboMultiplierRef = useRef(comboMultiplier);
+  comboMultiplierRef.current = comboMultiplier;
+
   const [noDriverFound, setNoDriverFound] = useState<boolean>(false);
   const [suggestedVehicle, setSuggestedVehicle] = useState<VehicleType | null>(null);
 
@@ -1000,6 +1010,84 @@ function App() {
     return () => clearInterval(timer);
   }, [status, currentRideId, selectedVehicle]);
 
+  // Interactive 3-Lane Traffic Dash Arcade Game Loop
+  useEffect(() => {
+    if (status !== 'searching') {
+      setGameItems([]);
+      setGamePopups([]);
+      setComboMultiplier(1);
+      return;
+    }
+
+    // Spawn new coins, energy, stars, and obstacles periodically
+    const spawnInterval = setInterval(() => {
+      const lanes: (0 | 1 | 2)[] = [0, 1, 2];
+      const randomLane = lanes[Math.floor(Math.random() * lanes.length)];
+      const rand = Math.random();
+      const type: 'coin' | 'lightning' | 'star' | 'obstacle' = 
+        rand < 0.55 ? 'coin' : rand < 0.75 ? 'lightning' : rand < 0.88 ? 'star' : 'obstacle';
+
+      setGameItems(prev => [
+        ...prev.slice(-8),
+        { id: Date.now() + Math.random(), lane: randomLane, top: 0, type }
+      ]);
+    }, 750);
+
+    // Physics movement & collision detection loop
+    const physicsInterval = setInterval(() => {
+      setGameItems(prev => {
+        const updated: typeof prev = [];
+        for (const item of prev) {
+          const nextTop = item.top + 6;
+
+          // Collision check when item reaches vertical player position (70% - 88%)
+          if (nextTop >= 70 && item.top < 70) {
+            if (item.lane === playerLaneRef.current) {
+              let pts = 0;
+              let popupText = '';
+              let popupColor = '';
+
+              if (item.type === 'coin') {
+                pts = 50 * comboMultiplierRef.current;
+                popupText = `+${pts} 🪙 COIN!`;
+                popupColor = 'text-amber-300';
+                setCoinsCollected(c => c + 1);
+              } else if (item.type === 'lightning') {
+                pts = 100 * comboMultiplierRef.current;
+                popupText = `+${pts} ⚡ BOOST!`;
+                popupColor = 'text-cyan-300';
+                setComboMultiplier(m => Math.min(m + 1, 5));
+              } else if (item.type === 'star') {
+                pts = 200;
+                popupText = `+200 ⭐ PRIORITY!`;
+                popupColor = 'text-purple-300';
+              } else if (item.type === 'obstacle') {
+                pts = -20;
+                popupText = `-20 🚧 DODGED!`;
+                popupColor = 'text-red-400';
+                setComboMultiplier(1);
+              }
+
+              setGameScore(s => Math.max(0, s + pts));
+              setGamePopups(p => [...p.slice(-3), { id: Date.now() + Math.random(), text: popupText, color: popupColor, lane: item.lane }]);
+              continue; // remove collected item
+            }
+          }
+
+          if (nextTop < 95) {
+            updated.push({ ...item, top: nextTop });
+          }
+        }
+        return updated;
+      });
+    }, 50);
+
+    return () => {
+      clearInterval(spawnInterval);
+      clearInterval(physicsInterval);
+    };
+  }, [status]);
+
   useEffect(() => {
     if (!currentRideId) return;
     
@@ -1410,78 +1498,132 @@ function App() {
                </div>
              </div>
           ) : status === 'searching' ? (
-             <div className="py-3">
-                {/* Attracting Interactive Mini-Game Radar Animation (Replaces raw seconds countdown) */}
-                <div className="relative mb-4 p-4 bg-gradient-to-b from-zinc-900/90 to-zinc-950/90 rounded-3xl border border-emerald-500/30 overflow-hidden shadow-2xl">
+             <div className="py-2">
+                {/* 🎮 RYVO Traffic Dash 3-Lane Arcade Racer Game Card */}
+                <div className="relative mb-4 p-4 bg-gradient-to-b from-zinc-900 to-zinc-950 rounded-3xl border border-zinc-700/80 shadow-2xl overflow-hidden">
+                  
+                  {/* Game HUD Bar: Live Status + High Score & Coins Counter */}
                   <div className="flex items-center justify-between mb-3 px-1">
                     <div className="flex items-center space-x-2">
                       <span className="relative flex h-3 w-3">
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                         <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
                       </span>
-                      <span className="text-xs font-black text-emerald-400 uppercase tracking-wider">Live Search Active</span>
+                      <span className="text-xs font-black text-white uppercase tracking-wider">🎮 RYVO Traffic Dash</span>
                     </div>
-                    <div className="bg-emerald-500/10 border border-emerald-500/30 px-3 py-1 rounded-full flex items-center space-x-1.5 animate-bounce">
-                      <span className="text-xs">⚡</span>
-                      <span className="text-xs font-black text-emerald-400">Signal: {gameScore}</span>
+
+                    <div className="flex items-center space-x-2">
+                      <div className="bg-amber-500/10 border border-amber-500/30 px-2.5 py-1 rounded-full flex items-center space-x-1">
+                        <span className="text-xs">🪙</span>
+                        <span className="text-xs font-black text-amber-300">{coinsCollected}</span>
+                      </div>
+                      <div className="bg-emerald-500/10 border border-emerald-500/30 px-2.5 py-1 rounded-full flex items-center space-x-1">
+                        <span className="text-xs">🏆</span>
+                        <span className="text-xs font-black text-emerald-400">{gameScore}</span>
+                      </div>
+                      {comboMultiplier > 1 && (
+                        <div className="bg-cyan-500/20 border border-cyan-500/40 px-2 py-0.5 rounded-full animate-bounce">
+                          <span className="text-[10px] font-black text-cyan-300">{comboMultiplier}x</span>
+                        </div>
+                      )}
                     </div>
                   </div>
 
-                  {/* Interactive Game Canvas / Radar Arena */}
-                  <div 
-                    onClick={(e) => {
-                      const rect = e.currentTarget.getBoundingClientRect();
-                      const x = e.clientX - rect.left;
-                      const y = e.clientY - rect.top;
-                      setGameScore(prev => prev + 10);
-                      const newFeedback = { id: Date.now(), x, y, text: '+10 Signal! ⚡' };
-                      setTapFeedback(prev => [...prev.slice(-4), newFeedback]);
-                    }}
-                    className="relative w-full h-40 bg-zinc-950 rounded-2xl border border-zinc-800 flex items-center justify-center overflow-hidden cursor-pointer select-none group active:scale-98 transition-transform"
-                  >
-                    {/* Radar Rings & Rotating Beams */}
-                    <div className="absolute w-36 h-36 rounded-full border border-emerald-500/20 animate-ping opacity-25"></div>
-                    <div className="absolute w-28 h-28 rounded-full border border-emerald-500/30"></div>
-                    <div className="absolute w-16 h-16 rounded-full border border-emerald-500/40"></div>
-                    <div className="absolute w-full h-0.5 bg-gradient-to-r from-transparent via-emerald-500/60 to-transparent animate-spin origin-center opacity-75"></div>
-
-                    {/* Orbiting Driver Vehicle Icons */}
-                    <div className="absolute animate-spin duration-10000 w-32 h-32 flex items-center justify-between pointer-events-none">
-                      <span className="text-xl transform -rotate-45">🛵</span>
-                      <span className="text-xl transform rotate-45">🛺</span>
-                    </div>
-                    <div className="absolute animate-spin duration-7000 w-24 h-24 flex items-center justify-between pointer-events-none">
-                      <span className="text-lg">🚗</span>
-                      <span className="text-lg">🚕</span>
+                  {/* 3-Lane Arcade Track Viewport */}
+                  <div className="relative w-full h-44 bg-zinc-950 rounded-2xl border-2 border-zinc-800 overflow-hidden shadow-inner select-none">
+                    
+                    {/* 3 Lanes Grid */}
+                    <div className="absolute inset-0 grid grid-cols-3 divide-x divide-zinc-800/80">
+                      {[0, 1, 2].map((laneIndex) => (
+                        <div 
+                          key={laneIndex}
+                          onClick={() => setPlayerLane(laneIndex as 0 | 1 | 2)}
+                          className={`relative h-full cursor-pointer transition-colors ${playerLane === laneIndex ? 'bg-emerald-500/5' : 'hover:bg-zinc-900/40'}`}
+                        >
+                          {/* Road Striping Line */}
+                          <div className="absolute inset-y-0 left-1/2 w-0.5 border-r border-dashed border-zinc-800/50 opacity-40"></div>
+                        </div>
+                      ))}
                     </div>
 
-                    {/* Center Signal Location Pin */}
-                    <div className="z-10 bg-emerald-500/20 p-3.5 rounded-full border-2 border-emerald-400 text-2xl shadow-lg shadow-emerald-500/30 group-hover:scale-110 transition-transform">
-                      📍
-                    </div>
-
-                    {/* Interactive Tap Floating Feedback Bubbles */}
-                    {tapFeedback.map((fb) => (
-                      <span 
-                        key={fb.id}
-                        style={{ left: fb.x, top: fb.y }}
-                        className="absolute text-xs font-black text-amber-300 pointer-events-none z-30 animate-bounce"
+                    {/* Falling Game Items (Coins 🪙, Lightning ⚡, Stars ⭐, Cones 🚧) */}
+                    {gameItems.map((item) => (
+                      <div
+                        key={item.id}
+                        style={{
+                          left: `${(item.lane * 33.33) + 16.66}%`,
+                          top: `${item.top}%`,
+                          transform: 'translate(-50%, -50%)'
+                        }}
+                        className="absolute text-2xl z-20 pointer-events-none transition-all duration-75"
                       >
-                        {fb.text}
-                      </span>
+                        {item.type === 'coin' ? '🪙' :
+                         item.type === 'lightning' ? '⚡' :
+                         item.type === 'star' ? '⭐' : '🚧'}
+                      </div>
                     ))}
 
-                    <div className="absolute bottom-2 inset-x-0 text-center">
-                      <span className="text-[10px] font-extrabold text-emerald-400 bg-zinc-900/90 px-3 py-1 rounded-full border border-emerald-500/30">
-                        🎮 Tap radar to boost driver dispatch!
+                    {/* Floating Catch / Collision Popups */}
+                    {gamePopups.map((popup) => (
+                      <div
+                        key={popup.id}
+                        style={{
+                          left: `${(popup.lane * 33.33) + 16.66}%`,
+                          top: '60%',
+                          transform: 'translate(-50%, -50%)'
+                        }}
+                        className={`absolute z-30 font-black text-xs ${popup.color} animate-bounce pointer-events-none whitespace-nowrap drop-shadow-md`}
+                      >
+                        {popup.text}
+                      </div>
+                    ))}
+
+                    {/* Player Vehicle Sprite (Positioned at bottom of current playerLane) */}
+                    <div
+                      style={{
+                        left: `${(playerLane * 33.33) + 16.66}%`,
+                        top: '80%',
+                        transform: 'translate(-50%, -50%)'
+                      }}
+                      className="absolute z-30 text-3xl transition-all duration-150 ease-out filter drop-shadow-[0_0_8px_rgba(16,185,129,0.5)]"
+                    >
+                      {selectedVehicle === 'bike' ? '🛵' : selectedVehicle === 'auto' ? '🛺' : '🚗'}
+                    </div>
+
+                    {/* Instructions Banner */}
+                    <div className="absolute bottom-1 inset-x-0 text-center pointer-events-none z-10">
+                      <span className="text-[10px] font-extrabold text-zinc-400 bg-zinc-900/90 px-3 py-0.5 rounded-full border border-zinc-800">
+                        🎮 Tap lanes or buttons to steer & collect coins!
                       </span>
                     </div>
                   </div>
 
-                  {/* Dynamic Non-Seconds Search Status */}
+                  {/* 3-Lane Touch Controls */}
+                  <div className="grid grid-cols-3 gap-2 mt-3">
+                    <button
+                      onClick={() => setPlayerLane(0)}
+                      className={`py-2 text-xs font-black rounded-xl border transition ${playerLane === 0 ? 'bg-emerald-500 text-black border-emerald-400 shadow-md font-extrabold' : 'bg-zinc-900 text-zinc-300 border-zinc-800 hover:border-zinc-700'}`}
+                    >
+                      👈 LEFT LANE
+                    </button>
+                    <button
+                      onClick={() => setPlayerLane(1)}
+                      className={`py-2 text-xs font-black rounded-xl border transition ${playerLane === 1 ? 'bg-emerald-500 text-black border-emerald-400 shadow-md font-extrabold' : 'bg-zinc-900 text-zinc-300 border-zinc-800 hover:border-zinc-700'}`}
+                    >
+                      🎯 CENTER
+                    </button>
+                    <button
+                      onClick={() => setPlayerLane(2)}
+                      className={`py-2 text-xs font-black rounded-xl border transition ${playerLane === 2 ? 'bg-emerald-500 text-black border-emerald-400 shadow-md font-extrabold' : 'bg-zinc-900 text-zinc-300 border-zinc-800 hover:border-zinc-700'}`}
+                    >
+                      RIGHT 👉
+                    </button>
+                  </div>
+
+                  {/* Dynamic Status Text */}
                   <div className="mt-3 text-center">
                     <p className="text-sm font-extrabold text-white animate-pulse">
-                      {searchingTimer > 90 ? "📡 Connecting with nearby drivers in Bengaluru..." :
+                      {searchingTimer > 90 ? "📡 Connecting with nearest drivers in Bengaluru..." :
                        searchingTimer > 60 ? "⚡ Priority signal sent to top-rated drivers..." :
                        "🚕 Dispatching request to all available drivers..."}
                     </p>
