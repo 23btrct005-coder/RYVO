@@ -904,6 +904,7 @@ function App() {
     setDriverDetails(null);
     setDriverLocation(null);
     setRouteGeometry(null);
+    setTipAmount(0);
     
     if (!currentRideId) return;
     try {
@@ -1400,6 +1401,7 @@ function App() {
                       setRating(0);
                       setReview('');
                       setHasRated(false);
+                      setTipAmount(0);
                                 }} className="mt-4 w-full bg-white text-black font-bold py-3 rounded-xl hover:bg-zinc-200">
                        Request Another Ride
                      </button>
@@ -1510,7 +1512,11 @@ function App() {
                               const basePrice = getPrice(selectedVehicle, distance);
                               const newTotal = Number((basePrice + amount).toFixed(2));
                               await supabase.from('rides').update({ price: newTotal, tip: amount }).eq('id', currentRideId);
-                              showToast(`Added +₹${amount} tip! Total fare updated to ₹${newTotal}.`);
+                              if (amount > 0) {
+                                showToast(`🚀 Sending updated request (+₹${amount} tip) to nearby drivers!`);
+                              } else {
+                                showToast(`Tip removed. Fare updated to ₹${newTotal}.`);
+                              }
                             }
                           }}
                           className={`py-2 px-1 text-xs font-black rounded-xl border transition-all ${
