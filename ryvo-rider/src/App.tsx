@@ -1,4 +1,4 @@
-// Vercel Production Trigger: 2026-09-06T09:47:00 - fix: bring dropdown out of box with overflow-visible and expanded length
+// Vercel Production Trigger: 2026-09-06T09:55:00 - fix: auto-fetch route line and hide recent searches when typing
 import { useState, useEffect, useRef } from 'react'
 import Map, { Marker, Source, Layer } from 'react-map-gl/mapbox'
 import type { MapRef } from 'react-map-gl/mapbox'
@@ -478,6 +478,33 @@ function App() {
     }
     getLocation()
   }, [])
+
+  // Auto-fetch route polyline line whenever pickup and destination coordinates exist
+  useEffect(() => {
+    if (!pickupCoords || !destCoords) return;
+    const fetchAutoRoute = async () => {
+      try {
+        const waypoints: [number, number][] = [pickupCoords];
+        stops.forEach(s => { if (s.coords) waypoints.push(s.coords); });
+        waypoints.push(destCoords);
+        const waypointsStr = waypoints.map(c => `${c[1]},${c[0]}`).join(';');
+        const res = await fetch(`https://api.mapbox.com/directions/v5/mapbox/driving-traffic/${waypointsStr}?alternatives=true&geometries=geojson&overview=full&access_token=${MAPBOX_TOKEN}`);
+        const data = await res.json();
+        if (data?.routes && data.routes.length > 0) {
+          const shortestRoute = data.routes.reduce((min: any, r: any) => r.duration < min.duration ? r : min, data.routes[0]);
+          const swappedGeometry = shortestRoute.geometry.coordinates.map((coord: [number, number]) => [coord[1], coord[0]]);
+          setRouteGeometry(swappedGeometry);
+          const distanceKm = shortestRoute.distance / 1000;
+          setDistance(distanceKm);
+          const durationMins = Math.max(1, Math.ceil((shortestRoute.duration || 0) / 60));
+          setEstimatedDuration(durationMins);
+        }
+      } catch (e) {
+        console.warn("Auto-route fetch error:", e);
+      }
+    };
+    fetchAutoRoute();
+  }, [pickupCoords, destCoords, stops]);
 
   // Listen for online drivers in real-time
   useEffect(() => {
@@ -1462,8 +1489,8 @@ function App() {
                          </div>
                       ))}
 
-                      {/* Option 3: Recent Searches */}
-                      {recentSearches.length > 0 && (
+                      {/* Option 3: Recent Searches (Shown ONLY when input is empty) */}
+                      {!pickup.trim() && recentSearches.length > 0 && (
                         <div className="p-3 bg-zinc-900/90 border-b border-zinc-800">
                           <p className="text-[11px] uppercase font-black text-zinc-400 px-1 mb-2 tracking-wider">Recent Searches</p>
                           <div className="space-y-1.5">
@@ -1517,8 +1544,8 @@ function App() {
                         </div>
                       )}
 
-                      {/* Vertical Recent Pickups List (Rapido / Uber / Ola style) */}
-                      {pastRides.length > 0 && (() => {
+                      {/* Vertical Recent Pickups List (Shown ONLY when input is empty) */}
+                      {!pickup.trim() && pastRides.length > 0 && (() => {
                         const uniquePickups = Array.from(new Set(pastRides.map(r => r.pickup).filter(Boolean))).slice(0, 5);
                         if (uniquePickups.length === 0) return null;
                         return (
@@ -1758,8 +1785,8 @@ function App() {
                          </div>
                       ))}
 
-                      {/* Option 3: Recent Searches */}
-                      {recentSearches.length > 0 && (
+                      {/* Option 3: Recent Searches (Shown ONLY when input is empty) */}
+                      {!destination.trim() && recentSearches.length > 0 && (
                         <div className="p-3 bg-zinc-900/90 border-b border-zinc-800">
                           <p className="text-[11px] uppercase font-black text-zinc-400 px-1 mb-2 tracking-wider">Recent Searches</p>
                           <div className="space-y-1.5">
@@ -1813,8 +1840,8 @@ function App() {
                         </div>
                       )}
 
-                      {/* Vertical Recent Destinations List (Rapido / Uber / Ola style) */}
-                      {pastRides.length > 0 && (() => {
+                      {/* Vertical Recent Destinations List (Shown ONLY when input is empty) */}
+                      {!destination.trim() && pastRides.length > 0 && (() => {
                         const uniqueDests = Array.from(new Set(pastRides.map(r => r.destination).filter(Boolean))).slice(0, 5);
                         if (uniqueDests.length === 0) return null;
                         return (
