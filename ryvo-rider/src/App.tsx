@@ -1453,10 +1453,12 @@ function App() {
                      <div className="flex items-center justify-between">
                        <div>
                          <h4 className="text-sm font-black text-white">RYVO {selectedVehicle.toUpperCase()}</h4>
-                         <p className="text-[11px] text-zinc-400 font-medium">Pickup ETA ~{getETAForVehicle(selectedVehicle, estimatedDuration)} mins</p>
+                         {tipAmount > 0 && (
+                           <span className="text-[10px] font-extrabold text-emerald-400">Base ₹{getPrice(selectedVehicle, distance).toFixed(2)} + ₹{tipAmount} Tip</span>
+                         )}
                        </div>
                        <div className="text-right">
-                         <span className="text-lg font-black text-emerald-400 block">₹{getPrice(selectedVehicle, distance).toFixed(2)}</span>
+                         <span className="text-lg font-black text-emerald-400 block">₹{(getPrice(selectedVehicle, distance) + tipAmount).toFixed(2)}</span>
                          <span className="text-[10px] font-bold text-zinc-400 bg-zinc-800 px-2 py-0.5 rounded-md inline-block">💵 Cash / UPI</span>
                        </div>
                      </div>
@@ -1478,13 +1480,22 @@ function App() {
                 {/* 1. Tips Feature Box (Shown ONLY after 30 seconds of searching, i.e., searchingTimer <= 90) */}
                 {searchingTimer <= 90 && (
                   <div className="mb-4 bg-zinc-800/90 p-3.5 rounded-2xl border border-zinc-700/80 text-left animate-slide-in">
-                    <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center justify-between mb-2.5">
                       <span className="text-xs font-bold text-zinc-200 flex items-center gap-1.5">
-                        <span className="text-emerald-400">⚡</span> Add tip to speed up driver response
+                        <span className="text-amber-400 font-extrabold">⚡</span> Add tip to speed up response
                       </span>
-                      {tipAmount > 0 && (
-                        <span className="text-xs font-extrabold text-emerald-400 bg-emerald-500/20 px-2 py-0.5 rounded-md border border-emerald-500/30">
-                          +₹{tipAmount} Tip Active
+                      {tipAmount > 0 ? (
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[11px] font-extrabold text-emerald-400 bg-emerald-500/20 px-2.5 py-0.5 rounded-md border border-emerald-500/30">
+                            +₹{tipAmount} Tip
+                          </span>
+                          <span className="text-[11px] font-extrabold text-white bg-zinc-900 px-2 py-0.5 rounded-md border border-zinc-700">
+                            Total: ₹{(getPrice(selectedVehicle, distance) + tipAmount).toFixed(2)}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider bg-zinc-900 px-2 py-0.5 rounded border border-zinc-750">
+                          Optional
                         </span>
                       )}
                     </div>
@@ -1498,12 +1509,12 @@ function App() {
                               const basePrice = getPrice(selectedVehicle, distance);
                               const newTotal = Number((basePrice + amount).toFixed(2));
                               await supabase.from('rides').update({ price: newTotal }).eq('id', currentRideId);
-                              showToast(`Added +₹${amount} tip! Updated total fare.`);
+                              showToast(`Added +₹${amount} tip! Total fare updated to ₹${newTotal}.`);
                             }
                           }}
-                          className={`py-2 px-1 text-xs font-bold rounded-xl border transition-all ${
+                          className={`py-2 px-1 text-xs font-black rounded-xl border transition-all ${
                             tipAmount === amount
-                              ? 'bg-emerald-500 text-black border-emerald-400 shadow-md scale-105 font-extrabold'
+                              ? 'bg-gradient-to-r from-emerald-500 to-teal-400 text-black border-emerald-400 shadow-md scale-105 font-extrabold'
                               : 'bg-zinc-900 text-zinc-300 border-zinc-750 hover:border-zinc-500'
                           }`}
                         >

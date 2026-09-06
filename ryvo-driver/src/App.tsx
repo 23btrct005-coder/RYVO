@@ -1042,6 +1042,13 @@ function App() {
         const totalFareFormatted = activeReq.price ? activeReq.price.toFixed(0) : '399';
         const activeVehicleType = (driverProfile?.vehicletype || activeReq.vehicleType || 'mini').toUpperCase();
         const activeEmoji = activeVehicleType === 'AUTO' ? '🛺' : activeVehicleType === 'BIKE' ? '🛵' : '🚗';
+        
+        // Calculate optional tip badge for driver view
+        // If price is higher than distance base rate or explicitly tipped
+        const estimatedBase = activeReq.distance ? (activeVehicleType === 'BIKE' ? activeReq.distance * 10 : activeVehicleType === 'AUTO' ? activeReq.distance * 15 : activeReq.distance * 20) : 0;
+        const calculatedTip = activeReq.price && estimatedBase > 0 && activeReq.price > estimatedBase + 5 
+          ? Math.round(activeReq.price - estimatedBase) 
+          : 0;
 
         return (
           <div className="absolute inset-x-0 bottom-0 z-20 p-2 sm:p-4 pb-6 bg-gradient-to-t from-black/80 via-black/40 to-transparent pointer-events-auto">
@@ -1087,14 +1094,19 @@ function App() {
 
               {/* Main Order Card */}
               <div className="flex-1 bg-white text-zinc-900 rounded-3xl p-5 shadow-2xl border border-zinc-200 transition-all transform animate-in slide-in-from-bottom duration-300">
-                {/* Header: Driver Vehicle Icon + Total Fare + Stops Badge */}
+                {/* Header: Driver Vehicle Icon + Total Fare + Tip & Stops Badges */}
                 <div className="flex items-center justify-between pb-3 border-b border-zinc-100 mb-4">
                   <div className="flex items-center gap-3">
                     <div className="w-11 h-11 rounded-full bg-slate-900 flex items-center justify-center text-2xl text-white shadow-md border border-slate-700">
                       {activeEmoji}
                     </div>
-                    <div>
+                    <div className="flex items-center gap-2">
                       <span className="text-3xl font-black text-slate-900 tracking-tight">₹{totalFareFormatted}</span>
+                      {calculatedTip > 0 && (
+                        <span className="bg-emerald-500 text-black text-xs font-black px-2.5 py-1 rounded-full border border-emerald-400 shadow-sm animate-pulse">
+                          +₹{calculatedTip} Tip
+                        </span>
+                      )}
                     </div>
                   </div>
                   {activeReq.stops && Array.isArray(activeReq.stops) && activeReq.stops.length > 0 && (
