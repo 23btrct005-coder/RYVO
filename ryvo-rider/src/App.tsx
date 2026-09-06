@@ -1407,131 +1407,52 @@ function App() {
               </div>
            ) : status === 'searching' ? (
               <div className="py-2">
-                 {/* 📡 Premium Driver Dispatch Pipeline Tracker Card */}
-                 <div className="relative mb-4 p-4.5 bg-gradient-to-b from-zinc-900 via-zinc-950 to-black rounded-3xl border border-amber-500/40 shadow-2xl overflow-hidden text-left space-y-3.5">
+                 {/* 🚕 Clean Real-World Ride Searching Sheet (Uber / Lyft Standard) */}
+                 <div className="mb-4 p-5 bg-gradient-to-b from-zinc-900 to-zinc-950 rounded-3xl border border-zinc-800 shadow-2xl text-left space-y-4">
                    
-                   {/* HUD Top Bar Header */}
-                   <div className="flex items-center justify-between px-0.5">
-                     <div className="flex items-center space-x-2">
-                       <span className="relative flex h-3 w-3">
+                   {/* Animated Searching Status Banner */}
+                   <div className="flex items-center space-x-3.5">
+                     <div className="relative flex items-center justify-center shrink-0 w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-400">
+                       <span className="text-2xl animate-pulse">{selectedVehicle === 'bike' ? '🛵' : selectedVehicle === 'auto' ? '🛺' : '🚗'}</span>
+                       <span className="absolute -top-1 -right-1 flex h-3 w-3">
                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                          <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
                        </span>
-                       <span className="text-xs font-black text-amber-400 uppercase tracking-wider">📡 DRIVER DISPATCH PIPELINE</span>
                      </div>
-                     <div className="bg-amber-500/10 border border-amber-500/30 px-3 py-1 rounded-full flex items-center space-x-1.5">
-                       <span className="text-xs">⏱️</span>
-                       <span className="text-xs font-black text-amber-300">
-                         {Math.floor(searchingTimer / 60)}:{String(searchingTimer % 60).padStart(2, '0')}
-                       </span>
-                     </div>
-                   </div>
-
-                   {/* Live Step Pipeline Visualizer */}
-                   <div className="bg-zinc-950/80 p-3.5 rounded-2xl border border-zinc-850 space-y-3 shadow-inner">
-                     
-                     {/* Pipeline Step 1 */}
-                     <div className="flex items-start space-x-3">
-                       <div className="relative flex items-center justify-center shrink-0 mt-0.5">
-                         <span className="w-5 h-5 rounded-full bg-emerald-500 text-black flex items-center justify-center text-[10px] font-black shadow-md">✓</span>
+                     <div className="flex-1 min-w-0">
+                       <div className="flex items-center justify-between">
+                         <h3 className="text-base font-black text-white truncate">Connecting with drivers...</h3>
+                         <span className="text-xs font-black text-amber-400 bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/20">
+                           {Math.floor(searchingTimer / 60)}:{String(searchingTimer % 60).padStart(2, '0')}
+                         </span>
                        </div>
-                       <div className="flex-1 min-w-0">
-                         <div className="flex items-center justify-between">
-                           <h5 className="text-xs font-extrabold text-white">Ride Request Broadcasted</h5>
-                           <span className="text-[10px] font-bold text-emerald-400">Complete</span>
-                         </div>
-                         <p className="text-[11px] text-zinc-400">Signal sent to all nearby drivers in 2.5km radius</p>
-                       </div>
-                     </div>
-
-                     <div className="w-0.5 h-2.5 bg-emerald-500/60 ml-2.5 -my-1"></div>
-
-                     {/* Pipeline Step 2 */}
-                     <div className="flex items-start space-x-3">
-                       <div className="relative flex items-center justify-center shrink-0 mt-0.5">
-                         {searchingTimer > 90 ? (
-                           <span className="relative flex h-5 w-5">
-                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                             <span className="relative inline-flex rounded-full h-5 w-5 bg-amber-500 text-black items-center justify-center text-[10px] font-black">2</span>
-                           </span>
-                         ) : (
-                           <span className="w-5 h-5 rounded-full bg-emerald-500 text-black flex items-center justify-center text-[10px] font-black shadow-md">✓</span>
-                         )}
-                       </div>
-                       <div className="flex-1 min-w-0">
-                         <div className="flex items-center justify-between">
-                           <h5 className="text-xs font-extrabold text-white">Driver Availability Handshake</h5>
-                           <span className={`text-[10px] font-bold ${searchingTimer > 90 ? 'text-amber-400 animate-pulse' : 'text-emerald-400'}`}>
-                             {searchingTimer > 90 ? 'In Progress...' : '4 Drivers Active'}
-                           </span>
-                         </div>
-                         <p className="text-[11px] text-zinc-400">Analyzing live traffic & driver distance rankings</p>
-                       </div>
-                     </div>
-
-                     <div className={`w-0.5 h-2.5 ml-2.5 -my-1 ${searchingTimer <= 90 ? 'bg-emerald-500/60' : 'bg-zinc-800'}`}></div>
-
-                     {/* Pipeline Step 3 */}
-                     <div className="flex items-start space-x-3">
-                       <div className="relative flex items-center justify-center shrink-0 mt-0.5">
-                         {searchingTimer <= 90 && searchingTimer > 60 ? (
-                           <span className="relative flex h-5 w-5">
-                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                             <span className="relative inline-flex rounded-full h-5 w-5 bg-amber-500 text-black items-center justify-center text-[10px] font-black">3</span>
-                           </span>
-                         ) : searchingTimer <= 60 ? (
-                           <span className="w-5 h-5 rounded-full bg-emerald-500 text-black flex items-center justify-center text-[10px] font-black shadow-md">✓</span>
-                         ) : (
-                           <span className="w-5 h-5 rounded-full bg-zinc-800 text-zinc-500 flex items-center justify-center text-[10px] font-bold">3</span>
-                         )}
-                       </div>
-                       <div className="flex-1 min-w-0">
-                         <div className="flex items-center justify-between">
-                           <h5 className="text-xs font-extrabold text-white">Priority Dispatch Match</h5>
-                           <span className={`text-[10px] font-bold ${searchingTimer <= 90 && searchingTimer > 60 ? 'text-amber-400 animate-pulse' : searchingTimer <= 60 ? 'text-emerald-400' : 'text-zinc-500'}`}>
-                             {searchingTimer <= 90 && searchingTimer > 60 ? 'Notifying Top Rated...' : searchingTimer <= 60 ? 'Matched' : 'Pending'}
-                           </span>
-                         </div>
-                         <p className="text-[11px] text-zinc-400">Direct alert sent to highest-rated nearest drivers</p>
-                       </div>
-                     </div>
-
-                     <div className={`w-0.5 h-2.5 ml-2.5 -my-1 ${searchingTimer <= 60 ? 'bg-emerald-500/60' : 'bg-zinc-800'}`}></div>
-
-                     {/* Pipeline Step 4 */}
-                     <div className="flex items-start space-x-3">
-                       <div className="relative flex items-center justify-center shrink-0 mt-0.5">
-                         {searchingTimer <= 60 ? (
-                           <span className="relative flex h-5 w-5">
-                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                             <span className="relative inline-flex rounded-full h-5 w-5 bg-emerald-500 text-black items-center justify-center text-[10px] font-black">4</span>
-                           </span>
-                         ) : (
-                           <span className="w-5 h-5 rounded-full bg-zinc-800 text-zinc-500 flex items-center justify-center text-[10px] font-bold">4</span>
-                         )}
-                       </div>
-                       <div className="flex-1 min-w-0">
-                         <div className="flex items-center justify-between">
-                           <h5 className="text-xs font-extrabold text-white">Driver Acceptance & Lock</h5>
-                           <span className={`text-[10px] font-bold ${searchingTimer <= 60 ? 'text-emerald-400 animate-pulse' : 'text-zinc-500'}`}>
-                             {searchingTimer <= 60 ? 'Assigning Now...' : 'Waiting'}
-                           </span>
-                         </div>
-                         <p className="text-[11px] text-zinc-400">Finalizing driver arrival ETA & vehicle assignment</p>
-                       </div>
+                       <p className="text-xs text-zinc-400 font-medium truncate mt-0.5">
+                         {searchingTimer > 90 ? 'Searching 2.5km radius in Bengaluru...' :
+                          searchingTimer > 60 ? 'Connecting with top-rated nearby drivers...' :
+                          'Expanding driver search area...'}
+                       </p>
                      </div>
                    </div>
 
-                   {/* Ride Summary Quick Badge */}
-                   <div className="flex items-center justify-between bg-zinc-900/90 p-3 rounded-2xl border border-zinc-800">
-                     <div className="flex items-center space-x-2.5">
-                       <span className="text-xl">{selectedVehicle === 'bike' ? '🛵' : selectedVehicle === 'auto' ? '🛺' : '🚗'}</span>
-                       <div>
-                         <h5 className="text-xs font-black text-white uppercase">RYVO {selectedVehicle}</h5>
-                         <p className="text-[11px] text-zinc-400">Pickup in ~{getETAForVehicle(selectedVehicle, estimatedDuration)} mins</p>
+                   {/* Smooth Animated Linear Progress Bar */}
+                   <div className="w-full h-1.5 bg-zinc-900 rounded-full overflow-hidden border border-zinc-800">
+                     <div className="h-full bg-gradient-to-r from-amber-500 via-yellow-400 to-emerald-400 animate-pulse rounded-full w-3/4 transition-all duration-1000"></div>
+                   </div>
+
+                   {/* Trip Summary Capsule */}
+                   <div className="bg-zinc-950/80 p-3.5 rounded-2xl border border-zinc-850 flex items-center justify-between">
+                     <div className="flex items-center space-x-3 min-w-0">
+                       <div className="text-left min-w-0">
+                         <div className="flex items-center space-x-1.5">
+                           <span className="text-xs font-black text-white">RYVO {selectedVehicle.toUpperCase()}</span>
+                           <span className="text-[10px] font-bold text-zinc-400 bg-zinc-800 px-2 py-0.5 rounded-md">
+                             ~{getETAForVehicle(selectedVehicle, estimatedDuration)} min pickup
+                           </span>
+                         </div>
+                         <p className="text-[11px] text-zinc-400 truncate mt-0.5">{pickup} ➔ {destination}</p>
                        </div>
                      </div>
-                     <span className="text-base font-black text-emerald-400">₹{getPrice(selectedVehicle, distance).toFixed(2)}</span>
+                     <span className="text-lg font-black text-emerald-400 shrink-0 pl-2">₹{getPrice(selectedVehicle, distance).toFixed(2)}</span>
                    </div>
                  </div>
 
