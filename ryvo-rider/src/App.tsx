@@ -173,6 +173,8 @@ function App() {
   
   // Tip & 2-Min Session Timeout state
   const [tipAmount, setTipAmount] = useState<number>(0);
+  const [customTipInput, setCustomTipInput] = useState<string>('');
+  const [isCustomTipOpen, setIsCustomTipOpen] = useState<boolean>(false);
   const [searchingTimer, setSearchingTimer] = useState<number>(120);
 
   const [noDriverFound, setNoDriverFound] = useState<boolean>(false);
@@ -1482,8 +1484,8 @@ function App() {
 
                 {/* 1. Tips Feature Box (Shown ONLY after 30 seconds of searching, i.e., searchingTimer <= 90) */}
                 {searchingTimer <= 90 && (
-                  <div className="mb-4 bg-zinc-800/90 p-3.5 rounded-2xl border border-zinc-700/80 text-left animate-slide-in">
-                    <div className="flex items-center justify-between mb-2.5">
+                  <div className="mb-4 bg-zinc-800/90 p-3.5 rounded-2xl border border-zinc-700/80 text-left animate-slide-in space-y-3">
+                    <div className="flex items-center justify-between">
                       <span className="text-xs font-bold text-zinc-200 flex items-center gap-1.5">
                         <span className="text-amber-400 font-extrabold">⚡</span> Add tip to speed up response
                       </span>
@@ -1502,25 +1504,19 @@ function App() {
                         </span>
                       )}
                     </div>
-                    <div className="grid grid-cols-5 gap-1.5">
+
+                    {/* Quick Preset Pills + Custom Option */}
+                    <div className="grid grid-cols-6 gap-1.5">
                       {[0, 10, 20, 30, 50].map((amount) => (
                         <button
                           key={amount}
-                          onClick={async () => {
+                          onClick={() => {
                             setTipAmount(amount);
-                            if (currentRideId) {
-                              const basePrice = getPrice(selectedVehicle, distance);
-                              const newTotal = Number((basePrice + amount).toFixed(2));
-                              await supabase.from('rides').update({ price: newTotal, tip: amount }).eq('id', currentRideId);
-                              if (amount > 0) {
-                                showToast(`🚀 Sending updated request (+₹${amount} tip) to nearby drivers!`);
-                              } else {
-                                showToast(`Tip removed. Fare updated to ₹${newTotal}.`);
-                              }
-                            }
+                            setIsCustomTipOpen(false);
+                            setCustomTipInput('');
                           }}
                           className={`py-2 px-1 text-xs font-black rounded-xl border transition-all ${
-                            tipAmount === amount
+                            tipAmount === amount && !isCustomTipOpen
                               ? 'bg-gradient-to-r from-emerald-500 to-teal-400 text-black border-emerald-400 shadow-md scale-105 font-extrabold'
                               : 'bg-zinc-900 text-zinc-300 border-zinc-750 hover:border-zinc-500'
                           }`}
@@ -1528,7 +1524,69 @@ function App() {
                           {amount === 0 ? 'No Tip' : `+₹${amount}`}
                         </button>
                       ))}
+
+                      {/* Custom Tip Button */}
+                      <button
+                        onClick={() => {
+                          setIsCustomTipOpen(!isCustomTipOpen);
+                        }}
+                        className={`py-2 px-1 text-xs font-black rounded-xl border transition-all ${
+                          isCustomTipOpen
+                            ? 'bg-amber-400 text-black border-amber-300 shadow-md font-extrabold'
+                            : 'bg-zinc-900 text-amber-400 border-amber-500/30 hover:border-amber-400'
+                        }`}
+                      >
+                        Custom
+                      </button>
                     </div>
+
+                    {/* Custom Tip Input Row */}
+                    {isCustomTipOpen && (
+                      <div className="flex items-center gap-2 pt-1 animate-fadeIn">
+                        <div className="relative flex-1">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 font-bold text-xs">₹</span>
+                          <input
+                            type="number"
+                            min="1"
+                            max="500"
+                            placeholder="Enter amount (e.g. 75)"
+                            value={customTipInput}
+                            onChange={(e) => setCustomTipInput(e.target.value)}
+                            className="w-full bg-zinc-950 text-white font-bold text-xs pl-7 pr-3 py-2.5 rounded-xl border border-zinc-700 focus:outline-none focus:border-amber-400"
+                          />
+                        </div>
+                        <button
+                          onClick={() => {
+                            const val = parseInt(customTipInput, 10);
+                            if (!isNaN(val) && val > 0) {
+                              setTipAmount(val);
+                            }
+                          }}
+                          className="bg-amber-400 hover:bg-amber-300 text-black font-extrabold text-xs px-3 py-2.5 rounded-xl transition"
+                        >
+                          Set
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Separate Action Bar Button: Broadcast Tip Request to Drivers */}
+                    <button
+                      onClick={async () => {
+                        if (currentRideId) {
+                          const basePrice = getPrice(selectedVehicle, distance);
+                          const newTotal = Number((basePrice + tipAmount).toFixed(2));
+                          await supabase.from('rides').update({ price: newTotal, tip: tipAmount }).eq('id', currentRideId);
+                          if (tipAmount > 0) {
+                            showToast(`🚀 Sending new request (+₹${tipAmount} tip) to nearby drivers!`);
+                          } else {
+                            showToast(`Broadcasting request with standard fare ₹${newTotal}.`);
+                          }
+                        }
+                      }}
+                      className="w-full py-3 bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-500 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-black text-sm rounded-xl shadow-lg flex items-center justify-center gap-2 transition active:scale-[0.99] border border-emerald-400/40 mt-2"
+                    >
+                      <span>⚡ Add Tip & Send New Request</span>
+                    </button>
                   </div>
                 )}
 
