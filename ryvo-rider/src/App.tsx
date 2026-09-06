@@ -951,6 +951,7 @@ function App() {
         status: 'pending',
         vehicletype: vehicleToBook,
         price: totalPrice,
+        tip: tipAmount,
         distance: distance,
         otp: generatedOtp
       };
@@ -1508,7 +1509,7 @@ function App() {
                             if (currentRideId) {
                               const basePrice = getPrice(selectedVehicle, distance);
                               const newTotal = Number((basePrice + amount).toFixed(2));
-                              await supabase.from('rides').update({ price: newTotal }).eq('id', currentRideId);
+                              await supabase.from('rides').update({ price: newTotal, tip: amount }).eq('id', currentRideId);
                               showToast(`Added +₹${amount} tip! Total fare updated to ₹${newTotal}.`);
                             }
                           }}

@@ -16,6 +16,7 @@ interface RideRequest {
   status: string;
   paymentMethod: string;
   price?: number;
+  tip?: number;
   distance?: number;
   vehicleType?: string;
   pickupCoords?: [number, number];
@@ -551,9 +552,10 @@ function App() {
         } else if (updated && updated.status === 'pending') {
           // Real-time fare/tip update sync
           const updatedPrice = typeof updated.price === 'string' ? parseFloat(updated.price) : updated.price;
-          setAvailableRequests(prev => prev.map(r => r.id === updated.id ? { ...r, price: updatedPrice } : r));
+          const updatedTip = typeof updated.tip === 'string' ? parseFloat(updated.tip) : (updated.tip || 0);
+          setAvailableRequests(prev => prev.map(r => r.id === updated.id ? { ...r, price: updatedPrice, tip: updatedTip } : r));
           if (incomingRequestRef.current?.id === updated.id) {
-            setIncomingRequest(prev => prev ? { ...prev, price: updatedPrice } : null);
+            setIncomingRequest(prev => prev ? { ...prev, price: updatedPrice, tip: updatedTip } : null);
           }
         }
       })
@@ -569,7 +571,8 @@ function App() {
           stops: Array.isArray(data.stops) ? data.stops : (typeof data.stops === 'string' ? JSON.parse(data.stops) : undefined),
           pickupCoords: (data.pickuplat && data.pickuplng) ? [data.pickuplat, data.pickuplng] : undefined,
           destCoords: (data.destlat && data.destlng) ? [data.destlat, data.destlng] : undefined,
-          price: typeof data.price === 'string' ? parseFloat(data.price) : data.price
+          price: typeof data.price === 'string' ? parseFloat(data.price) : data.price,
+          tip: typeof data.tip === 'string' ? parseFloat(data.tip) : (data.tip || 0)
         };
         
         // 1. Vehicle Type Match
@@ -1058,9 +1061,11 @@ function App() {
           : Math.max(50, 50 + (tripDistance * 15));
           
         const currentPriceNum = activeReq.price ? Number(activeReq.price) : 0;
-        const calculatedTip = currentPriceNum > 0 && calculatedBase > 0 && currentPriceNum > calculatedBase + 2
-          ? Math.round(currentPriceNum - calculatedBase)
-          : 0;
+        const calculatedTip = activeReq.tip !== undefined && activeReq.tip !== null
+          ? Number(activeReq.tip)
+          : (currentPriceNum > 0 && calculatedBase > 0 && currentPriceNum > calculatedBase + 2
+              ? Math.round(currentPriceNum - calculatedBase)
+              : 0);
 
         return (
           <div className="absolute inset-x-0 bottom-0 z-20 p-2 sm:p-4 pb-6 bg-gradient-to-t from-black/80 via-black/40 to-transparent pointer-events-auto">
