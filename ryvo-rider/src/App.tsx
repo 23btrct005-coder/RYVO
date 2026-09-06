@@ -306,19 +306,50 @@ function App() {
   };
   
   const [currentPosition, setCurrentPosition] = useState<[number, number]>([12.8753, 77.5958])
+  const [pickupCoords, setPickupCoords] = useState<[number, number] | null>(null)
+  const [destCoords, setDestCoords] = useState<[number, number] | null>(null)
   const mapRef = useRef<MapRef>(null)
 
   useEffect(() => {
-    if (currentPosition && mapRef.current) {
+    if (currentPosition && mapRef.current && (!pickupCoords || !destCoords)) {
       mapRef.current.flyTo({ center: [currentPosition[1], currentPosition[0]], zoom: 15 });
     }
-  }, [currentPosition]);
+  }, [currentPosition, pickupCoords, destCoords]);
+
+  // Dedicated Map camera fit bounds effect: ensures both pickup & drop points are inside map viewport
+  useEffect(() => {
+    if (pickupCoords && destCoords && mapRef.current) {
+      const allCoords: [number, number][] = [pickupCoords];
+      stops.forEach(s => { if (s.coords) allCoords.push(s.coords); });
+      allCoords.push(destCoords);
+
+      const lats = allCoords.map(c => c[0]);
+      const lngs = allCoords.map(c => c[1]);
+      const minLat = Math.min(...lats);
+      const maxLat = Math.max(...lats);
+      const minLng = Math.min(...lngs);
+      const maxLng = Math.max(...lngs);
+
+      const bottomPadding = isSheetMinimized ? 120 : (status === 'confirming' ? 360 : 320);
+
+      const timer = setTimeout(() => {
+        if (mapRef.current) {
+          mapRef.current.fitBounds(
+            [[minLng, minLat], [maxLng, maxLat]],
+            { 
+              padding: { top: 100, bottom: bottomPadding, left: 60, right: 60 }, 
+              duration: 1000 
+            }
+          );
+        }
+      }, 150);
+
+      return () => clearTimeout(timer);
+    }
+  }, [pickupCoords, destCoords, stops, isSheetMinimized, status]);
 
   const [pickupSuggestions, setPickupSuggestions] = useState<Suggestion[]>([])
   const [destSuggestions, setDestSuggestions] = useState<Suggestion[]>([])
-
-  const [pickupCoords, setPickupCoords] = useState<[number, number] | null>(null)
-  const [destCoords, setDestCoords] = useState<[number, number] | null>(null)
 
   const [activeInput, setActiveInput] = useState<'none' | 'pickup' | 'destination' | string>('none')
   const [stopSuggestionsMap, setStopSuggestionsMap] = useState<{ [stopId: string]: Suggestion[] }>({})
@@ -1424,74 +1455,118 @@ function App() {
                </button>
             </div>
           ) : status === 'confirming' ? (
-            <div className="py-2">
-               <div className="flex justify-between items-center mb-3">
-                 <p className="text-zinc-400 text-sm font-medium">Select a ride</p>
-                 <span className="bg-zinc-800 text-zinc-200 text-xs font-bold px-3 py-1 rounded-full border border-zinc-700">
-                   📍 {distance > 0 ? `${distance.toFixed(1)} km` : ''} {estimatedDuration > 0 ? `• ⏱️ ${estimatedDuration} min traffic` : ''}
-                 </span>
-               </div>
-               
-               <div className="space-y-3 mb-6">
-                 {/* Bike */}
-                 <div 
-                   onClick={() => setSelectedVehicle('bike')}
-                   className={`flex items-center justify-between p-4 rounded-xl border-2 cursor-pointer transition-all ${selectedVehicle === 'bike' ? 'border-white bg-zinc-800' : 'border-transparent bg-zinc-800/50 hover:bg-zinc-800'}`}
-                 >
-                    <div className="flex items-center space-x-3">
-                       <div className="text-2xl">🛵</div>
-                       <div>
-                         <h3 className="font-bold text-white">RYVO Bike</h3>
-                         <p className="text-xs text-zinc-400">Beat the traffic • <span className="text-emerald-400 font-bold">⏱️ {getETAForVehicle('bike', estimatedDuration)} min</span></p>
-                       </div>
-                    </div>
-                    <span className="font-bold text-xl">₹{getPrice('bike', distance).toFixed(2)}</span>
-                 </div>
-
-                 {/* Auto */}
-                 <div 
-                   onClick={() => setSelectedVehicle('auto')}
-                   className={`flex items-center justify-between p-4 rounded-xl border-2 cursor-pointer transition-all ${selectedVehicle === 'auto' ? 'border-white bg-zinc-800' : 'border-transparent bg-zinc-800/50 hover:bg-zinc-800'}`}
-                 >
-                    <div className="flex items-center space-x-3">
-                       <div className="text-2xl">🛺</div>
-                       <div>
-                         <h3 className="font-bold text-white">RYVO Auto</h3>
-                         <p className="text-xs text-zinc-400">Affordable rides • <span className="text-emerald-400 font-bold">⏱️ {getETAForVehicle('auto', estimatedDuration)} min</span></p>
-                       </div>
-                    </div>
-                    <span className="font-bold text-xl">₹{getPrice('auto', distance).toFixed(2)}</span>
-                 </div>
-
-                 {/* Mini */}
-                 <div 
-                   onClick={() => setSelectedVehicle('mini')}
-                   className={`flex items-center justify-between p-4 rounded-xl border-2 cursor-pointer transition-all ${selectedVehicle === 'mini' ? 'border-white bg-zinc-800' : 'border-transparent bg-zinc-800/50 hover:bg-zinc-800'}`}
-                 >
-                    <div className="flex items-center space-x-3">
-                       <div className="text-2xl">🚗</div>
-                       <div>
-                         <h3 className="font-bold text-white">RYVO Mini</h3>
-                         <p className="text-xs text-zinc-400">Comfortable AC rides • <span className="text-emerald-400 font-bold">⏱️ {getETAForVehicle('mini', estimatedDuration)} min</span></p>
-                       </div>
-                    </div>
-                    <span className="font-bold text-xl">₹{getPrice('mini', distance).toFixed(2)}</span>
-                 </div>
-               </div>
-
-               <button 
-                  onClick={() => handleConfirmRide()}
-                  className="w-full bg-white text-black font-bold py-4 rounded-xl hover:bg-zinc-200 transition-colors shadow-lg"
+            isSheetMinimized ? (
+              <div className="py-2 space-y-3">
+                <div 
+                  onClick={() => setIsSheetMinimized(false)}
+                  className="bg-zinc-800/80 hover:bg-zinc-800 p-3.5 rounded-2xl border border-zinc-700/80 cursor-pointer space-y-2 transition shadow-md"
                 >
-                  Confirm {selectedVehicle.toUpperCase()} (Cash)
-                </button>
-                <button 
-                  onClick={() => { setStatus('idle'); setRouteGeometry(null) }}
-                  className="w-full bg-transparent text-zinc-400 font-bold py-4 rounded-xl hover:text-white transition-colors mt-2"
-                >
-                  Cancel
-                </button>
-            </div>
+                  <div className="flex items-center space-x-2.5 min-w-0">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 ring-4 ring-emerald-500/20 shrink-0"></span>
+                    <span className="text-xs font-bold text-white truncate">{pickup}</span>
+                  </div>
+                  <div className="flex items-center space-x-2.5 min-w-0">
+                    <span className="w-2.5 h-2.5 rounded-full bg-red-500 ring-4 ring-red-500/20 shrink-0"></span>
+                    <span className="text-xs font-bold text-white truncate">{destination}</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between bg-zinc-800 p-3.5 rounded-2xl border border-zinc-700">
+                  <div className="flex items-center space-x-3">
+                    <span className="text-2xl">{selectedVehicle === 'bike' ? '🛵' : selectedVehicle === 'auto' ? '🛺' : '🚗'}</span>
+                    <div>
+                      <h4 className="font-bold text-white text-sm">RYVO {selectedVehicle.toUpperCase()}</h4>
+                      <p className="text-[11px] text-zinc-400">⏱️ {getETAForVehicle(selectedVehicle, estimatedDuration)} min • {distance.toFixed(1)} km</p>
+                    </div>
+                  </div>
+                  <span className="font-extrabold text-xl text-emerald-400">₹{getPrice(selectedVehicle, distance).toFixed(2)}</span>
+                </div>
+
+                <div className="flex space-x-2">
+                  <button 
+                    onClick={() => setIsSheetMinimized(false)}
+                    className="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-bold px-4 py-3.5 rounded-xl border border-zinc-700 text-xs transition"
+                  >
+                    Change 🗖
+                  </button>
+                  <button 
+                    onClick={() => handleConfirmRide()}
+                    className="flex-1 bg-white hover:bg-zinc-200 text-black font-extrabold py-3.5 rounded-xl text-sm transition shadow-lg"
+                  >
+                    Confirm {selectedVehicle.toUpperCase()} (Cash)
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="py-2">
+                 <div className="flex justify-between items-center mb-3">
+                   <p className="text-zinc-400 text-sm font-medium">Select a ride</p>
+                   <span className="bg-zinc-800 text-zinc-200 text-xs font-bold px-3 py-1 rounded-full border border-zinc-700">
+                     📍 {distance > 0 ? `${distance.toFixed(1)} km` : ''} {estimatedDuration > 0 ? `• ⏱️ ${estimatedDuration} min traffic` : ''}
+                   </span>
+                 </div>
+                 
+                 <div className="space-y-3 mb-6">
+                   {/* Bike */}
+                   <div 
+                     onClick={() => setSelectedVehicle('bike')}
+                     className={`flex items-center justify-between p-4 rounded-xl border-2 cursor-pointer transition-all ${selectedVehicle === 'bike' ? 'border-white bg-zinc-800' : 'border-transparent bg-zinc-800/50 hover:bg-zinc-800'}`}
+                   >
+                      <div className="flex items-center space-x-3">
+                         <div className="text-2xl">🛵</div>
+                         <div>
+                           <h3 className="font-bold text-white">RYVO Bike</h3>
+                           <p className="text-xs text-zinc-400">Beat the traffic • <span className="text-emerald-400 font-bold">⏱️ {getETAForVehicle('bike', estimatedDuration)} min</span></p>
+                         </div>
+                      </div>
+                      <span className="font-bold text-xl">₹{getPrice('bike', distance).toFixed(2)}</span>
+                   </div>
+
+                   {/* Auto */}
+                   <div 
+                     onClick={() => setSelectedVehicle('auto')}
+                     className={`flex items-center justify-between p-4 rounded-xl border-2 cursor-pointer transition-all ${selectedVehicle === 'auto' ? 'border-white bg-zinc-800' : 'border-transparent bg-zinc-800/50 hover:bg-zinc-800'}`}
+                   >
+                      <div className="flex items-center space-x-3">
+                         <div className="text-2xl">🛺</div>
+                         <div>
+                           <h3 className="font-bold text-white">RYVO Auto</h3>
+                           <p className="text-xs text-zinc-400">Affordable rides • <span className="text-emerald-400 font-bold">⏱️ {getETAForVehicle('auto', estimatedDuration)} min</span></p>
+                         </div>
+                      </div>
+                      <span className="font-bold text-xl">₹{getPrice('auto', distance).toFixed(2)}</span>
+                   </div>
+
+                   {/* Mini */}
+                   <div 
+                     onClick={() => setSelectedVehicle('mini')}
+                     className={`flex items-center justify-between p-4 rounded-xl border-2 cursor-pointer transition-all ${selectedVehicle === 'mini' ? 'border-white bg-zinc-800' : 'border-transparent bg-zinc-800/50 hover:bg-zinc-800'}`}
+                   >
+                      <div className="flex items-center space-x-3">
+                         <div className="text-2xl">🚗</div>
+                         <div>
+                           <h3 className="font-bold text-white">RYVO Mini</h3>
+                           <p className="text-xs text-zinc-400">Comfortable AC rides • <span className="text-emerald-400 font-bold">⏱️ {getETAForVehicle('mini', estimatedDuration)} min</span></p>
+                         </div>
+                      </div>
+                      <span className="font-bold text-xl">₹{getPrice('mini', distance).toFixed(2)}</span>
+                   </div>
+                 </div>
+
+                 <button 
+                    onClick={() => handleConfirmRide()}
+                    className="w-full bg-white text-black font-bold py-4 rounded-xl hover:bg-zinc-200 transition-colors shadow-lg"
+                  >
+                    Confirm {selectedVehicle.toUpperCase()} (Cash)
+                  </button>
+                  <button 
+                    onClick={() => { setStatus('idle'); setRouteGeometry(null) }}
+                    className="w-full bg-transparent text-zinc-400 font-bold py-4 rounded-xl hover:text-white transition-colors mt-2"
+                  >
+                    Cancel
+                  </button>
+              </div>
+            )
           ) : (
             isSheetMinimized ? (
               <div className="py-1 space-y-3">
