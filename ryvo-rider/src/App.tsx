@@ -1,4 +1,4 @@
-// Vercel Production Trigger: 2026-09-06T09:58:00 - style: convert Choose on Map and Current GPS to compact side-by-side buttons
+// Vercel Production Trigger: 2026-09-06T10:02:00 - fix: strictly restrict geocoding suggestions to Bengaluru area like Ola/Uber/Rapido
 import { useState, useEffect, useRef } from 'react'
 import Map, { Marker, Source, Layer } from 'react-map-gl/mapbox'
 import type { MapRef } from 'react-map-gl/mapbox'
@@ -610,14 +610,31 @@ function App() {
     return R * c;
   };
 
-  // Fetch suggestions using Mapbox Geocoding API with Nominatim fallback
+  // Fetch suggestions using Mapbox Geocoding API with Nominatim fallback (Restricted to Bengaluru area like Ola/Uber/Rapido)
   const fetchSuggestions = async (query: string, setter: (s: Suggestion[]) => void) => {
     if (query.length < 2) {
       setter([])
       return
     }
+    
+    // Bengaluru bounding box [minLng, minLat, maxLng, maxLat]
+    const bblrBbox = "77.35,12.75,77.85,13.25";
+    const userLat = currentPosition[0];
+    const userLng = currentPosition[1];
+    
+    // Check if user is near Bengaluru (~60km radius around Bengaluru center 12.9716, 77.5946)
+    const distFromBblr = getHaversineDistance(userLat, userLng, 12.9716, 77.5946);
+    const isUserInBengaluruArea = distFromBblr < 75; // km
+
     try {
-      const res = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?proximity=${currentPosition[1]},${currentPosition[0]}&autocomplete=true&limit=5&access_token=${MAPBOX_TOKEN}`)
+      let url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?country=in&proximity=${userLng},${userLat}&autocomplete=true&limit=7&access_token=${MAPBOX_TOKEN}`;
+      
+      // If user is in Bengaluru area, strictly restrict search results to Bengaluru bounding box
+      if (isUserInBengaluruArea) {
+        url += `&bbox=${bblrBbox}`;
+      }
+
+      const res = await fetch(url)
       const data = await res.json()
       if (data && data.features && data.features.length > 0) {
         const results = data.features.map((f: any) => {
@@ -629,17 +646,29 @@ function App() {
               lat: f.center[1], // latitude
               lon: f.center[0]  // longitude
            }
-        }).filter((s: Suggestion) => s.title)
-        setter(results)
-        return;
+        }).filter((s: Suggestion) => {
+          if (!s.title) return false;
+          // When in Bengaluru area, ensure result is within Bengaluru/Karnataka region
+          if (isUserInBengaluruArea) {
+            const placeLower = s.subtitle.toLowerCase();
+            return placeLower.includes('bengaluru') || placeLower.includes('bangalore') || placeLower.includes('karnataka') || placeLower.includes('77.');
+          }
+          return true;
+        })
+
+        if (results.length > 0) {
+          setter(results)
+          return;
+        }
       }
     } catch (e) {
       console.warn("Mapbox geocoding error, trying Nominatim fallback", e)
     }
 
-    // Fallback: Nominatim OpenStreetMap Search API
+    // Fallback: Nominatim OpenStreetMap Search API restricted to Bengaluru box & India
     try {
-      const nomRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&viewbox=${currentPosition[1]-0.5},${currentPosition[0]+0.5},${currentPosition[1]+0.5},${currentPosition[0]-0.5}`)
+      const viewboxParam = isUserInBengaluruArea ? `&viewbox=77.35,13.25,77.85,12.75&bounded=1` : `&viewbox=${userLng-0.5},${userLat+0.5},${userLng+0.5},${userLat-0.5}`;
+      const nomRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&countrycodes=in&q=${encodeURIComponent(query)}${viewboxParam}&limit=7`)
       const nomData = await nomRes.json()
       if (Array.isArray(nomData) && nomData.length > 0) {
         const results = nomData.map((item: any) => {
@@ -652,6 +681,8 @@ function App() {
            }
         });
         setter(results);
+      } else {
+        setter([]);
       }
     } catch (err) {
       setter([])
