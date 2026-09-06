@@ -958,23 +958,21 @@ function App() {
         otp: generatedOtp
       };
 
-      // Add tip property if non-zero
-      if (tipAmount > 0) {
-        rideData.tip = tipAmount;
-      }
-
-      let res = await supabase.from('rides').insert([rideData]).select().single();
+      // Write ride to Supabase
+      const { data, error } = await supabase.from('rides').insert([rideData]).select();
       
-      // If error occurs due to unknown 'tip' column in database schema, retry without explicit tip column
-      if (res.error && res.error.message?.includes('tip')) {
+      if (error) {
+        // Fallback: If error occurs due to unknown 'tip' column, retry without tip key
         delete rideData.tip;
-        res = await supabase.from('rides').insert([rideData]).select().single();
+        const retry = await supabase.from('rides').insert([rideData]).select();
+        if (retry.error) throw retry.error;
+        if (retry.data && retry.data.length > 0) {
+          setCurrentRideId(retry.data[0].id);
+        }
+      } else if (data && data.length > 0) {
+        console.log("Successfully wrote to Supabase with ID:", data[0].id);
+        setCurrentRideId(data[0].id);
       }
-
-      if (res.error) throw res.error;
-
-      console.log("Successfully wrote to Supabase with ID:", res.data.id);
-      setCurrentRideId(res.data.id)
     } catch (e: any) {
       console.error("Error adding document: ", e);
       setErrorMessage(e.message || "Network error: Could not reach Supabase.")
