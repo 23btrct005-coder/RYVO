@@ -188,10 +188,12 @@ function App() {
   // Multilingual AI Voice Agent State
   const [isVoiceModalOpen, setIsVoiceModalOpen] = useState<boolean>(false);
   const [isListening, setIsListening] = useState<boolean>(false);
+  const [isWakeWordActive, setIsWakeWordActive] = useState<boolean>(true);
   const [voiceLang, setVoiceLang] = useState<'en-IN' | 'hi-IN' | 'kn-IN' | 'ta-IN'>('en-IN');
   const [transcript, setTranscript] = useState<string>('');
-  const [aiSpeechResponse, setAiSpeechResponse] = useState<string>('Tap the mic and say "Book Auto to MG Road" or "इंदिरानगरी से ऑटो करो"');
+  const [aiSpeechResponse, setAiSpeechResponse] = useState<string>('Tap the mic or say "Hey RYVO" / "राइवो" / "ರೈವೋ" anytime!');
   const recognitionRef = useRef<any>(null);
+  const wakeWordRecognitionRef = useRef<any>(null);
 
   // Initialize Speech Recognition & Synthesis
   const speakAiText = (text: string, langCode: string = 'en-IN') => {
@@ -203,6 +205,75 @@ function App() {
       window.speechSynthesis.speak(utterance);
     }
   };
+
+  // Check if spoken phrase contains "RYVO" in any Indian pronunciation or slang
+  const isRyvoWakeWordDetected = (text: string): boolean => {
+    if (!text) return false;
+    const lower = text.toLowerCase();
+    const ryvoSlangs = [
+      'ryvo', 'rivo', 'riva', 'raivo', 'raivoo', 'reevo', 'revo', 
+      'राइवो', 'राइवा', 'रीवो', 'रिवो', 
+      'ರೈವೋ', 'ರೈವ', 'ರೀವೋ', 
+      'ரைவோ', 'ரிவோ'
+    ];
+    return ryvoSlangs.some(slang => lower.includes(slang));
+  };
+
+  // Continuous Background Wake-Word Listener ("Hey RYVO")
+  useEffect(() => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition || !isWakeWordActive) return;
+
+    try {
+      const bgRecognition = new SpeechRecognition();
+      bgRecognition.continuous = true;
+      bgRecognition.interimResults = true;
+      bgRecognition.lang = 'en-IN';
+
+      bgRecognition.onresult = (event: any) => {
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const spoken = event.results[i][0].transcript;
+          if (isRyvoWakeWordDetected(spoken)) {
+            console.log("⚡ Wake Word 'RYVO' Detected:", spoken);
+            showToast("⚡ 'RYVO' Voice Agent Activated!");
+            setIsVoiceModalOpen(true);
+            setAiSpeechResponse(`🎙️ Activated by "RYVO"! Where would you like to go?`);
+            speakAiText("RYVO activated! Where would you like to go?", voiceLang);
+            
+            // Extract remaining command if available
+            const commandAfterWakeWord = spoken.replace(/hey|hi|hello|ok|ryvo|rivo|raivo|राइवो|ರೈವೋ/gi, '').trim();
+            if (commandAfterWakeWord.length > 3) {
+              parseVoiceIntentAndProcess(commandAfterWakeWord);
+            } else {
+              startVoiceRecognition();
+            }
+            break;
+          }
+        }
+      };
+
+      bgRecognition.onerror = (e: any) => {
+        console.warn("Background wake-word listener error (auto-restarting):", e.error);
+      };
+
+      bgRecognition.onend = () => {
+        if (isWakeWordActive && !isListening) {
+          try { bgRecognition.start(); } catch (err) {}
+        }
+      };
+
+      wakeWordRecognitionRef.current = bgRecognition;
+      bgRecognition.start();
+    } catch (err) {
+      console.warn("Could not start background wake-word listener:", err);
+    }
+
+    return () => {
+      if (wakeWordRecognitionRef.current) {
+        try { wakeWordRecognitionRef.current.stop(); } catch (e) {}
+      }
+    };
+  }, [isWakeWordActive, voiceLang]);
 
   const startVoiceRecognition = () => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -229,6 +300,11 @@ function App() {
           currentTranscript += event.results[i][0].transcript;
         }
         setTranscript(currentTranscript);
+
+        // Auto wake word trigger check inside active recognition
+        if (isRyvoWakeWordDetected(currentTranscript) && !isVoiceModalOpen) {
+          setIsVoiceModalOpen(true);
+        }
       };
 
       recognition.onerror = (event: any) => {
@@ -3127,9 +3203,22 @@ function App() {
         <div className="fixed inset-0 z-[4500] bg-black/85 backdrop-blur-xl flex flex-col justify-between p-6 animate-fadeIn select-none">
           {/* Modal Header Bar */}
           <div className="flex items-center justify-between mt-2">
-            <div className="flex items-center space-x-2 bg-emerald-500/10 border border-emerald-500/30 px-3.5 py-1.5 rounded-full">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
-              <span className="text-xs font-black text-emerald-400 uppercase tracking-widest">RYVO AI Voice Booking</span>
+            <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2 bg-emerald-500/10 border border-emerald-500/30 px-3.5 py-1.5 rounded-full">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
+                <span className="text-xs font-black text-emerald-400 uppercase tracking-widest">RYVO AI Voice Booking</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  const nextState = !isWakeWordActive;
+                  setIsWakeWordActive(nextState);
+                  showToast(nextState ? "🟢 'Hey RYVO' Wake-Word Listening ON" : "🔴 Wake-Word Listening OFF");
+                }}
+                className={`text-[10px] font-extrabold px-2.5 py-1 rounded-full border transition ${isWakeWordActive ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' : 'bg-zinc-800 text-zinc-400 border-zinc-700'}`}
+              >
+                {isWakeWordActive ? '⚡ Wake-Word ON' : '⏸️ Wake-Word OFF'}
+              </button>
             </div>
             <button
               onClick={() => {
@@ -3200,30 +3289,42 @@ function App() {
 
             {/* Quick Sample Voice Presets for Testing */}
             <div className="w-full space-y-2 pt-2">
-              <p className="text-[11px] uppercase font-black tracking-wider text-zinc-400">Quick Test Prompts (1-Tap Test)</p>
-              <div className="grid grid-cols-2 gap-2">
+              <p className="text-[11px] uppercase font-black tracking-wider text-zinc-400">Quick Test Prompts (Slang & Vernacular Wake Words)</p>
+              <div className="grid grid-cols-3 gap-2">
                 <button
                   onClick={() => {
-                    const text = "Book Auto to MG Road Metro Station";
+                    const text = "Hey RYVO, Book Auto to MG Road";
                     setTranscript(text);
                     parseVoiceIntentAndProcess(text);
                   }}
-                  className="p-2.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-emerald-500/50 rounded-xl text-left transition group"
+                  className="p-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-emerald-500/50 rounded-xl text-left transition group"
                 >
-                  <p className="text-xs font-bold text-emerald-400 group-hover:translate-x-0.5 transition-transform">🛺 Auto to MG Road</p>
-                  <p className="text-[10px] text-zinc-400 truncate">"Book Auto to MG Road"</p>
+                  <p className="text-[11px] font-bold text-emerald-400 group-hover:translate-x-0.5 transition-transform">⚡ "Hey RYVO..."</p>
+                  <p className="text-[9px] text-zinc-400 truncate">English Slang</p>
                 </button>
 
                 <button
                   onClick={() => {
-                    const text = "Book Bike for Indiranagar";
+                    const text = "राइवो, इंदिरानगरी से ऑटो करो";
                     setTranscript(text);
                     parseVoiceIntentAndProcess(text);
                   }}
-                  className="p-2.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-amber-500/50 rounded-xl text-left transition group"
+                  className="p-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-amber-500/50 rounded-xl text-left transition group"
                 >
-                  <p className="text-xs font-bold text-amber-400 group-hover:translate-x-0.5 transition-transform">🛵 Bike to Indiranagar</p>
-                  <p className="text-[10px] text-zinc-400 truncate">"Book Bike for Indiranagar"</p>
+                  <p className="text-[11px] font-bold text-amber-400 group-hover:translate-x-0.5 transition-transform">🗣️ "राइवो (Hindi)"</p>
+                  <p className="text-[9px] text-zinc-400 truncate">Hindi Accent</p>
+                </button>
+
+                <button
+                  onClick={() => {
+                    const text = "ರೈವೋ, Majestic ಗೆ Bike beku";
+                    setTranscript(text);
+                    parseVoiceIntentAndProcess(text);
+                  }}
+                  className="p-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-cyan-500/50 rounded-xl text-left transition group"
+                >
+                  <p className="text-[11px] font-bold text-cyan-400 group-hover:translate-x-0.5 transition-transform">🛵 "ರೈವೋ (Kannada)"</p>
+                  <p className="text-[9px] text-zinc-400 truncate">Kannada Slang</p>
                 </button>
               </div>
             </div>
