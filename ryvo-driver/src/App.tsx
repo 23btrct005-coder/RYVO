@@ -1,4 +1,4 @@
-// Vercel Production Trigger: 2026-09-05T23:07:00 - sync driver app with tip and session timeout
+// Vercel Production Trigger: 2026-09-06T18:24:00 - deploy: force trigger Vercel build for custom tips & emerald styling
 import { useState, useEffect, useRef } from 'react'
 import Map, { Marker, Source, Layer } from 'react-map-gl/mapbox'
 import type { MapRef } from 'react-map-gl/mapbox'

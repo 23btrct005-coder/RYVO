@@ -1,4 +1,4 @@
-// Vercel Production Trigger: 2026-09-06T10:35:00 - feat: display address name badge on map pin markers and enable interactive pin click edit
+// Vercel Production Trigger: 2026-09-06T18:24:00 - deploy: force trigger Vercel build for custom tips & Auto->Cab recommendation
 import { useState, useEffect, useRef } from 'react'
 import Map, { Marker, Source, Layer } from 'react-map-gl/mapbox'
 import type { MapRef } from 'react-map-gl/mapbox'
