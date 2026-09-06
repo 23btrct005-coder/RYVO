@@ -185,6 +185,130 @@ function App() {
   const [isCustomTipOpen, setIsCustomTipOpen] = useState<boolean>(false);
   const [searchingTimer, setSearchingTimer] = useState<number>(120);
 
+  // Multilingual AI Voice Agent State
+  const [isVoiceModalOpen, setIsVoiceModalOpen] = useState<boolean>(false);
+  const [isListening, setIsListening] = useState<boolean>(false);
+  const [voiceLang, setVoiceLang] = useState<'en-IN' | 'hi-IN' | 'kn-IN' | 'ta-IN'>('en-IN');
+  const [transcript, setTranscript] = useState<string>('');
+  const [aiSpeechResponse, setAiSpeechResponse] = useState<string>('Tap the mic and say "Book Auto to MG Road" or "इंदिरानगरी से ऑटो करो"');
+  const recognitionRef = useRef<any>(null);
+
+  // Initialize Speech Recognition & Synthesis
+  const speakAiText = (text: string, langCode: string = 'en-IN') => {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = langCode;
+      utterance.rate = 1.0;
+      window.speechSynthesis.speak(utterance);
+    }
+  };
+
+  const startVoiceRecognition = () => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      showToast("⚠️ Voice recognition is not supported in this browser. Please use Chrome/Edge.");
+      return;
+    }
+
+    try {
+      const recognition = new SpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = true;
+      recognition.lang = voiceLang;
+
+      recognition.onstart = () => {
+        setIsListening(true);
+        setTranscript('');
+        setAiSpeechResponse("🎙️ Listening... Speak your ride requirement now!");
+      };
+
+      recognition.onresult = (event: any) => {
+        let currentTranscript = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          currentTranscript += event.results[i][0].transcript;
+        }
+        setTranscript(currentTranscript);
+      };
+
+      recognition.onerror = (event: any) => {
+        console.warn("Speech recognition error:", event.error);
+        setIsListening(false);
+        setAiSpeechResponse("⚠️ Speech not recognized clearly. Tap mic to try again.");
+      };
+
+      recognition.onend = () => {
+        setIsListening(false);
+      };
+
+      recognitionRef.current = recognition;
+      recognition.start();
+    } catch (err) {
+      console.error("Error starting speech recognition:", err);
+      setIsListening(false);
+    }
+  };
+
+  const stopVoiceRecognition = () => {
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+      setIsListening(false);
+    }
+  };
+
+  // AI Intent Parsing Function for Indian Vernacular Speech
+  const parseVoiceIntentAndProcess = (spokenText: string) => {
+    if (!spokenText || spokenText.trim().length < 2) return;
+
+    const lower = spokenText.toLowerCase();
+
+    // 1. Detect Vehicle Type
+    let detectedVehicle: VehicleType = selectedVehicle;
+    if (lower.includes('auto') || lower.includes('ऑटो') || lower.includes('ಆಟೋ')) {
+      detectedVehicle = 'auto';
+    } else if (lower.includes('bike') || lower.includes('scooter') || lower.includes('बाइक') || lower.includes('ಬೈಕ್')) {
+      detectedVehicle = 'bike';
+    } else if (lower.includes('cab') || lower.includes('car') || lower.includes('taxi') || lower.includes('कैब') || lower.includes('ಟ್ಯಾಕ್ಸಿ')) {
+      detectedVehicle = 'mini';
+    }
+
+    // Pattern extraction for Destination
+    let parsedDest = '';
+
+    if (lower.includes(' to ')) {
+      parsedDest = spokenText.split(/ to /i)[1]?.trim() || '';
+    } else if (lower.includes(' for ')) {
+      parsedDest = spokenText.split(/ for /i)[1]?.trim() || '';
+    } else if (lower.includes('के लिए')) {
+      parsedDest = spokenText.split('के लिए')[0]?.trim() || '';
+    } else if (lower.includes('गे')) {
+      parsedDest = spokenText.split('गे')[0]?.trim() || '';
+    } else {
+      parsedDest = spokenText
+        .replace(/book|ride|auto|bike|cab|car|taxi|please|karo|beku|pannu|ऑटो|बाइक|कैब/gi, '')
+        .trim();
+    }
+
+    if (parsedDest.length > 2) {
+      setDestination(parsedDest);
+      setSelectedVehicle(detectedVehicle);
+
+      const confirmMsg = `Got it! Selected RYVO ${detectedVehicle.toUpperCase()} to ${parsedDest}. Calculating route...`;
+      setAiSpeechResponse(confirmMsg);
+      speakAiText(confirmMsg, voiceLang);
+
+      // Auto trigger estimation & close voice modal after 1.5s
+      setTimeout(() => {
+        setIsVoiceModalOpen(false);
+        handleEstimate();
+      }, 1800);
+    } else {
+      const retryMsg = `I heard "${spokenText}". Please specify destination (e.g. "Book Auto to MG Road").`;
+      setAiSpeechResponse(retryMsg);
+      speakAiText(retryMsg, voiceLang);
+    }
+  };
+
   const [noDriverFound, setNoDriverFound] = useState<boolean>(false);
   const [suggestedVehicle, setSuggestedVehicle] = useState<VehicleType | null>(null);
 
@@ -1910,25 +2034,41 @@ function App() {
                 
                 {/* OLA / UBER / RAPIDO ANIMATED HYPER LANDING VIEW */}
                 <div className="space-y-5">
-                  {/* Search Bar / Quick Target Bar */}
-                  <div 
-                    onClick={() => {
-                      if (!destination) setActiveInput('destination');
-                    }}
-                    className="relative bg-gradient-to-r from-zinc-800/90 via-zinc-800 to-zinc-900 border-2 border-emerald-500/30 hover:border-emerald-400 p-3.5 rounded-2xl cursor-pointer transition-all shadow-xl hover:scale-[1.01] group"
-                  >
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center text-xl shrink-0 group-hover:scale-110 transition-transform">
-                        🔍
+                  {/* Search Bar / Quick Target Bar with AI Voice Trigger */}
+                  <div className="flex items-center space-x-2">
+                    <div 
+                      onClick={() => {
+                        if (!destination) setActiveInput('destination');
+                      }}
+                      className="flex-1 relative bg-gradient-to-r from-zinc-800/90 via-zinc-800 to-zinc-900 border-2 border-emerald-500/30 hover:border-emerald-400 p-3.5 rounded-2xl cursor-pointer transition-all shadow-xl hover:scale-[1.01] group"
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center text-xl shrink-0 group-hover:scale-110 transition-transform">
+                          🔍
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[11px] font-black uppercase text-emerald-400 tracking-wider">Where are you heading today?</p>
+                          <p className="text-base font-extrabold text-white truncate">{destination || 'Search destination or speak AI voice'}</p>
+                        </div>
+                        <span className="bg-emerald-400 text-zinc-950 font-black text-xs px-3 py-1.5 rounded-xl shadow-md group-hover:translate-x-1 transition-transform">
+                          GO ➔
+                        </span>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[11px] font-black uppercase text-emerald-400 tracking-wider">Where are you heading today?</p>
-                        <p className="text-base font-extrabold text-white truncate">{destination || 'Search destination or tap category below'}</p>
-                      </div>
-                      <span className="bg-emerald-400 text-zinc-950 font-black text-xs px-3 py-1.5 rounded-xl shadow-md group-hover:translate-x-1 transition-transform">
-                        GO ➔
-                      </span>
                     </div>
+
+                    {/* 🎙️ Voice AI Booking Button */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsVoiceModalOpen(true);
+                        startVoiceRecognition();
+                      }}
+                      title="Book ride with AI Voice Assistant"
+                      className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-emerald-500 via-teal-400 to-cyan-400 text-zinc-950 font-black text-2xl flex flex-col items-center justify-center shadow-xl border-2 border-emerald-300/50 hover:scale-105 active:scale-95 transition-transform shrink-0 relative overflow-hidden group"
+                    >
+                      <span className="animate-pulse">🎙️</span>
+                      <span className="text-[8px] font-black tracking-tighter uppercase text-zinc-900 -mt-1">VOICE</span>
+                    </button>
                   </div>
 
                   {/* Ola / Rapido / Uber Style Animated Category Grid */}
@@ -2978,6 +3118,131 @@ function App() {
                 Change Options
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* 🎙️ MULTILINGUAL AI VOICE AGENT BOOKING MODAL */}
+      {isVoiceModalOpen && (
+        <div className="fixed inset-0 z-[4500] bg-black/85 backdrop-blur-xl flex flex-col justify-between p-6 animate-fadeIn select-none">
+          {/* Modal Header Bar */}
+          <div className="flex items-center justify-between mt-2">
+            <div className="flex items-center space-x-2 bg-emerald-500/10 border border-emerald-500/30 px-3.5 py-1.5 rounded-full">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
+              <span className="text-xs font-black text-emerald-400 uppercase tracking-widest">RYVO AI Voice Booking</span>
+            </div>
+            <button
+              onClick={() => {
+                stopVoiceRecognition();
+                setIsVoiceModalOpen(false);
+              }}
+              className="w-10 h-10 rounded-full bg-zinc-800 text-zinc-300 hover:text-white flex items-center justify-center font-bold text-lg border border-zinc-700 hover:bg-zinc-700 transition"
+            >
+              ✕
+            </button>
+          </div>
+
+          {/* Center Voice AI Visualizer & Intent Card */}
+          <div className="flex flex-col items-center justify-center my-auto space-y-6 text-center max-w-md mx-auto w-full">
+            {/* Language Selector Bar */}
+            <div className="flex items-center space-x-2 bg-zinc-900/90 p-1.5 rounded-2xl border border-zinc-800 shadow-inner">
+              {[
+                { code: 'en-IN', label: 'English (IN)' },
+                { code: 'hi-IN', label: 'हिंदी (Hindi)' },
+                { code: 'kn-IN', label: 'ಕನ್ನಡ (Kannada)' },
+                { code: 'ta-IN', label: 'தமிழ் (Tamil)' },
+              ].map((lang) => (
+                <button
+                  key={lang.code}
+                  onClick={() => {
+                    setVoiceLang(lang.code as any);
+                    stopVoiceRecognition();
+                    setTimeout(() => startVoiceRecognition(), 200);
+                  }}
+                  className={`px-3 py-1.5 text-xs font-extrabold rounded-xl transition-all ${voiceLang === lang.code ? 'bg-emerald-400 text-zinc-950 shadow-md scale-105' : 'text-zinc-400 hover:text-white'}`}
+                >
+                  {lang.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Pulsing Audio Wave Orb */}
+            <div className="relative flex items-center justify-center my-4">
+              {isListening && (
+                <>
+                  <div className="absolute w-48 h-48 bg-emerald-500/20 rounded-full animate-ping"></div>
+                  <div className="absolute w-36 h-36 bg-teal-500/30 rounded-full animate-pulse"></div>
+                </>
+              )}
+              <button
+                type="button"
+                onClick={() => {
+                  if (isListening) stopVoiceRecognition();
+                  else startVoiceRecognition();
+                }}
+                className={`w-32 h-32 rounded-full border-4 shadow-2xl flex items-center justify-center transition-transform active:scale-90 relative z-10 ${isListening ? 'bg-gradient-to-tr from-emerald-500 via-teal-400 to-cyan-400 border-white text-zinc-950 shadow-emerald-500/50 scale-105' : 'bg-zinc-800 border-zinc-700 text-white hover:border-emerald-400'}`}
+              >
+                <span className="text-5xl">{isListening ? '🎙️' : '🎙️'}</span>
+              </button>
+            </div>
+
+            {/* AI Speech Assistant Response Box */}
+            <div className="bg-zinc-900/90 border border-zinc-800 p-4 rounded-2xl w-full shadow-2xl space-y-2">
+              <p className="text-[11px] font-black uppercase text-emerald-400 tracking-wider">AI Assistant Status</p>
+              <p className="text-sm font-bold text-white leading-relaxed">{aiSpeechResponse}</p>
+              {transcript && (
+                <div className="pt-2 border-t border-zinc-800">
+                  <p className="text-[10px] font-bold text-zinc-400 uppercase">You Said:</p>
+                  <p className="text-xs font-extrabold text-amber-300 italic">"{transcript}"</p>
+                </div>
+              )}
+            </div>
+
+            {/* Quick Sample Voice Presets for Testing */}
+            <div className="w-full space-y-2 pt-2">
+              <p className="text-[11px] uppercase font-black tracking-wider text-zinc-400">Quick Test Prompts (1-Tap Test)</p>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => {
+                    const text = "Book Auto to MG Road Metro Station";
+                    setTranscript(text);
+                    parseVoiceIntentAndProcess(text);
+                  }}
+                  className="p-2.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-emerald-500/50 rounded-xl text-left transition group"
+                >
+                  <p className="text-xs font-bold text-emerald-400 group-hover:translate-x-0.5 transition-transform">🛺 Auto to MG Road</p>
+                  <p className="text-[10px] text-zinc-400 truncate">"Book Auto to MG Road"</p>
+                </button>
+
+                <button
+                  onClick={() => {
+                    const text = "Book Bike for Indiranagar";
+                    setTranscript(text);
+                    parseVoiceIntentAndProcess(text);
+                  }}
+                  className="p-2.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-amber-500/50 rounded-xl text-left transition group"
+                >
+                  <p className="text-xs font-bold text-amber-400 group-hover:translate-x-0.5 transition-transform">🛵 Bike to Indiranagar</p>
+                  <p className="text-[10px] text-zinc-400 truncate">"Book Bike for Indiranagar"</p>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom Action Footer */}
+          <div className="w-full max-w-md mx-auto space-y-2 mb-2 text-center">
+            {transcript.length > 2 && (
+              <button
+                onClick={() => parseVoiceIntentAndProcess(transcript)}
+                className="w-full py-3.5 bg-emerald-400 hover:bg-emerald-300 text-zinc-950 font-black text-sm rounded-xl shadow-xl flex items-center justify-center space-x-2 transition"
+              >
+                <span>⚡ PROCESS VOICE BOOKING</span>
+                <span>➔</span>
+              </button>
+            )}
+            <p className="text-[10px] text-zinc-500 font-bold">
+              Supports English, Hindi, Kannada & Tamil • Auto-parses landmark addresses
+            </p>
           </div>
         </div>
       )}
