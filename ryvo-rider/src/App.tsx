@@ -961,15 +961,9 @@ function App() {
       // Write ride to Supabase
       const { data, error } = await supabase.from('rides').insert([rideData]).select();
       
-      if (error) {
-        // Fallback: If error occurs due to unknown 'tip' column, retry without tip key
-        delete rideData.tip;
-        const retry = await supabase.from('rides').insert([rideData]).select();
-        if (retry.error) throw retry.error;
-        if (retry.data && retry.data.length > 0) {
-          setCurrentRideId(retry.data[0].id);
-        }
-      } else if (data && data.length > 0) {
+      if (error) throw error;
+
+      if (data && data.length > 0) {
         console.log("Successfully wrote to Supabase with ID:", data[0].id);
         setCurrentRideId(data[0].id);
       }
@@ -1525,10 +1519,7 @@ function App() {
                             if (currentRideId) {
                               const basePrice = getPrice(selectedVehicle, distance);
                               const newTotal = Number((basePrice + amount).toFixed(2));
-                              let { error } = await supabase.from('rides').update({ price: newTotal, tip: amount }).eq('id', currentRideId);
-                              if (error && error.message?.includes('tip')) {
-                                await supabase.from('rides').update({ price: newTotal }).eq('id', currentRideId);
-                              }
+                              await supabase.from('rides').update({ price: newTotal }).eq('id', currentRideId);
                               if (amount > 0) {
                                 showToast(`🚀 Sending new request (+₹${amount} tip) to nearby drivers!`);
                               } else {
@@ -1584,10 +1575,7 @@ function App() {
                               if (currentRideId) {
                                 const basePrice = getPrice(selectedVehicle, distance);
                                 const newTotal = Number((basePrice + val).toFixed(2));
-                                let { error } = await supabase.from('rides').update({ price: newTotal, tip: val }).eq('id', currentRideId);
-                                if (error && error.message?.includes('tip')) {
-                                  await supabase.from('rides').update({ price: newTotal }).eq('id', currentRideId);
-                                }
+                                await supabase.from('rides').update({ price: newTotal }).eq('id', currentRideId);
                                 showToast(`🚀 Sending new request (+₹${val} tip) to nearby drivers!`);
                               }
                             }
@@ -1605,10 +1593,7 @@ function App() {
                         if (currentRideId) {
                           const basePrice = getPrice(selectedVehicle, distance);
                           const newTotal = Number((basePrice + tipAmount).toFixed(2));
-                          let { error } = await supabase.from('rides').update({ price: newTotal, tip: tipAmount }).eq('id', currentRideId);
-                          if (error && error.message?.includes('tip')) {
-                            await supabase.from('rides').update({ price: newTotal }).eq('id', currentRideId);
-                          }
+                          await supabase.from('rides').update({ price: newTotal }).eq('id', currentRideId);
                           if (tipAmount > 0) {
                             showToast(`🚀 Sending new request (+₹${tipAmount} tip) to nearby drivers!`);
                           } else {
