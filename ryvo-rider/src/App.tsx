@@ -175,6 +175,12 @@ function App() {
   const [tipAmount, setTipAmount] = useState<number>(0);
   const [searchingTimer, setSearchingTimer] = useState<number>(120);
 
+  // Rider Preferences Customization State
+  const [acTemp, setAcTemp] = useState<string>('22°C ❄️');
+  const [musicVibe, setMusicVibe] = useState<string>('Lo-Fi 🎵');
+  const [isQuietRide, setIsQuietRide] = useState<boolean>(false);
+  const [customNote, setCustomNote] = useState<string>('');
+
   const [noDriverFound, setNoDriverFound] = useState<boolean>(false);
   const [suggestedVehicle, setSuggestedVehicle] = useState<VehicleType | null>(null);
 
@@ -1470,15 +1476,93 @@ function App() {
                      </div>
                    </div>
 
-                   {/* Live Broadcast Feed Log */}
-                   <div className="bg-zinc-900/80 p-2.5 rounded-2xl border border-zinc-800 my-2 text-left">
-                     <div className="flex items-center space-x-2">
-                       <span className="text-xs">⚡</span>
-                       <p className="text-[11px] font-bold text-amber-300 truncate">
-                         {searchingTimer > 90 ? "Scanning 2km radius around pickup point..." :
-                          searchingTimer > 60 ? "Notifying top-rated drivers nearby..." :
-                          "Expanding match zone for instant assignment..."}
-                       </p>
+                   {/* Interactive Ride Customization Hub */}
+                   <div className="bg-zinc-900/90 p-3 rounded-2xl border border-amber-500/30 my-3 text-left space-y-2.5">
+                     <div className="flex items-center justify-between">
+                       <span className="text-[11px] font-black text-amber-400 uppercase tracking-wider flex items-center gap-1">
+                         <span>⚙️ PRE-RIDE PREFERENCES</span>
+                       </span>
+                       <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/30">
+                         Saved for Driver
+                       </span>
+                     </div>
+
+                     {/* AC Temperature Selector */}
+                     <div>
+                       <label className="text-[10px] font-bold text-zinc-400 uppercase block mb-1">Cabin AC Temp</label>
+                       <div className="grid grid-cols-4 gap-1">
+                         {['18°C 🥶', '20°C ❄️', '22°C 🍃', 'AC OFF 🌬️'].map((temp) => (
+                           <button
+                             key={temp}
+                             type="button"
+                             onClick={() => {
+                               setAcTemp(temp);
+                               showToast(`AC set to ${temp}`);
+                             }}
+                             className={`py-1.5 text-[10px] font-extrabold rounded-xl border transition-all ${
+                               acTemp === temp
+                                 ? 'bg-amber-500 text-black border-amber-400 shadow-md font-black scale-105'
+                                 : 'bg-zinc-950 text-zinc-300 border-zinc-800 hover:border-zinc-700'
+                             }`}
+                           >
+                             {temp}
+                           </button>
+                         ))}
+                       </div>
+                     </div>
+
+                     {/* Music Vibe Selector */}
+                     <div>
+                       <label className="text-[10px] font-bold text-zinc-400 uppercase block mb-1">Music Vibe</label>
+                       <div className="grid grid-cols-4 gap-1">
+                         {['Bollywood 🎶', 'Lo-Fi 🎵', 'EDM ⚡', 'No Music 🔇'].map((vibe) => (
+                           <button
+                             key={vibe}
+                             type="button"
+                             onClick={() => {
+                               setMusicVibe(vibe);
+                               showToast(`Music preference: ${vibe}`);
+                             }}
+                             className={`py-1.5 text-[10px] font-extrabold rounded-xl border transition-all ${
+                               musicVibe === vibe
+                                 ? 'bg-amber-500 text-black border-amber-400 shadow-md font-black scale-105'
+                                 : 'bg-zinc-950 text-zinc-300 border-zinc-800 hover:border-zinc-700'
+                             }`}
+                           >
+                             {vibe}
+                           </button>
+                         ))}
+                       </div>
+                     </div>
+
+                     {/* Silent Ride Toggle */}
+                     <div className="flex items-center justify-between pt-1 border-t border-zinc-800/80">
+                       <span className="text-xs font-bold text-zinc-200 flex items-center gap-1.5">
+                         <span>🤫</span> Silent / Quiet Ride Mode
+                       </span>
+                       <button
+                         type="button"
+                         onClick={() => {
+                           setIsQuietRide(!isQuietRide);
+                           showToast(isQuietRide ? 'Quiet mode disabled' : 'Quiet mode enabled for driver');
+                         }}
+                         className={`w-11 h-6 flex items-center rounded-full p-1 transition-colors ${
+                           isQuietRide ? 'bg-emerald-500 justify-end' : 'bg-zinc-800 justify-start'
+                         }`}
+                       >
+                         <span className="w-4 h-4 rounded-full bg-white shadow-md transform transition-transform"></span>
+                       </button>
+                     </div>
+
+                     {/* Pickup Note input */}
+                     <div className="pt-1">
+                       <input
+                         type="text"
+                         value={customNote}
+                         onChange={(e) => setCustomNote(e.target.value)}
+                         placeholder="✍️ Add note for driver (e.g. Near gate #2)..."
+                         className="w-full bg-zinc-950 border border-zinc-800 rounded-xl py-2 px-3 text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-amber-500/60"
+                       />
                      </div>
                    </div>
 
