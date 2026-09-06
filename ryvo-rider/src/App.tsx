@@ -171,20 +171,43 @@ function App() {
   const [review, setReview] = useState<string>('')
   const [hasRated, setHasRated] = useState<boolean>(false)
   
-  // Tip, 2-Min Session Timeout, Game Score, and Alternative Vehicle Suggestion state
+  // Tip, 2-Min Session Timeout, Lucky Wheel Spin Game state
   const [tipAmount, setTipAmount] = useState<number>(0);
   const [searchingTimer, setSearchingTimer] = useState<number>(120);
   const [gameScore, setGameScore] = useState<number>(0);
-  const [coinsCollected, setCoinsCollected] = useState<number>(0);
-  const [comboMultiplier, setComboMultiplier] = useState<number>(1);
-  const [playerLane, setPlayerLane] = useState<0 | 1 | 2>(1); // 0: Left, 1: Center, 2: Right
-  const [gameItems, setGameItems] = useState<{ id: number; lane: 0 | 1 | 2; top: number; type: 'coin' | 'lightning' | 'star' | 'obstacle' }[]>([]);
-  const [gamePopups, setGamePopups] = useState<{ id: number; text: string; color: string; lane: number }[]>([]);
+  const [wheelRotation, setWheelRotation] = useState<number>(0);
+  const [isSpinning, setIsSpinning] = useState<boolean>(false);
+  const [wonPrize, setWonPrize] = useState<{ title: string; desc: string; icon: string; color: string } | null>(null);
+  const [spinCount, setSpinCount] = useState<number>(0);
 
-  const playerLaneRef = useRef(playerLane);
-  playerLaneRef.current = playerLane;
-  const comboMultiplierRef = useRef(comboMultiplier);
-  comboMultiplierRef.current = comboMultiplier;
+  const wheelPrizes = [
+    { title: "⚡ Priority Dispatch", desc: "Broadcasts your ride to drivers 2x faster!", icon: "⚡", color: "from-emerald-500 to-green-600" },
+    { title: "🪙 500 RYVO Coins", desc: "Added to your rewards wallet!", icon: "🪙", color: "from-amber-400 to-yellow-500" },
+    { title: "🎁 ₹15 Fare Discount", desc: "Applied on your current trip!", icon: "🎁", color: "from-purple-500 to-indigo-600" },
+    { title: "⭐ VIP Match", desc: "Priority pairing with top 5.0★ drivers!", icon: "⭐", color: "from-cyan-400 to-blue-500" },
+    { title: "🚀 Express Boost", desc: "Pushes request to top of queue!", icon: "🚀", color: "from-rose-500 to-pink-600" },
+    { title: "🏆 Lucky Winner", desc: "Super priority & bonus reward points!", icon: "🏆", color: "from-yellow-400 to-amber-500" }
+  ];
+
+  const spinWheel = () => {
+    if (isSpinning) return;
+    setIsSpinning(true);
+    setWonPrize(null);
+
+    const randomIndex = Math.floor(Math.random() * wheelPrizes.length);
+    const degreesPerSlice = 360 / wheelPrizes.length;
+    const extraSpins = (5 + Math.floor(Math.random() * 3)) * 360;
+    const targetDegree = wheelRotation + extraSpins + (randomIndex * degreesPerSlice) + (degreesPerSlice / 2);
+
+    setWheelRotation(targetDegree);
+
+    setTimeout(() => {
+      setIsSpinning(false);
+      setWonPrize(wheelPrizes[randomIndex]);
+      setSpinCount(prev => prev + 1);
+      setGameScore(prev => prev + 250);
+    }, 3200);
+  };
 
   const [noDriverFound, setNoDriverFound] = useState<boolean>(false);
   const [suggestedVehicle, setSuggestedVehicle] = useState<VehicleType | null>(null);
@@ -1010,84 +1033,6 @@ function App() {
     return () => clearInterval(timer);
   }, [status, currentRideId, selectedVehicle]);
 
-  // Interactive 3-Lane Traffic Dash Arcade Game Loop
-  useEffect(() => {
-    if (status !== 'searching') {
-      setGameItems([]);
-      setGamePopups([]);
-      setComboMultiplier(1);
-      return;
-    }
-
-    // Spawn new coins, energy, stars, and obstacles periodically
-    const spawnInterval = setInterval(() => {
-      const lanes: (0 | 1 | 2)[] = [0, 1, 2];
-      const randomLane = lanes[Math.floor(Math.random() * lanes.length)];
-      const rand = Math.random();
-      const type: 'coin' | 'lightning' | 'star' | 'obstacle' = 
-        rand < 0.55 ? 'coin' : rand < 0.75 ? 'lightning' : rand < 0.88 ? 'star' : 'obstacle';
-
-      setGameItems(prev => [
-        ...prev.slice(-8),
-        { id: Date.now() + Math.random(), lane: randomLane, top: 0, type }
-      ]);
-    }, 750);
-
-    // Physics movement & collision detection loop
-    const physicsInterval = setInterval(() => {
-      setGameItems(prev => {
-        const updated: typeof prev = [];
-        for (const item of prev) {
-          const nextTop = item.top + 6;
-
-          // Collision check when item reaches vertical player position (70% - 88%)
-          if (nextTop >= 70 && item.top < 70) {
-            if (item.lane === playerLaneRef.current) {
-              let pts = 0;
-              let popupText = '';
-              let popupColor = '';
-
-              if (item.type === 'coin') {
-                pts = 50 * comboMultiplierRef.current;
-                popupText = `+${pts} 🪙 COIN!`;
-                popupColor = 'text-amber-300';
-                setCoinsCollected(c => c + 1);
-              } else if (item.type === 'lightning') {
-                pts = 100 * comboMultiplierRef.current;
-                popupText = `+${pts} ⚡ BOOST!`;
-                popupColor = 'text-cyan-300';
-                setComboMultiplier(m => Math.min(m + 1, 5));
-              } else if (item.type === 'star') {
-                pts = 200;
-                popupText = `+200 ⭐ PRIORITY!`;
-                popupColor = 'text-purple-300';
-              } else if (item.type === 'obstacle') {
-                pts = -20;
-                popupText = `-20 🚧 DODGED!`;
-                popupColor = 'text-red-400';
-                setComboMultiplier(1);
-              }
-
-              setGameScore(s => Math.max(0, s + pts));
-              setGamePopups(p => [...p.slice(-3), { id: Date.now() + Math.random(), text: popupText, color: popupColor, lane: item.lane }]);
-              continue; // remove collected item
-            }
-          }
-
-          if (nextTop < 95) {
-            updated.push({ ...item, top: nextTop });
-          }
-        }
-        return updated;
-      });
-    }, 50);
-
-    return () => {
-      clearInterval(spawnInterval);
-      clearInterval(physicsInterval);
-    };
-  }, [status]);
-
   useEffect(() => {
     if (!currentRideId) return;
     
@@ -1499,135 +1444,127 @@ function App() {
              </div>
           ) : status === 'searching' ? (
              <div className="py-2">
-                {/* 🎮 RYVO Traffic Dash 3-Lane Arcade Racer Game Card */}
-                <div className="relative mb-4 p-4 bg-gradient-to-b from-zinc-900 to-zinc-950 rounded-3xl border border-zinc-700/80 shadow-2xl overflow-hidden">
+                {/* 🎡 RYVO Lucky Spin Wheel & Rewards Card */}
+                <div className="relative mb-4 p-4 bg-gradient-to-b from-zinc-900 via-zinc-950 to-black rounded-3xl border border-amber-500/40 shadow-2xl overflow-hidden text-center">
                   
-                  {/* Game HUD Bar: Live Status + High Score & Coins Counter */}
+                  {/* HUD Header Bar */}
                   <div className="flex items-center justify-between mb-3 px-1">
                     <div className="flex items-center space-x-2">
                       <span className="relative flex h-3 w-3">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
                       </span>
-                      <span className="text-xs font-black text-white uppercase tracking-wider">🎮 RYVO Traffic Dash</span>
+                      <span className="text-xs font-black text-amber-400 uppercase tracking-wider">🎡 Lucky Spin & Rewards</span>
                     </div>
-
                     <div className="flex items-center space-x-2">
                       <div className="bg-amber-500/10 border border-amber-500/30 px-2.5 py-1 rounded-full flex items-center space-x-1">
-                        <span className="text-xs">🪙</span>
-                        <span className="text-xs font-black text-amber-300">{coinsCollected}</span>
+                        <span className="text-xs">🌀</span>
+                        <span className="text-xs font-black text-amber-300">Spins: {spinCount}</span>
                       </div>
                       <div className="bg-emerald-500/10 border border-emerald-500/30 px-2.5 py-1 rounded-full flex items-center space-x-1">
                         <span className="text-xs">🏆</span>
-                        <span className="text-xs font-black text-emerald-400">{gameScore}</span>
+                        <span className="text-xs font-black text-emerald-400">Score: {gameScore}</span>
                       </div>
-                      {comboMultiplier > 1 && (
-                        <div className="bg-cyan-500/20 border border-cyan-500/40 px-2 py-0.5 rounded-full animate-bounce">
-                          <span className="text-[10px] font-black text-cyan-300">{comboMultiplier}x</span>
-                        </div>
-                      )}
                     </div>
                   </div>
 
-                  {/* 3-Lane Arcade Track Viewport */}
-                  <div className="relative w-full h-44 bg-zinc-950 rounded-2xl border-2 border-zinc-800 overflow-hidden shadow-inner select-none">
-                    
-                    {/* 3 Lanes Grid */}
-                    <div className="absolute inset-0 grid grid-cols-3 divide-x divide-zinc-800/80">
-                      {[0, 1, 2].map((laneIndex) => (
-                        <div 
-                          key={laneIndex}
-                          onClick={() => setPlayerLane(laneIndex as 0 | 1 | 2)}
-                          className={`relative h-full cursor-pointer transition-colors ${playerLane === laneIndex ? 'bg-emerald-500/5' : 'hover:bg-zinc-900/40'}`}
-                        >
-                          {/* Road Striping Line */}
-                          <div className="absolute inset-y-0 left-1/2 w-0.5 border-r border-dashed border-zinc-800/50 opacity-40"></div>
-                        </div>
-                      ))}
+                  {/* Spinning Wheel Arena */}
+                  <div className="relative w-48 h-48 mx-auto my-2 flex items-center justify-center">
+                    {/* Top Pointer Arrow */}
+                    <div className="absolute -top-3 z-30 text-amber-400 text-2xl filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] animate-bounce">
+                      🔻
                     </div>
 
-                    {/* Falling Game Items (Coins 🪙, Lightning ⚡, Stars ⭐, Cones 🚧) */}
-                    {gameItems.map((item) => (
-                      <div
-                        key={item.id}
-                        style={{
-                          left: `${(item.lane * 33.33) + 16.66}%`,
-                          top: `${item.top}%`,
-                          transform: 'translate(-50%, -50%)'
-                        }}
-                        className="absolute text-2xl z-20 pointer-events-none transition-all duration-75"
-                      >
-                        {item.type === 'coin' ? '🪙' :
-                         item.type === 'lightning' ? '⚡' :
-                         item.type === 'star' ? '⭐' : '🚧'}
-                      </div>
-                    ))}
+                    {/* Outer Glowing Ring */}
+                    <div className="absolute inset-0 rounded-full border-4 border-amber-500/40 shadow-[0_0_20px_rgba(245,158,11,0.3)] animate-pulse"></div>
 
-                    {/* Floating Catch / Collision Popups */}
-                    {gamePopups.map((popup) => (
-                      <div
-                        key={popup.id}
-                        style={{
-                          left: `${(popup.lane * 33.33) + 16.66}%`,
-                          top: '60%',
-                          transform: 'translate(-50%, -50%)'
-                        }}
-                        className={`absolute z-30 font-black text-xs ${popup.color} animate-bounce pointer-events-none whitespace-nowrap drop-shadow-md`}
-                      >
-                        {popup.text}
-                      </div>
-                    ))}
-
-                    {/* Player Vehicle Sprite (Positioned at bottom of current playerLane) */}
-                    <div
-                      style={{
-                        left: `${(playerLane * 33.33) + 16.66}%`,
-                        top: '80%',
-                        transform: 'translate(-50%, -50%)'
-                      }}
-                      className="absolute z-30 text-3xl transition-all duration-150 ease-out filter drop-shadow-[0_0_8px_rgba(16,185,129,0.5)]"
+                    {/* Dynamic Rotating SVG Wheel */}
+                    <div 
+                      style={{ transform: `rotate(${wheelRotation}deg)` }}
+                      className="w-44 h-44 rounded-full border-4 border-zinc-800 shadow-2xl relative overflow-hidden transition-transform duration-[3200ms] cubic-bezier(0.15, 0.9, 0.2, 1)"
                     >
-                      {selectedVehicle === 'bike' ? '🛵' : selectedVehicle === 'auto' ? '🛺' : '🚗'}
-                    </div>
+                      {/* SVG Conic Slices */}
+                      <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-90">
+                        {wheelPrizes.map((_prize, idx) => {
+                          const angle = 360 / wheelPrizes.length;
+                          const startAngle = idx * angle;
+                          const endAngle = (idx + 1) * angle;
+                          const x1 = 50 + 50 * Math.cos((Math.PI * startAngle) / 180);
+                          const y1 = 50 + 50 * Math.sin((Math.PI * startAngle) / 180);
+                          const x2 = 50 + 50 * Math.cos((Math.PI * endAngle) / 180);
+                          const y2 = 50 + 50 * Math.sin((Math.PI * endAngle) / 180);
+                          const pathData = `M 50 50 L ${x1} ${y1} A 50 50 0 0 1 ${x2} ${y2} Z`;
+                          const colors = ['#10b981', '#f59e0b', '#8b5cf6', '#06b6d4', '#f43f5e', '#eab308'];
+                          return (
+                            <path
+                              key={idx}
+                              d={pathData}
+                              fill={colors[idx % colors.length]}
+                              stroke="#18181b"
+                              strokeWidth="1.5"
+                            />
+                          );
+                        })}
+                      </svg>
 
-                    {/* Instructions Banner */}
-                    <div className="absolute bottom-1 inset-x-0 text-center pointer-events-none z-10">
-                      <span className="text-[10px] font-extrabold text-zinc-400 bg-zinc-900/90 px-3 py-0.5 rounded-full border border-zinc-800">
-                        🎮 Tap lanes or buttons to steer & collect coins!
-                      </span>
+                      {/* Icons on slices */}
+                      {wheelPrizes.map((prize, idx) => {
+                        const angle = (idx * 60) + 30;
+                        const rad = (angle * Math.PI) / 180;
+                        const r = 32; // radius
+                        const x = 50 + r * Math.cos(rad);
+                        const y = 50 + r * Math.sin(rad);
+                        return (
+                          <div
+                            key={idx}
+                            style={{
+                              left: `${x}%`,
+                              top: `${y}%`,
+                              transform: 'translate(-50%, -50%)'
+                            }}
+                            className="absolute text-lg font-bold select-none pointer-events-none drop-shadow-md"
+                          >
+                            {prize.icon}
+                          </div>
+                        );
+                      })}
+
+                      {/* Center Hub */}
+                      <div className="absolute inset-0 m-auto w-12 h-12 bg-zinc-950 border-2 border-amber-400 rounded-full flex items-center justify-center text-amber-400 font-black text-sm shadow-xl z-20">
+                        RYVO
+                      </div>
                     </div>
                   </div>
 
-                  {/* 3-Lane Touch Controls */}
-                  <div className="grid grid-cols-3 gap-2 mt-3">
-                    <button
-                      onClick={() => setPlayerLane(0)}
-                      className={`py-2 text-xs font-black rounded-xl border transition ${playerLane === 0 ? 'bg-emerald-500 text-black border-emerald-400 shadow-md font-extrabold' : 'bg-zinc-900 text-zinc-300 border-zinc-800 hover:border-zinc-700'}`}
-                    >
-                      👈 LEFT LANE
-                    </button>
-                    <button
-                      onClick={() => setPlayerLane(1)}
-                      className={`py-2 text-xs font-black rounded-xl border transition ${playerLane === 1 ? 'bg-emerald-500 text-black border-emerald-400 shadow-md font-extrabold' : 'bg-zinc-900 text-zinc-300 border-zinc-800 hover:border-zinc-700'}`}
-                    >
-                      🎯 CENTER
-                    </button>
-                    <button
-                      onClick={() => setPlayerLane(2)}
-                      className={`py-2 text-xs font-black rounded-xl border transition ${playerLane === 2 ? 'bg-emerald-500 text-black border-emerald-400 shadow-md font-extrabold' : 'bg-zinc-900 text-zinc-300 border-zinc-800 hover:border-zinc-700'}`}
-                    >
-                      RIGHT 👉
-                    </button>
-                  </div>
+                  {/* Won Prize Celebration Modal Banner */}
+                  {wonPrize && (
+                    <div className="mt-3 p-3 bg-gradient-to-r from-amber-500/20 via-amber-500/10 to-amber-500/20 border border-amber-500/50 rounded-2xl animate-bounce">
+                      <p className="text-xs font-black text-amber-300 uppercase tracking-wider flex items-center justify-center gap-1">
+                        <span>🎉 YOU WON:</span>
+                        <span>{wonPrize.icon} {wonPrize.title}</span>
+                      </p>
+                      <p className="text-[11px] text-zinc-300 font-medium mt-0.5">{wonPrize.desc}</p>
+                    </div>
+                  )}
 
-                  {/* Dynamic Status Text */}
+                  {/* Spin Button */}
+                  <button
+                    onClick={spinWheel}
+                    disabled={isSpinning}
+                    className="w-full mt-3 bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-black font-extrabold py-3.5 rounded-2xl text-sm transition-all shadow-lg active:scale-95 disabled:opacity-50 flex items-center justify-center space-x-2"
+                  >
+                    <span className="text-base">{isSpinning ? '🌀' : '🎡'}</span>
+                    <span>{isSpinning ? 'SPINNING WHEEL...' : 'SPIN WHEEL FOR PRIZES!'}</span>
+                  </button>
+
+                  {/* Search Status Text */}
                   <div className="mt-3 text-center">
-                    <p className="text-sm font-extrabold text-white animate-pulse">
+                    <p className="text-xs font-extrabold text-zinc-300 animate-pulse">
                       {searchingTimer > 90 ? "📡 Connecting with nearest drivers in Bengaluru..." :
                        searchingTimer > 60 ? "⚡ Priority signal sent to top-rated drivers..." :
                        "🚕 Dispatching request to all available drivers..."}
                     </p>
-                    <p className="text-xs text-zinc-400 mt-0.5 font-medium">Searching for {selectedVehicle.toUpperCase()} ride...</p>
+                    <p className="text-[11px] text-zinc-400 mt-0.5 font-medium">Searching for {selectedVehicle.toUpperCase()} ride...</p>
                   </div>
                 </div>
 
