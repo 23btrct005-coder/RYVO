@@ -181,6 +181,14 @@ function App() {
   const [isQuietRide, setIsQuietRide] = useState<boolean>(false);
   const [customNote, setCustomNote] = useState<string>('');
 
+  // Interactive Quiz & Scratch Card Reward State
+  const [activeTab, setActiveTab] = useState<'prefs' | 'quiz' | 'scratch'>('prefs');
+  const [quizScore, setQuizScore] = useState<number>(0);
+  const [currentQuestionIdx, setCurrentQuestionIdx] = useState<number>(0);
+  const [quizAnswered, setQuizAnswered] = useState<number | null>(null);
+  const [isScratched, setIsScratched] = useState<boolean>(false);
+  const [discountWon, setDiscountWon] = useState<number>(0);
+
   const [noDriverFound, setNoDriverFound] = useState<boolean>(false);
   const [suggestedVehicle, setSuggestedVehicle] = useState<VehicleType | null>(null);
 
@@ -1476,94 +1484,233 @@ function App() {
                      </div>
                    </div>
 
-                   {/* Interactive Ride Customization Hub */}
+                   {/* Multi-Tab Interactive Searching Hub */}
                    <div className="bg-zinc-900/90 p-3 rounded-2xl border border-amber-500/30 my-3 text-left space-y-2.5">
-                     <div className="flex items-center justify-between">
-                       <span className="text-[11px] font-black text-amber-400 uppercase tracking-wider flex items-center gap-1">
-                         <span>⚙️ PRE-RIDE PREFERENCES</span>
-                       </span>
-                       <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/30">
-                         Saved for Driver
-                       </span>
-                     </div>
-
-                     {/* AC Temperature Selector */}
-                     <div>
-                       <label className="text-[10px] font-bold text-zinc-400 uppercase block mb-1">Cabin AC Temp</label>
-                       <div className="grid grid-cols-4 gap-1">
-                         {['18°C 🥶', '20°C ❄️', '22°C 🍃', 'AC OFF 🌬️'].map((temp) => (
-                           <button
-                             key={temp}
-                             type="button"
-                             onClick={() => {
-                               setAcTemp(temp);
-                               showToast(`AC set to ${temp}`);
-                             }}
-                             className={`py-1.5 text-[10px] font-extrabold rounded-xl border transition-all ${
-                               acTemp === temp
-                                 ? 'bg-amber-500 text-black border-amber-400 shadow-md font-black scale-105'
-                                 : 'bg-zinc-950 text-zinc-300 border-zinc-800 hover:border-zinc-700'
-                             }`}
-                           >
-                             {temp}
-                           </button>
-                         ))}
-                       </div>
-                     </div>
-
-                     {/* Music Vibe Selector */}
-                     <div>
-                       <label className="text-[10px] font-bold text-zinc-400 uppercase block mb-1">Music Vibe</label>
-                       <div className="grid grid-cols-4 gap-1">
-                         {['Bollywood 🎶', 'Lo-Fi 🎵', 'EDM ⚡', 'No Music 🔇'].map((vibe) => (
-                           <button
-                             key={vibe}
-                             type="button"
-                             onClick={() => {
-                               setMusicVibe(vibe);
-                               showToast(`Music preference: ${vibe}`);
-                             }}
-                             className={`py-1.5 text-[10px] font-extrabold rounded-xl border transition-all ${
-                               musicVibe === vibe
-                                 ? 'bg-amber-500 text-black border-amber-400 shadow-md font-black scale-105'
-                                 : 'bg-zinc-950 text-zinc-300 border-zinc-800 hover:border-zinc-700'
-                             }`}
-                           >
-                             {vibe}
-                           </button>
-                         ))}
-                       </div>
-                     </div>
-
-                     {/* Silent Ride Toggle */}
-                     <div className="flex items-center justify-between pt-1 border-t border-zinc-800/80">
-                       <span className="text-xs font-bold text-zinc-200 flex items-center gap-1.5">
-                         <span>🤫</span> Silent / Quiet Ride Mode
-                       </span>
+                     
+                     {/* Tab Headers */}
+                     <div className="grid grid-cols-3 gap-1 p-1 bg-zinc-950 rounded-xl border border-zinc-800 text-center">
                        <button
                          type="button"
-                         onClick={() => {
-                           setIsQuietRide(!isQuietRide);
-                           showToast(isQuietRide ? 'Quiet mode disabled' : 'Quiet mode enabled for driver');
-                         }}
-                         className={`w-11 h-6 flex items-center rounded-full p-1 transition-colors ${
-                           isQuietRide ? 'bg-emerald-500 justify-end' : 'bg-zinc-800 justify-start'
+                         onClick={() => setActiveTab('prefs')}
+                         className={`py-1.5 text-[10px] font-black rounded-lg transition-all ${
+                           activeTab === 'prefs'
+                             ? 'bg-amber-500 text-black shadow-md'
+                             : 'text-zinc-400 hover:text-white'
                          }`}
                        >
-                         <span className="w-4 h-4 rounded-full bg-white shadow-md transform transition-transform"></span>
+                         ⚙️ Prefs
+                       </button>
+                       <button
+                         type="button"
+                         onClick={() => setActiveTab('quiz')}
+                         className={`py-1.5 text-[10px] font-black rounded-lg transition-all ${
+                           activeTab === 'quiz'
+                             ? 'bg-amber-500 text-black shadow-md'
+                             : 'text-zinc-400 hover:text-white'
+                         }`}
+                       >
+                         ❓ City Quiz
+                       </button>
+                       <button
+                         type="button"
+                         onClick={() => setActiveTab('scratch')}
+                         className={`py-1.5 text-[10px] font-black rounded-lg transition-all relative ${
+                           activeTab === 'scratch'
+                             ? 'bg-amber-500 text-black shadow-md'
+                             : 'text-zinc-400 hover:text-white'
+                         }`}
+                       >
+                         🎁 Rewards
+                         {discountWon > 0 && (
+                           <span className="absolute -top-1 -right-1 w-2 h-2 bg-emerald-400 rounded-full animate-ping"></span>
+                         )}
                        </button>
                      </div>
 
-                     {/* Pickup Note input */}
-                     <div className="pt-1">
-                       <input
-                         type="text"
-                         value={customNote}
-                         onChange={(e) => setCustomNote(e.target.value)}
-                         placeholder="✍️ Add note for driver (e.g. Near gate #2)..."
-                         className="w-full bg-zinc-950 border border-zinc-800 rounded-xl py-2 px-3 text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-amber-500/60"
-                       />
-                     </div>
+                     {/* TAB 1: PREFERENCES */}
+                     {activeTab === 'prefs' && (
+                       <div className="space-y-2.5">
+                         {/* AC Temperature Selector */}
+                         <div>
+                           <label className="text-[10px] font-bold text-zinc-400 uppercase block mb-1">Cabin AC Temp</label>
+                           <div className="grid grid-cols-4 gap-1">
+                             {['18°C 🥶', '20°C ❄️', '22°C 🍃', 'AC OFF 🌬️'].map((temp) => (
+                               <button
+                                 key={temp}
+                                 type="button"
+                                 onClick={() => {
+                                   setAcTemp(temp);
+                                   showToast(`AC set to ${temp}`);
+                                 }}
+                                 className={`py-1.5 text-[10px] font-extrabold rounded-xl border transition-all ${
+                                   acTemp === temp
+                                     ? 'bg-amber-500 text-black border-amber-400 shadow-md font-black scale-105'
+                                     : 'bg-zinc-950 text-zinc-300 border-zinc-800 hover:border-zinc-700'
+                                 }`}
+                               >
+                                 {temp}
+                               </button>
+                             ))}
+                           </div>
+                         </div>
+
+                         {/* Music Vibe Selector */}
+                         <div>
+                           <label className="text-[10px] font-bold text-zinc-400 uppercase block mb-1">Music Vibe</label>
+                           <div className="grid grid-cols-4 gap-1">
+                             {['Bollywood 🎶', 'Lo-Fi 🎵', 'EDM ⚡', 'No Music 🔇'].map((vibe) => (
+                               <button
+                                 key={vibe}
+                                 type="button"
+                                 onClick={() => {
+                                   setMusicVibe(vibe);
+                                   showToast(`Music preference: ${vibe}`);
+                                 }}
+                                 className={`py-1.5 text-[10px] font-extrabold rounded-xl border transition-all ${
+                                   musicVibe === vibe
+                                     ? 'bg-amber-500 text-black border-amber-400 shadow-md font-black scale-105'
+                                     : 'bg-zinc-950 text-zinc-300 border-zinc-800 hover:border-zinc-700'
+                                 }`}
+                               >
+                                 {vibe}
+                               </button>
+                             ))}
+                           </div>
+                         </div>
+
+                         {/* Silent Ride Toggle */}
+                         <div className="flex items-center justify-between pt-1 border-t border-zinc-800/80">
+                           <span className="text-xs font-bold text-zinc-200 flex items-center gap-1.5">
+                             <span>🤫</span> Silent / Quiet Ride Mode
+                           </span>
+                           <button
+                             type="button"
+                             onClick={() => {
+                               setIsQuietRide(!isQuietRide);
+                               showToast(isQuietRide ? 'Quiet mode disabled' : 'Quiet mode enabled for driver');
+                             }}
+                             className={`w-11 h-6 flex items-center rounded-full p-1 transition-colors ${
+                               isQuietRide ? 'bg-emerald-500 justify-end' : 'bg-zinc-800 justify-start'
+                             }`}
+                           >
+                             <span className="w-4 h-4 rounded-full bg-white shadow-md transform transition-transform"></span>
+                           </button>
+                         </div>
+
+                         {/* Pickup Note input */}
+                         <div className="pt-1">
+                           <input
+                             type="text"
+                             value={customNote}
+                             onChange={(e) => setCustomNote(e.target.value)}
+                             placeholder="✍️ Add note for driver (e.g. Near gate #2)..."
+                             className="w-full bg-zinc-950 border border-zinc-800 rounded-xl py-2 px-3 text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-amber-500/60"
+                           />
+                         </div>
+                       </div>
+                     )}
+
+                     {/* TAB 2: BENGALURU CITY TRIVIA QUIZ */}
+                     {activeTab === 'quiz' && (
+                       <div className="space-y-2 text-center">
+                         {currentQuestionIdx < 3 ? (
+                           <>
+                             <div className="flex items-center justify-between text-[11px] text-amber-400 font-bold mb-1">
+                               <span>🧠 BENGALURU TRIVIA</span>
+                               <span>Q{currentQuestionIdx + 1}/3</span>
+                             </div>
+                             <p className="text-xs font-extrabold text-white text-left">
+                               {[
+                                 "Which iconic park in Bengaluru has over 300 acres of lush greenery?",
+                                 "What famous Bengaluru dish was invented during WWII ration shortages?",
+                                 "Which technology hub in Bengaluru was India's first IT park?"
+                               ][currentQuestionIdx]}
+                             </p>
+                             <div className="grid grid-cols-2 gap-1.5 pt-1">
+                               {[
+                                 ["Cubbon Park", "Lalbagh", "Freedom Park", "Bannerghatta"],
+                                 ["Rava Idli", "Masala Dosa", "Bisi Bele Bath", "Vada Pav"],
+                                 ["Electronics City", "Whitefield", "Manyata Tech Park", "ITPL"]
+                               ][currentQuestionIdx].map((opt, idx) => (
+                                 <button
+                                   key={idx}
+                                   type="button"
+                                   onClick={() => {
+                                     setQuizAnswered(idx);
+                                     const correct = [0, 0, 0][currentQuestionIdx]; // 0 is correct answer
+                                     if (idx === correct) {
+                                       setQuizScore(s => s + 1);
+                                       showToast("Correct! +1 Point 🎯");
+                                     } else {
+                                       showToast("Nice try! 💡");
+                                     }
+                                     setTimeout(() => {
+                                       setCurrentQuestionIdx(q => q + 1);
+                                       setQuizAnswered(null);
+                                     }, 700);
+                                   }}
+                                   disabled={quizAnswered !== null}
+                                   className={`p-2 text-[11px] font-bold rounded-xl border text-left transition-all ${
+                                     quizAnswered === idx
+                                       ? idx === [0, 0, 0][currentQuestionIdx]
+                                         ? 'bg-emerald-500 text-black border-emerald-400 font-black'
+                                         : 'bg-red-500 text-white border-red-400'
+                                       : 'bg-zinc-950 text-zinc-300 border-zinc-800 hover:border-zinc-700'
+                                   }`}
+                                 >
+                                   {opt}
+                                 </button>
+                               ))}
+                             </div>
+                           </>
+                         ) : (
+                           <div className="py-2 space-y-2">
+                             <span className="text-2xl">🎉</span>
+                             <h4 className="text-xs font-black text-amber-300">QUIZ COMPLETED!</h4>
+                             <p className="text-[11px] text-zinc-300 font-medium">You scored {quizScore}/3! Scratch your reward card now!</p>
+                             <button
+                               type="button"
+                               onClick={() => setActiveTab('scratch')}
+                               className="w-full bg-emerald-500 text-black font-extrabold py-2 rounded-xl text-xs hover:bg-emerald-400 transition"
+                             >
+                               Claim Scratch Card Reward 🎁
+                             </button>
+                           </div>
+                         )}
+                       </div>
+                     )}
+
+                     {/* TAB 3: REWARD SCRATCH CARD */}
+                     {activeTab === 'scratch' && (
+                       <div className="text-center py-1">
+                         <div className="flex items-center justify-between text-[11px] text-amber-400 font-bold mb-2">
+                           <span>🎁 TRIP REWARD CARD</span>
+                           <span>Instant Cashback</span>
+                         </div>
+                         {!isScratched ? (
+                           <div
+                             onClick={() => {
+                               const prize = Math.floor(10 + Math.random() * 25);
+                               setDiscountWon(prize);
+                               setIsScratched(true);
+                               showToast(`🎉 You unlocked ₹${prize} Ride Cashback!`);
+                             }}
+                             className="relative w-full h-24 bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-500 rounded-2xl border-2 border-dashed border-amber-200 flex flex-col items-center justify-center cursor-pointer shadow-lg hover:scale-[1.02] transition-transform"
+                           >
+                             <span className="text-2xl animate-bounce">✨</span>
+                             <p className="text-xs font-black text-black uppercase tracking-wider mt-1">TAP TO SCRATCH & REVEAL!</p>
+                             <p className="text-[10px] text-amber-950 font-bold">Win up to ₹30 cashback on this trip</p>
+                           </div>
+                         ) : (
+                           <div className="w-full h-24 bg-gradient-to-br from-emerald-950 via-zinc-900 to-black rounded-2xl border border-emerald-500/50 p-3 flex flex-col items-center justify-center animate-slide-in shadow-xl">
+                             <span className="text-xs font-black text-emerald-400 uppercase tracking-widest">🎉 CONGRATULATIONS!</span>
+                             <p className="text-lg font-black text-white my-0.5">₹{discountWon} CASHBACK UNLOCKED</p>
+                             <p className="text-[10px] text-zinc-400 font-medium">Applied automatically to your next ride fare!</p>
+                           </div>
+                         )}
+                       </div>
+                     )}
+
                    </div>
 
                    {/* Search Status Text */}
