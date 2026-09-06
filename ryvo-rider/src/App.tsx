@@ -1512,20 +1512,10 @@ function App() {
                       {[0, 10, 20, 30, 50].map((amount) => (
                         <button
                           key={amount}
-                          onClick={async () => {
+                          onClick={() => {
                             setTipAmount(amount);
                             setIsCustomTipOpen(false);
                             setCustomTipInput('');
-                            if (currentRideId) {
-                              const basePrice = getPrice(selectedVehicle, distance);
-                              const newTotal = Number((basePrice + amount).toFixed(2));
-                              await supabase.from('rides').update({ price: newTotal }).eq('id', currentRideId);
-                              if (amount > 0) {
-                                showToast(`🚀 Sending new request (+₹${amount} tip) to nearby drivers!`);
-                              } else {
-                                showToast(`Request updated to standard fare ₹${newTotal}.`);
-                              }
-                            }
                           }}
                           className={`py-2 px-1 text-xs font-black rounded-xl border transition-all ${
                             tipAmount === amount && !isCustomTipOpen
@@ -1568,21 +1558,15 @@ function App() {
                           />
                         </div>
                         <button
-                          onClick={async () => {
+                          onClick={() => {
                             const val = parseInt(customTipInput, 10);
                             if (!isNaN(val) && val > 0) {
                               setTipAmount(val);
-                              if (currentRideId) {
-                                const basePrice = getPrice(selectedVehicle, distance);
-                                const newTotal = Number((basePrice + val).toFixed(2));
-                                await supabase.from('rides').update({ price: newTotal }).eq('id', currentRideId);
-                                showToast(`🚀 Sending new request (+₹${val} tip) to nearby drivers!`);
-                              }
                             }
                           }}
                           className="bg-amber-400 hover:bg-amber-300 text-black font-extrabold text-xs px-3.5 py-2.5 rounded-xl transition shadow-md"
                         >
-                          Send
+                          Set
                         </button>
                       </div>
                     )}
