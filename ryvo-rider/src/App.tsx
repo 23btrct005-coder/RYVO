@@ -2109,24 +2109,24 @@ function App() {
                 )}
                 
                 {/* OLA / UBER / RAPIDO ANIMATED HYPER LANDING VIEW */}
-                <div className="space-y-5">
+                <div className="space-y-4">
                   {/* Search Bar / Quick Target Bar with AI Voice Trigger */}
                   <div className="flex items-center space-x-2">
                     <div 
                       onClick={() => {
                         if (!destination) setActiveInput('destination');
                       }}
-                      className="flex-1 relative bg-gradient-to-r from-zinc-800/90 via-zinc-800 to-zinc-900 border-2 border-emerald-500/30 hover:border-emerald-400 p-3.5 rounded-2xl cursor-pointer transition-all shadow-xl hover:scale-[1.01] group"
+                      className="flex-1 relative bg-gradient-to-r from-zinc-800/90 via-zinc-800 to-zinc-900 border-2 border-emerald-500/30 hover:border-emerald-400 p-3 rounded-2xl cursor-pointer transition-all shadow-xl hover:scale-[1.01] group overflow-hidden min-w-0"
                     >
-                      <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center text-xl shrink-0 group-hover:scale-110 transition-transform">
+                      <div className="flex items-center space-x-2.5 min-w-0">
+                        <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center text-lg shrink-0 group-hover:scale-110 transition-transform">
                           🔍
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-[11px] font-black uppercase text-emerald-400 tracking-wider">Where are you heading today?</p>
-                          <p className="text-base font-extrabold text-white truncate">{destination || 'Search destination or speak AI voice'}</p>
+                        <div className="flex-1 min-w-0 pr-1">
+                          <p className="text-[10px] font-black uppercase text-emerald-400 tracking-wider truncate">Where to?</p>
+                          <p className="text-xs sm:text-sm font-extrabold text-white truncate">{destination || 'Search destination or AI voice'}</p>
                         </div>
-                        <span className="bg-emerald-400 text-zinc-950 font-black text-xs px-3 py-1.5 rounded-xl shadow-md group-hover:translate-x-1 transition-transform">
+                        <span className="bg-emerald-400 text-zinc-950 font-black text-[11px] px-2.5 py-1.5 rounded-xl shadow-md shrink-0 group-hover:translate-x-0.5 transition-transform">
                           GO ➔
                         </span>
                       </div>
@@ -2140,26 +2140,26 @@ function App() {
                         startVoiceRecognition();
                       }}
                       title="Book ride with AI Voice Assistant"
-                      className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-emerald-500 via-teal-400 to-cyan-400 text-zinc-950 font-black text-2xl flex flex-col items-center justify-center shadow-xl border-2 border-emerald-300/50 hover:scale-105 active:scale-95 transition-transform shrink-0 relative overflow-hidden group"
+                      className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-500 via-teal-400 to-cyan-400 text-zinc-950 font-black text-xl flex flex-col items-center justify-center shadow-xl border-2 border-emerald-300/50 hover:scale-105 active:scale-95 transition-transform shrink-0 relative overflow-hidden group"
                     >
                       <span className="animate-pulse">🎙️</span>
-                      <span className="text-[8px] font-black tracking-tighter uppercase text-zinc-900 -mt-1">VOICE</span>
+                      <span className="text-[7px] font-black tracking-tighter uppercase text-zinc-900 -mt-1">VOICE</span>
                     </button>
                   </div>
 
                   {/* Ola / Rapido / Uber Style Animated Category Grid */}
                   <div>
-                    <div className="flex items-center justify-between mb-2.5">
-                      <span className="text-xs font-black uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[11px] font-black uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
                         <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
                         Popular Services
                       </span>
-                      <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
+                      <span className="text-[9px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
                         ⚡ Instant Dispatch
                       </span>
                     </div>
 
-                    <div className="grid grid-cols-4 gap-2.5">
+                    <div className="grid grid-cols-4 gap-1.5 sm:gap-2.5">
                       {/* Bike Tile */}
                       <button
                         type="button"
@@ -2168,14 +2168,14 @@ function App() {
                           if (!destination) setDestination('Mg Road, Bengaluru');
                           handleEstimate();
                         }}
-                        className="flex flex-col items-center justify-center p-3 bg-gradient-to-b from-zinc-800 to-zinc-900/90 hover:from-amber-500/20 hover:to-zinc-800 border border-zinc-700/80 hover:border-amber-400 rounded-2xl transition-all shadow-md group active:scale-95 relative overflow-hidden"
+                        className="flex flex-col items-center justify-center p-2 sm:p-3 bg-gradient-to-b from-zinc-800 to-zinc-900/90 hover:from-amber-500/20 hover:to-zinc-800 border border-zinc-700/80 hover:border-amber-400 rounded-2xl transition-all shadow-md group active:scale-95 relative overflow-hidden text-center min-w-0"
                       >
-                        <span className="absolute top-1 right-1 text-[8px] font-extrabold text-amber-300 bg-amber-500/20 px-1 rounded">FAST</span>
-                        <div className="w-12 h-12 rounded-full bg-amber-500/10 flex items-center justify-center text-3xl mb-1.5 group-hover:scale-125 transition-transform animate-float">
+                        <span className="absolute top-0.5 right-0.5 text-[7px] sm:text-[8px] font-extrabold text-amber-300 bg-amber-500/20 px-1 rounded">FAST</span>
+                        <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-amber-500/10 flex items-center justify-center text-2xl sm:text-3xl mb-1 group-hover:scale-110 transition-transform animate-float">
                           🛵
                         </div>
-                        <span className="text-xs font-extrabold text-white group-hover:text-amber-400">Bike</span>
-                        <span className="text-[10px] font-bold text-zinc-400">From ₹25</span>
+                        <span className="text-[11px] sm:text-xs font-extrabold text-white group-hover:text-amber-400 truncate w-full">Bike</span>
+                        <span className="text-[9px] sm:text-[10px] font-bold text-zinc-400 truncate w-full">₹25</span>
                       </button>
 
                       {/* Auto Tile */}
@@ -2186,14 +2186,14 @@ function App() {
                           if (!destination) setDestination('Indiranagar, Bengaluru');
                           handleEstimate();
                         }}
-                        className="flex flex-col items-center justify-center p-3 bg-gradient-to-b from-zinc-800 to-zinc-900/90 hover:from-emerald-500/20 hover:to-zinc-800 border border-zinc-700/80 hover:border-emerald-400 rounded-2xl transition-all shadow-md group active:scale-95 relative overflow-hidden"
+                        className="flex flex-col items-center justify-center p-2 sm:p-3 bg-gradient-to-b from-zinc-800 to-zinc-900/90 hover:from-emerald-500/20 hover:to-zinc-800 border border-zinc-700/80 hover:border-emerald-400 rounded-2xl transition-all shadow-md group active:scale-95 relative overflow-hidden text-center min-w-0"
                       >
-                        <span className="absolute top-1 right-1 text-[8px] font-extrabold text-emerald-300 bg-emerald-500/20 px-1 rounded">TOP</span>
-                        <div className="w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center text-3xl mb-1.5 group-hover:scale-125 transition-transform animate-float">
+                        <span className="absolute top-0.5 right-0.5 text-[7px] sm:text-[8px] font-extrabold text-emerald-300 bg-emerald-500/20 px-1 rounded">TOP</span>
+                        <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-emerald-500/10 flex items-center justify-center text-2xl sm:text-3xl mb-1 group-hover:scale-110 transition-transform animate-float">
                           🛺
                         </div>
-                        <span className="text-xs font-extrabold text-white group-hover:text-emerald-400">Auto</span>
-                        <span className="text-[10px] font-bold text-zinc-400">From ₹35</span>
+                        <span className="text-[11px] sm:text-xs font-extrabold text-white group-hover:text-emerald-400 truncate w-full">Auto</span>
+                        <span className="text-[9px] sm:text-[10px] font-bold text-zinc-400 truncate w-full">₹35</span>
                       </button>
 
                       {/* Cab Tile */}
@@ -2204,14 +2204,14 @@ function App() {
                           if (!destination) setDestination('Koramangala, Bengaluru');
                           handleEstimate();
                         }}
-                        className="flex flex-col items-center justify-center p-3 bg-gradient-to-b from-zinc-800 to-zinc-900/90 hover:from-cyan-500/20 hover:to-zinc-800 border border-zinc-700/80 hover:border-cyan-400 rounded-2xl transition-all shadow-md group active:scale-95 relative overflow-hidden"
+                        className="flex flex-col items-center justify-center p-2 sm:p-3 bg-gradient-to-b from-zinc-800 to-zinc-900/90 hover:from-cyan-500/20 hover:to-zinc-800 border border-zinc-700/80 hover:border-cyan-400 rounded-2xl transition-all shadow-md group active:scale-95 relative overflow-hidden text-center min-w-0"
                       >
-                        <span className="absolute top-1 right-1 text-[8px] font-extrabold text-cyan-300 bg-cyan-500/20 px-1 rounded">AC</span>
-                        <div className="w-12 h-12 rounded-full bg-cyan-500/10 flex items-center justify-center text-3xl mb-1.5 group-hover:scale-125 transition-transform animate-float">
+                        <span className="absolute top-0.5 right-0.5 text-[7px] sm:text-[8px] font-extrabold text-cyan-300 bg-cyan-500/20 px-1 rounded">AC</span>
+                        <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-cyan-500/10 flex items-center justify-center text-2xl sm:text-3xl mb-1 group-hover:scale-110 transition-transform animate-float">
                           🚗
                         </div>
-                        <span className="text-xs font-extrabold text-white group-hover:text-cyan-400">Cab</span>
-                        <span className="text-[10px] font-bold text-zinc-400">From ₹50</span>
+                        <span className="text-[11px] sm:text-xs font-extrabold text-white group-hover:text-cyan-400 truncate w-full">Cab</span>
+                        <span className="text-[9px] sm:text-[10px] font-bold text-zinc-400 truncate w-full">₹50</span>
                       </button>
 
                       {/* Hourly Rental Tile */}
@@ -2222,29 +2222,29 @@ function App() {
                           if (!destination) setDestination('City Tour Package');
                           handleEstimate();
                         }}
-                        className="flex flex-col items-center justify-center p-3 bg-gradient-to-b from-zinc-800 to-zinc-900/90 hover:from-purple-500/20 hover:to-zinc-800 border border-zinc-700/80 hover:border-purple-400 rounded-2xl transition-all shadow-md group active:scale-95 relative overflow-hidden"
+                        className="flex flex-col items-center justify-center p-2 sm:p-3 bg-gradient-to-b from-zinc-800 to-zinc-900/90 hover:from-purple-500/20 hover:to-zinc-800 border border-zinc-700/80 hover:border-purple-400 rounded-2xl transition-all shadow-md group active:scale-95 relative overflow-hidden text-center min-w-0"
                       >
-                        <span className="absolute top-1 right-1 text-[8px] font-extrabold text-purple-300 bg-purple-500/20 px-1 rounded">NEW</span>
-                        <div className="w-12 h-12 rounded-full bg-purple-500/10 flex items-center justify-center text-3xl mb-1.5 group-hover:scale-125 transition-transform animate-float">
+                        <span className="absolute top-0.5 right-0.5 text-[7px] sm:text-[8px] font-extrabold text-purple-300 bg-purple-500/20 px-1 rounded">NEW</span>
+                        <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-purple-500/10 flex items-center justify-center text-2xl sm:text-3xl mb-1 group-hover:scale-110 transition-transform animate-float">
                           ⏱️
                         </div>
-                        <span className="text-xs font-extrabold text-white group-hover:text-purple-400">Rentals</span>
-                        <span className="text-[10px] font-bold text-zinc-400">Multi-Hr</span>
+                        <span className="text-[11px] sm:text-xs font-extrabold text-white group-hover:text-purple-400 truncate w-full">Rentals</span>
+                        <span className="text-[9px] sm:text-[10px] font-bold text-zinc-400 truncate w-full">Multi-Hr</span>
                       </button>
                     </div>
                   </div>
 
                   {/* Animated Promo Banner Carousel */}
-                  <div className="relative overflow-hidden bg-gradient-to-r from-emerald-950 via-teal-900 to-zinc-900 border border-emerald-500/40 p-4 rounded-2xl shadow-xl">
+                  <div className="relative overflow-hidden bg-gradient-to-r from-emerald-950 via-teal-900 to-zinc-900 border border-emerald-500/40 p-3 sm:p-4 rounded-2xl shadow-xl">
                     <div className="flex items-center justify-between relative z-10">
-                      <div className="space-y-1">
-                        <span className="bg-emerald-400 text-black text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">
-                          RYVO Super Offer
+                      <div className="space-y-1 min-w-0 pr-2">
+                        <span className="bg-emerald-400 text-black text-[8px] sm:text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider inline-block">
+                          RYVO Offer
                         </span>
-                        <h4 className="text-sm font-black text-white leading-snug">50% OFF on 1st Auto & Bike Ride!</h4>
-                        <p className="text-[11px] text-emerald-200 font-medium">Use code <span className="font-extrabold text-amber-300">FIRST50</span> at checkout</p>
+                        <h4 className="text-xs sm:text-sm font-black text-white leading-snug truncate">50% OFF on 1st Auto & Bike Ride!</h4>
+                        <p className="text-[10px] sm:text-[11px] text-emerald-200 font-medium truncate">Use code <span className="font-extrabold text-amber-300">FIRST50</span></p>
                       </div>
-                      <div className="text-4xl animate-bounce">
+                      <div className="text-3xl sm:text-4xl animate-bounce shrink-0">
                         🎉
                       </div>
                     </div>
