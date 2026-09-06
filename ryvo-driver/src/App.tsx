@@ -98,6 +98,15 @@ function App() {
     }
   })
   const declinedRidesRef = useRef(declinedRides)
+
+  // Floating Toast Notification State & Helper
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => {
+      setToastMessage(null);
+    }, 4000);
+  };
   const incomingRequestRef = useRef(incomingRequest)
   
   useEffect(() => {
@@ -610,7 +619,7 @@ function App() {
     const checkRide = async () => {
       const { data } = await supabase.from('rides').select('*').eq('id', currentRide.id).single();
       if (data && data.status === 'cancelled') {
-        alert("The rider has cancelled the ride request.");
+        showToast("⚠️ The rider has cancelled the ride request.");
         setCurrentRide(null);
         setAppState('online');
         setRouteGeometry(null);
@@ -620,7 +629,7 @@ function App() {
     const channel = supabase.channel(`driver-ride-${currentRide.id}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'rides' }, payload => {
         if (payload.new && (payload.new as any).id === currentRide.id && (payload.new as any).status === 'cancelled') {
-          alert("The rider has cancelled the ride request.");
+          showToast("⚠️ The rider has cancelled the ride request.");
           setCurrentRide(null);
           setAppState('online');
           setRouteGeometry(null);
@@ -704,7 +713,7 @@ function App() {
       }).eq('id', incomingRequest.id);
       
       if (updateError) {
-        alert(`Failed to accept ride: ${updateError.message}`);
+        showToast(`Failed to accept ride: ${updateError.message}`);
         return;
       }
       
@@ -959,6 +968,13 @@ function App() {
       {fetchError && (
         <div className="absolute top-20 left-1/2 -translate-x-1/2 z-[3000] bg-red-600 text-white p-4 rounded-xl shadow-2xl font-bold max-w-md w-full">
           🚨 DEBUG ERROR: {fetchError}
+        </div>
+      )}
+
+      {/* Real-time Toast Notification Banner */}
+      {toastMessage && (
+        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-[9999] bg-zinc-900/95 backdrop-blur-md text-white font-bold px-5 py-3.5 rounded-2xl border border-zinc-700/80 shadow-2xl animate-bounce text-sm flex items-center gap-3 max-w-sm w-[90%] justify-center">
+          <span>{toastMessage}</span>
         </div>
       )}
 
